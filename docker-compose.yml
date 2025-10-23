@@ -1,0 +1,159 @@
+# Supreme System V5 - Docker Compose Stack
+# Production-ready orchestration with 4 core services
+
+version: '3.8'
+
+services:
+  # Main Supreme System V5 application
+  supreme-system-v5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: supreme-system-v5
+    ports:
+      - "8000:8000"     # API server
+      - "9090:9090"     # Prometheus metrics
+    environment:
+      - ENVIRONMENT=production
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - PROMETHEUS_PORT=9090
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supreme-jwt-secret-key-2025}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config
+    depends_on:
+      - redis
+      - prometheus
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7.2-alpine
+    container_name: supreme-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Prometheus monitoring
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    container_name: supreme-prometheus
+    ports:
+      - "9091:9090"  # Use 9091 to avoid conflicts
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Grafana dashboard
+  grafana:
+    image: grafana/grafana:10.1.5
+    container_name: supreme-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-Supreme@Admin2025!}
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.3'
+
+# Persistent volumes
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/prometheus
+  grafana_data:
+    driver: local
+
+# Network configuration
+networks:
+  supreme-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Environment variables template
+# Create .env file with:
+# JWT_SECRET_KEY=your-jwt-secret-key-here
+# GRAFANA_PASSWORD=your-grafana-password-here
+# REDIS_PASSWORD=your-redis-password-here (optional)
