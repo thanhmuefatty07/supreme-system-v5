@@ -1,100 +1,145 @@
 # Supreme System V5 - Production Requirements
-# Neuromorphic & Ultra-Low Latency Trading System
+# Optimized for i3-8th gen + 4GB RAM with real API integration
 
-# Core Python
-numpy>=1.25.0
+# === CORE FRAMEWORK (Required) ===
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# === REAL-TIME DATA APIS (Required) ===
+aiohttp>=3.8.0
+websockets>=12.0
+requests>=2.31.0
+yfinance>=0.2.24          # Yahoo Finance API
+ccxt>=4.1.64              # Cryptocurrency exchanges
+
+# === CORE SCIENTIFIC (Required) ===
+numpy>=1.24.0
 pandas>=2.1.0
 scipy>=1.11.0
 
-# Machine Learning & AI
-torch>=2.1.0
-transformers>=4.35.0
-datasets>=2.14.0
-scikit-learn>=1.3.0
-einops>=0.7.0
-
-# Neuromorphic Computing
-brian2>=2.5.1
-nengo>=3.2.0
-snntorch>=0.6.0
-
-# Quantum Computing
-qiskit>=0.45.0
-qiskit-aer>=0.12.0
-qiskit-optimization>=0.5.0
-cirq>=1.2.0
-pennylane>=0.32.0
-
-# Ultra-Low Latency
+# === ASYNC & NETWORKING (Required) ===
 uvloop>=0.18.0
+aiofiles>=23.0.0
 asyncio-throttle>=1.0.2
-aiohttp>=3.8.0
-numba>=0.58.0
-cython>=3.0.0
 
-# Data Processing
-polars>=0.19.0
-arrow>=13.0.0
-pyarrow>=13.0.0
-fastparquet>=0.8.3
+# === TECHNICAL ANALYSIS (Required) ===
+# Use pure Python TA instead of TA-Lib to avoid binary installation issues
+ta>=0.10.2                # Pure Python technical analysis
+finta>=1.3                # Financial technical analysis
 
-# Performance & Monitoring
-psutil>=5.9.0
+# === PERFORMANCE (Required) ===
+numba>=0.58.0             # JIT compilation (CPU only)
+psutil>=5.9.0             # System monitoring
+
+# === DATA PROCESSING (Required) ===
+pyarrow>=13.0.0           # Columnar data (smaller than polars)
+
+# === MONITORING (Required) ===
 prometheus-client>=0.17.0
-grafana-client>=3.5.0
-memory-profiler>=0.60.0
-py-spy>=0.3.14
 
-# FPGA Development
-# pynq>=2.7.0  # Uncomment when FPGA available
-# vivado-bindings>=2023.1  # Proprietary license required
+# === SECURITY (Required) ===
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
+cryptography>=41.0.0
 
-# Testing & Quality
+# === UTILITIES (Required) ===
+python-dotenv>=1.0.0
+loguru>=0.7.2             # Better logging
+rich>=13.7.0              # Console output
+click>=8.1.7              # CLI interface
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# === TESTING (Required) ===
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
-pytest-benchmark>=4.0.0
-pytest-cov>=4.1.0
+
+# === CODE QUALITY (Required) ===
 black>=23.9.0
 flake8>=6.1.0
-mypy>=1.5.0
 
-# Hardware Interface
-pyserial>=3.5
-pyftdi>=0.54.0
-
-# Cryptography & Security
-cryptography>=41.0.0
-pycryptodome>=3.19.0
-
-# Development Tools
-jupyter>=1.0.0
-ipython>=8.16.0
-matplotlib>=3.8.0
-seaborn>=0.13.0
-plotly>=5.17.0
-
-# Documentation
-sphinx>=7.2.0
-sphinx-rtd-theme>=1.3.0
-myst-parser>=2.0.0
-
-# Deployment
-# docker>=6.1.0  # System-level dependency
-# kubernetes>=27.2.0  # System-level dependency
+# === PRODUCTION SERVER (Required) ===
 gunicorn>=21.2.0
-uvicorn>=0.23.0
 
-# Additional Scientific Computing
-sympy>=1.12
-numexpr>=2.8.0
-bottleneck>=1.3.0
+# === AI/ML - LIGHTWEIGHT FOR i3-4GB ===
+# These are automatically disabled on i3-4GB systems
+# Install only if you have 8GB+ RAM
 
-# Time Series Analysis
-statsmodels>=0.14.0
-arch>=6.2.0
-sktime>=0.24.0
+# scikit-learn>=1.3.0     # Uncomment for 8GB+ systems
+# torch>=2.1.0            # Uncomment for 8GB+ systems (CPU only)
+# transformers>=4.35.0    # Uncomment for 8GB+ systems
 
-# Visualization
-bokeh>=3.3.0
-altair>=5.1.0
-holoviews>=1.18.0
+# === NEUROMORPHIC COMPUTING (Optional) ===
+# Only install on systems with 8GB+ RAM
+# brian2>=2.5.1           # Uncomment for neuromorphic computing
+# nengo>=3.2.0            # Uncomment for neural engineering
+# snntorch>=0.6.0         # Uncomment for spiking networks
+
+# === QUANTUM COMPUTING (Optional) ===
+# Only install if specifically needed and have 16GB+ RAM
+# qiskit>=0.45.0          # Uncomment for quantum algorithms
+# qiskit-aer>=0.12.0      # Uncomment for quantum simulation
+# cirq>=1.2.0             # Uncomment for Google Cirq
+# pennylane>=0.32.0       # Uncomment for differentiable quantum
+
+# === ADVANCED DATA PROCESSING (Optional) ===
+# Install only on higher-end systems
+# polars>=0.19.0          # Uncomment for 8GB+ systems
+# arrow>=13.0.0           # Uncomment if needed
+# fastparquet>=0.8.3      # Uncomment if needed
+
+# === ADVANCED MONITORING (Optional) ===
+# grafana-client>=3.5.0   # Uncomment for Grafana integration
+# memory-profiler>=0.60.0 # Uncomment for memory profiling
+# py-spy>=0.3.14          # Uncomment for performance profiling
+
+# === ADVANCED ANALYSIS (Optional) ===
+# statsmodels>=0.14.0     # Uncomment for advanced statistics
+# arch>=6.2.0             # Uncomment for GARCH models
+# sktime>=0.24.0          # Uncomment for time series ML
+
+# === VISUALIZATION (Optional) ===
+# matplotlib>=3.8.0       # Uncomment if needed
+# seaborn>=0.13.0         # Uncomment if needed
+# plotly>=5.17.0          # Uncomment if needed
+# bokeh>=3.3.0            # Uncomment if needed
+
+# === DEVELOPMENT (Optional) ===
+# jupyter>=1.0.0          # Uncomment for development
+# ipython>=8.16.0         # Uncomment for development
+# mypy>=1.5.0             # Uncomment for type checking
+
+# === HARDWARE INTERFACE (Optional) ===
+# pyserial>=3.5           # Uncomment if hardware interfaces needed
+# pyftdi>=0.54.0          # Uncomment if FTDI devices needed
+
+# === DOCUMENTATION (Optional) ===
+# sphinx>=7.2.0           # Uncomment for documentation generation
+# sphinx-rtd-theme>=1.3.0 # Uncomment for documentation
+
+# === ALTERNATIVE BINARY DEPENDENCIES ===
+# If you want to use TA-Lib instead of pure Python TA:
+# 1. Install TA-Lib binary first:
+#    - Ubuntu/Debian: sudo apt-get install libta-lib-dev
+#    - macOS: brew install ta-lib  
+#    - Windows: Download from https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
+# 2. Then uncomment:
+# TA-Lib>=0.4.26
+
+# === INSTALLATION NOTES ===
+# For i3-8th gen + 4GB RAM systems:
+# 1. Use: pip install -r requirements.txt --no-cache-dir
+# 2. System will automatically detect hardware and disable heavy components
+# 3. All optional packages can be installed later if needed
+#
+# For systems with 8GB+ RAM:
+# 1. Uncomment desired optional packages above
+# 2. Install normally: pip install -r requirements.txt
+#
+# Memory usage estimates:
+# - Core only: ~1.5GB
+# - Core + basic ML: ~2.5GB  
+# - Core + full AI: ~4-6GB
+# - Everything: ~8GB+
