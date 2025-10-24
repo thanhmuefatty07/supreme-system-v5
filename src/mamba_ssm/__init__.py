@@ -1,53 +1,27 @@
 """
 🐍 Supreme System V5 - Mamba State Space Model Module
-O(L) linear complexity sequence modeling for unlimited context length
-Revolutionary selective mechanism for time series processing
+Linear O(L) complexity sequence modeling for trading
 
-This module implements the breakthrough Mamba architecture:
-- Selective State Space Models
-- O(L) linear complexity (vs O(L²) for Transformers)
-- Unlimited context length
-- Hardware-efficient processing
-- Real-time sequence modeling
-
-Components:
-- MambaSSMEngine: Main processing engine
-- SelectiveSSM: Core selective state space implementation
-- MambaBlock: Individual Mamba layer
-- MambaConfig: System configuration
+Features:
+- Selective state space models
+- Linear complexity scaling
+- Long sequence processing
+- Hardware acceleration ready
 """
-
-from .engine import (
-    MambaSSMEngine,
-    MambaConfig,
-    SelectiveSSM,
-    MambaBlock,
-    demo_mamba_ssm
-)
 
 __version__ = "5.0.0"
 __author__ = "Supreme System V5 Team"
-__email__ = "thanhmuefatty07@gmail.com"
 
-# Module exports
+from .model import MambaSSMModel, MambaConfig
+from .layers import MambaLayer, SelectiveSSM
+
+# Export main classes  
+MambaSSMEngine = MambaSSMModel  # Alias
+
 __all__ = [
+    "MambaSSMModel",
     "MambaSSMEngine",
     "MambaConfig",
-    "SelectiveSSM",
-    "MambaBlock",
-    "demo_mamba_ssm"
+    "MambaLayer",
+    "SelectiveSSM"
 ]
-
-# Performance specifications
-PERFORMANCE_SPECS = {
-    "complexity": "O(L) linear",
-    "context_length": "unlimited",
-    "selective_mechanism": True,
-    "hardware_efficient": True,
-    "memory_efficient": True
-}
-
-print("🐍 Supreme System V5 - Mamba SSM Module Loaded")
-print(f"   Complexity: {PERFORMANCE_SPECS['complexity']}")
-print(f"   Context Length: {PERFORMANCE_SPECS['context_length']}")
-print("🚀 Revolutionary Linear Complexity Ready!")
