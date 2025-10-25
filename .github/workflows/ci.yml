@@ -29,12 +29,13 @@ jobs:
 
       - name: Install dependencies (prefer lockfile)
         run: |
+          set -e
           if [ -f requirements.lock ] && [ -s requirements.lock ]; then
             echo "Installing from lock"
-            uv pip install -r requirements.lock
+            uv pip install --system -r requirements.lock
           else
             echo "Installing from requirements.txt"
-            uv pip install -r requirements.txt
+            uv pip install --system -r requirements.txt
           fi
           pip install ruff black isort mypy bandit pytest pytest-cov
 
