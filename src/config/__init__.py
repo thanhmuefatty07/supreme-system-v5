@@ -1,27 +1,15 @@
 """
 ⚙️ Supreme System V5 - Configuration Module
-Hardware-aware configuration management
+Centralized configuration management
+
+Features:
+- Environment-based configuration
+- Validation and type checking
+- Dynamic config reloading
+- Security and secrets management
 """
 
-from .hardware_profiles import (
-    HardwareDetector,
-    HardwareProfile,
-    MemoryProfile,
-    PerformanceOptimizer,
-    ProcessorType,
-    hardware_detector,
-    optimal_profile,
-    performance_optimizer,
-)
-
 __version__ = "5.0.0"
-__all__ = [
-    "HardwareDetector",
-    "HardwareProfile",
-    "PerformanceOptimizer",
-    "ProcessorType",
-    "MemoryProfile",
-    "hardware_detector",
-    "optimal_profile",
-    "performance_optimizer",
-]
+__author__ = "Supreme System V5 Team"
+
+__all__ = []

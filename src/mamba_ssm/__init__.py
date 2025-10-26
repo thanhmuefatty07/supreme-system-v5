@@ -1,27 +1,23 @@
 """
 🐍 Supreme System V5 - Mamba State Space Model Module
-Linear O(L) complexity sequence modeling for trading
+Linear-time sequence modeling for financial time series
 
 Features:
-- Selective state space models
-- Linear complexity scaling
-- Long sequence processing
-- Hardware acceleration ready
+- O(L) computational complexity
+- Long-range dependency modeling  
+- Hardware-efficient selective state spaces
+- Sub-quadratic attention alternative
 """
+
+from .engine import MambaEngine, MambaSSMConfig
+from .model import MambaModel, SelectiveSSM
 
 __version__ = "5.0.0"
 __author__ = "Supreme System V5 Team"
 
-from .model import MambaSSMModel, MambaConfig
-from .layers import MambaLayer, SelectiveSSM
-
-# Export main classes  
-MambaSSMEngine = MambaSSMModel  # Alias
-
 __all__ = [
-    "MambaSSMModel",
-    "MambaSSMEngine",
-    "MambaConfig",
-    "MambaLayer",
-    "SelectiveSSM"
+    "MambaEngine",
+    "MambaSSMConfig", 
+    "MambaModel",
+    "SelectiveSSM",
 ]
