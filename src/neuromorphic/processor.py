@@ -1,195 +1,127 @@
 """
 🧠 Supreme System V5 - Neuromorphic Processor
-Production neuromorphic computing for market pattern recognition
+Brain-inspired computing for financial markets
+
+Features:
+- Spiking neural network processing
+- Adaptive learning algorithms
+- Low-power consumption
+- Real-time pattern recognition
 """
 
 import asyncio
-import numpy as np
-import time
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
-from datetime import datetime
 import logging
+import time
+from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger("neuromorphic")
+import numpy as np
 
-@dataclass
-class NeuromorphicConfig:
-    """Neuromorphic processor configuration"""
-    num_neurons: int = 256
-    target_latency_us: float = 50.0
-    spike_threshold: float = 0.7
-    learning_rate: float = 0.001
-    memory_window: int = 100
+logger = logging.getLogger(__name__)
+
 
 class NeuromorphicProcessor:
-    """Production neuromorphic processor for trading"""
-    
-    def __init__(self, config: NeuromorphicConfig = None):
-        self.config = config or NeuromorphicConfig()
-        self.neurons = np.zeros(self.config.num_neurons)
-        self.synapses = np.random.randn(self.config.num_neurons, self.config.num_neurons) * 0.1
-        self.spike_history = []
-        self.pattern_memory = []
-        self.initialized = False
-        
-    async def initialize(self):
-        """Initialize neuromorphic processor"""
-        logger.info(f"🧠 Initializing neuromorphic processor with {self.config.num_neurons} neurons")
-        
-        # Initialize neural network weights
-        self.synapses = self._initialize_synapses()
-        self.initialized = True
-        
-        logger.info("✅ Neuromorphic processor initialized")
-    
-    def _initialize_synapses(self) -> np.ndarray:
-        """Initialize synaptic weights for market pattern recognition"""
-        # Create specialized connection patterns for trading
-        synapses = np.zeros((self.config.num_neurons, self.config.num_neurons))
-        
-        # Pattern detection clusters
-        cluster_size = self.config.num_neurons // 8
-        for i in range(8):
-            start_idx = i * cluster_size
-            end_idx = (i + 1) * cluster_size
-            
-            # Strong intra-cluster connections
-            synapses[start_idx:end_idx, start_idx:end_idx] = np.random.randn(cluster_size, cluster_size) * 0.2
-            
-            # Weaker inter-cluster connections
-            for j in range(8):
-                if i != j:
-                    other_start = j * cluster_size
-                    other_end = (j + 1) * cluster_size
-                    synapses[start_idx:end_idx, other_start:other_end] = np.random.randn(cluster_size, cluster_size) * 0.05
-        
-        return synapses
-    
-    async def process_market_data(self, market_data: np.ndarray) -> Dict[str, Any]:
-        """Process market data using neuromorphic computing"""
-        if not self.initialized:
-            await self.initialize()
-        
-        process_start = time.perf_counter()
-        
-        # Normalize input data
-        normalized_data = self._normalize_input(market_data)
-        
-        # Convert to spike trains
-        spike_trains = self._encode_as_spikes(normalized_data)
-        
-        # Process through spiking neural network
-        network_output = self._process_spikes(spike_trains)
-        
-        # Detect patterns
-        patterns = self._detect_patterns(network_output)
-        
-        processing_time_us = (time.perf_counter() - process_start) * 1_000_000
-        
-        result = {
-            "patterns_detected": patterns,
-            "network_activity": np.mean(network_output),
-            "spike_rate": len([s for s in network_output if s > self.config.spike_threshold]),
-            "processing_time_us": processing_time_us,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        logger.debug(f"🧠 Processed {len(market_data)} data points in {processing_time_us:.1f}μs")
-        
-        return result
-    
-    def _normalize_input(self, data: np.ndarray) -> np.ndarray:
-        """Normalize market data for neural processing"""
-        # Z-score normalization
-        if len(data) > 1:
-            mean = np.mean(data)
-            std = np.std(data)
-            if std > 0:
-                return (data - mean) / std
-        return data
-    
-    def _encode_as_spikes(self, data: np.ndarray) -> np.ndarray:
-        """Convert normalized data to spike trains"""
-        # Rate coding: higher values = higher spike rates
-        spike_rates = np.abs(data) * 10  # Scale to reasonable spike rates
-        
-        # Generate Poisson spikes
-        spikes = np.random.poisson(spike_rates, size=(len(data), self.config.num_neurons))
+    """Neuromorphic processor for market data analysis"""
+
+    def __init__(self, neuron_count: int = 512) -> None:
+        self.neuron_count = neuron_count
+        self.synaptic_weights = np.random.randn(neuron_count, neuron_count) * 0.1
+        self.neuron_states = np.zeros(neuron_count)
+        self.spike_history: List[np.ndarray] = []
+        self.learning_rate = 0.001
+
+        logger.info(f"🧠 Neuromorphic processor initialized: {neuron_count} neurons")
+
+    def spike_train_encoding(self, market_data: List[float]) -> np.ndarray:
+        """Convert market data to spike trains"""
+        # Normalize data to spike rates
+        data_array = np.array(market_data)
+        normalized_data = (data_array - np.mean(data_array)) / (np.std(data_array) + 1e-8)
+
+        # Convert to spike probabilities
+        spike_rates = 1.0 / (1.0 + np.exp(-normalized_data))  # Sigmoid
+
+        # Generate spikes based on rates
+        spikes = np.random.rand(len(spike_rates)) < spike_rates
         return spikes.astype(float)
-    
-    def _process_spikes(self, spike_trains: np.ndarray) -> np.ndarray:
-        """Process spikes through the neural network"""
-        network_state = np.zeros(self.config.num_neurons)
-        outputs = []
-        
-        for t in range(len(spike_trains)):
-            # Input spikes for this time step
-            input_spikes = spike_trains[t]
-            
-            # Update neuron states
-            network_input = np.dot(self.synapses, network_state) + input_spikes[:self.config.num_neurons]
-            
-            # Apply activation (spike generation)
-            network_state = self._apply_activation(network_input)
-            outputs.append(network_state.copy())
-        
-        return np.array(outputs)
-    
-    def _apply_activation(self, inputs: np.ndarray) -> np.ndarray:
-        """Apply spiking neuron activation function"""
-        # Leaky integrate-and-fire model
-        leak_factor = 0.9
-        self.neurons = self.neurons * leak_factor + inputs
-        
-        # Generate spikes where threshold is exceeded
-        spikes = (self.neurons > self.config.spike_threshold).astype(float)
-        
-        # Reset neurons that spiked
-        self.neurons[spikes > 0] = 0
-        
-        return spikes
-    
-    def _detect_patterns(self, network_output: np.ndarray) -> List[Dict[str, Any]]:
-        """Detect trading patterns from network output"""
-        patterns = []
-        
-        if len(network_output) == 0:
-            return patterns
-        
-        # Calculate network activity metrics
-        total_spikes = np.sum(network_output)
-        avg_activity = np.mean(network_output)
-        activity_variance = np.var(network_output)
-        
-        # Pattern detection based on activity patterns
-        if total_spikes > 50:  # High activity pattern
-            patterns.append({
-                "type": "high_activity",
-                "strength": min(1.0, total_spikes / 100),
-                "confidence": 0.8,
-                "description": "High neural network activity detected"
-            })
-        
-        if activity_variance > 0.1:  # Variable activity pattern
-            patterns.append({
-                "type": "volatility_pattern",
-                "strength": min(1.0, activity_variance * 10),
-                "confidence": 0.7,
-                "description": "Market volatility pattern detected"
-            })
-        
-        # Synchronization pattern
-        if len(network_output) > 10:
-            correlation = np.corrcoef(network_output[-10:].T)
-            avg_correlation = np.mean(correlation[np.triu_indices(len(correlation), k=1)])
-            
-            if avg_correlation > 0.5:
-                patterns.append({
-                    "type": "synchronization",
-                    "strength": avg_correlation,
-                    "confidence": 0.9,
-                    "description": "Neural synchronization pattern detected"
-                })
-        
-        return patterns
+
+    def process_spikes(self, input_spikes: np.ndarray) -> np.ndarray:
+        """Process spike train through neuromorphic network"""
+        # Pad input to match neuron count
+        if len(input_spikes) < self.neuron_count:
+            padded_input = np.zeros(self.neuron_count)
+            padded_input[: len(input_spikes)] = input_spikes
+        else:
+            padded_input = input_spikes[: self.neuron_count]
+
+        # Leaky integrate-and-fire dynamics
+        membrane_potential = np.dot(self.synaptic_weights, padded_input)
+        self.neuron_states = 0.9 * self.neuron_states + 0.1 * membrane_potential
+
+        # Generate output spikes
+        output_spikes = (self.neuron_states > 0.5).astype(float)
+        self.neuron_states[output_spikes > 0] = 0  # Reset spiked neurons
+
+        # Store spike history
+        if len(self.spike_history) > 100:
+            self.spike_history.pop(0)
+        self.spike_history.append(output_spikes.copy())
+
+        return output_spikes
+
+    async def analyze_pattern(
+        self, market_data: List[float]
+    ) -> Dict[str, Any]:
+        """Analyze market patterns using neuromorphic processing"""
+        start_time = time.perf_counter()
+
+        # Convert market data to spikes
+        input_spikes = self.spike_train_encoding(market_data)
+
+        # Process through neuromorphic network
+        output_spikes = self.process_spikes(input_spikes)
+
+        # Extract pattern features
+        spike_count = np.sum(output_spikes)
+        spike_rate = spike_count / self.neuron_count
+        complexity_measure = np.std(output_spikes)
+
+        processing_time = (time.perf_counter() - start_time) * 1000  # milliseconds
+
+        return {
+            "pattern_strength": float(spike_rate),
+            "complexity": float(complexity_measure),
+            "spike_count": int(spike_count),
+            "processing_time_ms": processing_time,
+            "neuron_count": self.neuron_count,
+        }
+
+    def adapt_weights(self, reward: float) -> None:
+        """Adapt synaptic weights based on reward signal"""
+        if len(self.spike_history) >= 2:
+            # Simple STDP-like learning
+            pre_spikes = self.spike_history[-2]
+            post_spikes = self.spike_history[-1]
+
+            # Hebbian learning with reward modulation
+            weight_delta = (
+                self.learning_rate
+                * reward
+                * np.outer(post_spikes, pre_spikes)
+            )
+            self.synaptic_weights += weight_delta
+
+            # Keep weights bounded
+            self.synaptic_weights = np.clip(
+                self.synaptic_weights, -1.0, 1.0
+            )
+
+    def get_network_state(self) -> Dict[str, Any]:
+        """Get current network state for monitoring"""
+        return {
+            "neuron_states_mean": float(np.mean(self.neuron_states)),
+            "neuron_states_std": float(np.std(self.neuron_states)),
+            "weights_mean": float(np.mean(self.synaptic_weights)),
+            "weights_std": float(np.std(self.synaptic_weights)),
+            "spike_history_length": len(self.spike_history),
+            "learning_rate": self.learning_rate,
+        }
