@@ -20,7 +20,8 @@ pandas>=2.1.0
 scipy>=1.11.0
 
 # === ASYNC & NETWORKING (Required) ===
-uvloop>=0.18.0
+# uvloop>=0.18.0          # Not supported on Windows - using asyncio instead
+# Note: On Windows, asyncio event loop is used instead of uvloop
 aiofiles>=23.0.0
 asyncio-throttle>=1.0.2
 
@@ -38,6 +39,7 @@ pyarrow>=13.0.0           # Columnar data (smaller than polars)
 
 # === MONITORING (Required) ===
 prometheus-client>=0.17.0
+aioredis>=2.0.0
 
 # === SECURITY (Required) ===
 pyjwt>=2.8.0
