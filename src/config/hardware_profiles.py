@@ -8,11 +8,13 @@ Optimizations for:
 - Ultra-low resource configurations
 """
 
-import psutil
 import platform
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
 from enum import Enum
+from typing import Any
+
+import psutil
+
 
 class ProcessorType(Enum):
     I3_8TH_GEN = "i3_8th_gen"
@@ -174,7 +176,7 @@ class HardwareDetector:
     def __init__(self):
         self.system_info = self._detect_system()
         
-    def _detect_system(self) -> Dict[str, Any]:
+    def _detect_system(self) -> dict[str, Any]:
         """Detect current system specifications"""
         cpu_info = platform.processor()
         memory_gb = psutil.virtual_memory().total / (1024**3)
@@ -240,7 +242,7 @@ class PerformanceOptimizer:
     def __init__(self, profile: HardwareProfile):
         self.profile = profile
         
-    def get_trading_engine_config(self) -> Dict[str, Any]:
+    def get_trading_engine_config(self) -> dict[str, Any]:
         """Get trading engine configuration for hardware"""
         return {
             "max_symbols": self.profile.max_symbols,
@@ -259,7 +261,7 @@ class PerformanceOptimizer:
             "aggressive_memory_cleanup": self.profile.aggressive_gc
         }
     
-    def get_websocket_config(self) -> Dict[str, Any]:
+    def get_websocket_config(self) -> dict[str, Any]:
         """Get WebSocket configuration for hardware"""
         return {
             "buffer_size": self.profile.websocket_buffer_size,
@@ -269,7 +271,7 @@ class PerformanceOptimizer:
             "backpressure_aggressive": True
         }
     
-    def get_monitoring_config(self) -> Dict[str, Any]:
+    def get_monitoring_config(self) -> dict[str, Any]:
         """Get monitoring configuration for hardware"""
         return {
             "metrics_retention_hours": self.profile.metrics_retention_hours,
@@ -278,7 +280,7 @@ class PerformanceOptimizer:
             "disable_heavy_metrics": self.profile.memory_profile == MemoryProfile.LOW_4GB
         }
     
-    def get_docker_config(self) -> Dict[str, Any]:
+    def get_docker_config(self) -> dict[str, Any]:
         """Get Docker resource limits for hardware"""
         return {
             "memory_limit": f"{self.profile.max_memory_usage_gb}g",
@@ -293,7 +295,7 @@ optimal_profile = hardware_detector.get_optimal_profile()
 performance_optimizer = PerformanceOptimizer(optimal_profile)
 
 # Print detected hardware info
-print(f"🔧 Hardware Profile Detected:")
+print("🔧 Hardware Profile Detected:")
 print(f"   Processor: {optimal_profile.processor_type.value}")
 print(f"   Memory: {optimal_profile.memory_profile.value}")
 print(f"   Max Symbols: {optimal_profile.max_symbols}")

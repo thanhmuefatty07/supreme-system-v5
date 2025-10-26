@@ -12,7 +12,7 @@ Features:
 """
 
 from .alerts import AlertManager, AlertSeverity, AlertThreshold, configure_alert_thresholds
-from .health import ComponentHealthStatus, HealthChecker, perform_health_check
+from .health import ComponentHealth, HealthChecker, quick_health_check
 from .metrics import (
     MetricsCollector,
     PrometheusExporter,
@@ -30,9 +30,10 @@ __all__ = [
     "AlertManager",
     "start_metrics_server",
     "get_metrics_summary",
-    "perform_health_check",
+    "quick_health_check",
+    "perform_health_check",  # Alias for backward compatibility
     "configure_alert_thresholds",
-    "ComponentHealthStatus",
+    "ComponentHealth",
     "AlertThreshold",
     "AlertSeverity",
 ]
@@ -78,3 +79,6 @@ DEFAULT_ALERT_THRESHOLDS = {
         "critical": 10.0,  # 10% drawdown
     },
 }
+
+# Backward compatibility alias
+perform_health_check = quick_health_check

@@ -529,8 +529,7 @@ if __name__ == "__main__":
         alert_mgr = configure_alert_thresholds()
         
         # Simulate metric breaches
-        print("
-📋 Testing alert thresholds...")
+        print("📋 Testing alert thresholds...")
         
         # Simulate API latency breach
         alert_mgr.update_metric_value("api_latency_ms", 75.0)  # Above warning
@@ -546,8 +545,7 @@ if __name__ == "__main__":
         
         # Get alert summary
         summary = alert_mgr.get_alert_summary()
-        print(f"
-📉 Alert Summary:")
+        print(f"📉 Alert Summary:")
         print(f"   Total thresholds: {summary['total_thresholds']}")
         print(f"   Active alerts: {summary['active_alerts']}")
         print(f"   Alerts by severity: {summary['alerts_by_severity']}")

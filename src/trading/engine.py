@@ -809,6 +809,21 @@ async def demo_trading_engine():
     
     return True
 
+# Export all public classes and functions
+__all__ = [
+    "TradingState",
+    "ExchangeType",
+    "OrderType",
+    "OrderSide",
+    "TradingConfig",
+    "RealDataConnector",
+    "PortfolioManager",
+    "AISignalGenerator",
+    "TradingEngine",
+    "demo_trading_engine",
+]
+
+
 if __name__ == "__main__":
     # Run real data trading demo
     asyncio.run(demo_trading_engine())
