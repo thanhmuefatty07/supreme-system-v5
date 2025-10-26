@@ -12,14 +12,16 @@ Features:
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
-from enum import Enum
-from pydantic import BaseModel, Field, validator, root_validator
 from decimal import Decimal
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, root_validator, validator
 
 
 class ResponseStatus(str, Enum):
     """Standard response status values"""
+
     SUCCESS = "success"
     ERROR = "error"
     WARNING = "warning"
@@ -28,6 +30,7 @@ class ResponseStatus(str, Enum):
 
 class TradingState(str, Enum):
     """Trading engine states"""
+
     IDLE = "idle"
     STARTING = "starting"
     RUNNING = "running"
@@ -38,12 +41,14 @@ class TradingState(str, Enum):
 
 class OrderSide(str, Enum):
     """Order side enumeration"""
+
     BUY = "buy"
     SELL = "sell"
 
 
 class OrderType(str, Enum):
     """Order type enumeration"""
+
     MARKET = "market"
     LIMIT = "limit"
     STOP_LOSS = "stop_loss"
@@ -52,6 +57,7 @@ class OrderType(str, Enum):
 
 class OrderStatus(str, Enum):
     """Order status enumeration"""
+
     PENDING = "pending"
     FILLED = "filled"
     PARTIALLY_FILLED = "partially_filled"
@@ -61,6 +67,7 @@ class OrderStatus(str, Enum):
 
 class ComponentStatus(str, Enum):
     """System component status"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     ERROR = "error"
@@ -71,6 +78,7 @@ class ComponentStatus(str, Enum):
 # Base response models
 class BaseResponse(BaseModel):
     """Base response model"""
+
     status: ResponseStatus
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     message: Optional[str] = None
@@ -78,6 +86,7 @@ class BaseResponse(BaseModel):
 
 class ErrorResponse(BaseResponse):
     """Error response model"""
+
     status: ResponseStatus = ResponseStatus.ERROR
     error_code: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
@@ -85,6 +94,7 @@ class ErrorResponse(BaseResponse):
 
 class SuccessResponse(BaseResponse):
     """Success response model"""
+
     status: ResponseStatus = ResponseStatus.SUCCESS
     data: Optional[Dict[str, Any]] = None
 
@@ -92,12 +102,14 @@ class SuccessResponse(BaseResponse):
 # Authentication models
 class LoginRequest(BaseModel):
     """User login request"""
+
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)
 
 
 class LoginResponse(BaseModel):
     """User login response"""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -107,11 +119,13 @@ class LoginResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     """Token refresh request"""
+
     refresh_token: str
 
 
 class TokenResponse(BaseModel):
     """Token response"""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int
@@ -120,10 +134,13 @@ class TokenResponse(BaseModel):
 # System status models
 class PerformanceMetrics(BaseModel):
     """Performance metrics data"""
+
     timestamp: datetime
     latency_us: float = Field(..., description="Latency in microseconds")
     throughput_tps: float = Field(..., description="Throughput in transactions per second")
-    accuracy_percent: float = Field(..., ge=0, le=100, description="Prediction accuracy percentage")
+    accuracy_percent: float = Field(
+        ..., ge=0, le=100, description="Prediction accuracy percentage"
+    )
     memory_mb: float = Field(..., ge=0, description="Memory usage in MB")
     cpu_percent: float = Field(..., ge=0, le=100, description="CPU usage percentage")
     gpu_utilization: float = Field(..., ge=0, le=100, description="GPU utilization percentage")
@@ -131,6 +148,7 @@ class PerformanceMetrics(BaseModel):
 
 class ComponentInfo(BaseModel):
     """System component information"""
+
     status: ComponentStatus
     initialized: bool
     last_activity: datetime
@@ -139,6 +157,7 @@ class ComponentInfo(BaseModel):
 
 class SystemStatus(BaseModel):
     """System status response"""
+
     status: str
     version: str
     uptime_seconds: float
@@ -150,6 +169,7 @@ class SystemStatus(BaseModel):
 # Trading models
 class TradingConfig(BaseModel):
     """Trading configuration"""
+
     exchange: str
     testnet: bool = True
     trading_pairs: List[str]
@@ -158,7 +178,7 @@ class TradingConfig(BaseModel):
     stop_loss_pct: float = Field(..., gt=0, le=100)
     take_profit_pct: float = Field(..., gt=0, le=100)
     max_open_positions: int = Field(..., gt=0)
-    
+
     # AI component flags
     use_neuromorphic: bool = True
     use_ultra_low_latency: bool = True
@@ -168,6 +188,7 @@ class TradingConfig(BaseModel):
 
 class MarketData(BaseModel):
     """Market data structure"""
+
     symbol: str
     price: Decimal = Field(..., decimal_places=8)
     bid: Decimal = Field(..., decimal_places=8)
@@ -179,6 +200,7 @@ class MarketData(BaseModel):
 
 class Position(BaseModel):
     """Trading position"""
+
     symbol: str
     quantity: Decimal = Field(..., decimal_places=8)
     average_price: Decimal = Field(..., decimal_places=8)
@@ -190,6 +212,7 @@ class Position(BaseModel):
 
 class Order(BaseModel):
     """Trading order"""
+
     order_id: str
     symbol: str
     side: OrderSide
@@ -197,7 +220,7 @@ class Order(BaseModel):
     quantity: Decimal = Field(..., decimal_places=8)
     price: Optional[Decimal] = Field(None, decimal_places=8)
     status: OrderStatus
-    filled_quantity: Decimal = Field(default=Decimal('0'), decimal_places=8)
+    filled_quantity: Decimal = Field(default=Decimal("0"), decimal_places=8)
     timestamp: datetime
     execution_time_ms: Optional[float] = None
     exchange: str
@@ -205,32 +228,39 @@ class Order(BaseModel):
 
 class PortfolioBalance(BaseModel):
     """Portfolio balance for a currency"""
+
     currency: str
     available: Decimal = Field(..., decimal_places=8)
-    locked: Decimal = Field(default=Decimal('0'), decimal_places=8)
+    locked: Decimal = Field(default=Decimal("0"), decimal_places=8)
     total: Decimal = Field(..., decimal_places=8)
 
 
 class PnLSummary(BaseModel):
     """Profit and Loss summary"""
+
     realized: Decimal = Field(..., decimal_places=2)
     unrealized: Decimal = Field(..., decimal_places=2)
     total: Decimal = Field(..., decimal_places=2)
     daily: Decimal = Field(..., decimal_places=2)
-    
+
     @root_validator
     def calculate_total(cls, values):
         """Calculate total PnL"""
-        realized = values.get('realized', Decimal('0'))
-        unrealized = values.get('unrealized', Decimal('0'))
-        values['total'] = realized + unrealized
+        realized = values.get("realized", Decimal("0"))
+        unrealized = values.get("unrealized", Decimal("0"))
+        values["total"] = realized + unrealized
         return values
 
 
 class PortfolioStatus(BaseModel):
     """Portfolio status response"""
-    total_value: Decimal = Field(..., decimal_places=2, description="Total portfolio value in USD")
-    available_balance: Decimal = Field(..., decimal_places=2, description="Available cash balance")
+
+    total_value: Decimal = Field(
+        ..., decimal_places=2, description="Total portfolio value in USD"
+    )
+    available_balance: Decimal = Field(
+        ..., decimal_places=2, description="Available cash balance"
+    )
     positions: List[Position] = Field(default=[])
     balances: List[PortfolioBalance] = Field(default=[])
     pnl: PnLSummary
@@ -241,6 +271,7 @@ class PortfolioStatus(BaseModel):
 
 class TradingResponse(BaseModel):
     """Trading operation response"""
+
     success: bool
     message: str
     timestamp: datetime
@@ -249,6 +280,7 @@ class TradingResponse(BaseModel):
 
 class OrderRequest(BaseModel):
     """Order placement request"""
+
     symbol: str = Field(..., description="Trading pair symbol")
     side: OrderSide
     type: OrderType
@@ -256,18 +288,20 @@ class OrderRequest(BaseModel):
     price: Optional[Decimal] = Field(None, decimal_places=8)
     stop_price: Optional[Decimal] = Field(None, decimal_places=8)
     time_in_force: Optional[str] = Field("GTC", description="Time in force")
-    
-    @validator('price')
+
+    @validator("price")
     def price_required_for_limit_orders(cls, v, values):
         """Validate price for limit orders"""
-        order_type = values.get('type')
+        order_type = values.get("type")
         if order_type == OrderType.LIMIT and v is None:
-            raise ValueError('Price is required for limit orders')
+            msg = "Price is required for limit orders"
+            raise ValueError(msg)
         return v
 
 
 class SignalData(BaseModel):
     """AI signal data"""
+
     symbol: str
     signal_strength: float = Field(..., ge=-1.0, le=1.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
@@ -279,6 +313,7 @@ class SignalData(BaseModel):
 # Performance and analytics models
 class AIComponentMetrics(BaseModel):
     """AI component performance metrics"""
+
     component_name: str
     processing_time_us: float
     accuracy: Optional[float] = Field(None, ge=0, le=100)
@@ -289,24 +324,26 @@ class AIComponentMetrics(BaseModel):
 
 class TradingMetrics(BaseModel):
     """Trading performance metrics"""
+
     total_trades: int = Field(default=0, ge=0)
     successful_trades: int = Field(default=0, ge=0)
     win_rate: float = Field(default=0.0, ge=0, le=100)
-    total_pnl: Decimal = Field(default=Decimal('0'), decimal_places=2)
-    average_trade_pnl: Decimal = Field(default=Decimal('0'), decimal_places=2)
-    max_drawdown: Decimal = Field(default=Decimal('0'), decimal_places=2)
+    total_pnl: Decimal = Field(default=Decimal("0"), decimal_places=2)
+    average_trade_pnl: Decimal = Field(default=Decimal("0"), decimal_places=2)
+    max_drawdown: Decimal = Field(default=Decimal("0"), decimal_places=2)
     sharpe_ratio: Optional[float] = None
-    
-    @validator('win_rate', pre=True)
+
+    @validator("win_rate", pre=True)
     def calculate_win_rate(cls, v, values):
         """Calculate win rate from successful and total trades"""
-        total = values.get('total_trades', 0)
-        successful = values.get('successful_trades', 0)
+        total = values.get("total_trades", 0)
+        successful = values.get("successful_trades", 0)
         return (successful / total * 100) if total > 0 else 0.0
 
 
 class SessionMetrics(BaseModel):
     """Trading session metrics"""
+
     session_id: str
     start_time: datetime
     end_time: Optional[datetime] = None
@@ -320,6 +357,7 @@ class SessionMetrics(BaseModel):
 # WebSocket models
 class WebSocketMessage(BaseModel):
     """WebSocket message structure"""
+
     type: str
     timestamp: datetime
     data: Dict[str, Any]
@@ -329,12 +367,14 @@ class WebSocketMessage(BaseModel):
 
 class SubscriptionRequest(BaseModel):
     """WebSocket subscription request"""
+
     subscriptions: List[str] = Field(default=[])
     client_id: Optional[str] = None
 
 
 class HeartbeatMessage(BaseModel):
     """WebSocket heartbeat message"""
+
     type: str = "heartbeat"
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     status: str = "alive"
@@ -343,6 +383,7 @@ class HeartbeatMessage(BaseModel):
 # Configuration models
 class APIConfig(BaseModel):
     """API configuration"""
+
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1024, le=65535)
     debug: bool = False
@@ -350,11 +391,11 @@ class APIConfig(BaseModel):
     log_level: str = Field(default="info", regex=r"^(debug|info|warning|error|critical)$")
     cors_origins: List[str] = Field(default=["*"])
     max_connections: int = Field(default=1000, ge=1)
-    
+
     # Rate limiting
     rate_limit_enabled: bool = True
     rate_limit_per_minute: int = Field(default=60, ge=1)
-    
+
     # Security
     jwt_secret_key: str
     jwt_expiry_minutes: int = Field(default=60, ge=5)
@@ -362,11 +403,12 @@ class APIConfig(BaseModel):
 
 class MonitoringConfig(BaseModel):
     """Monitoring system configuration"""
+
     prometheus_enabled: bool = True
     prometheus_port: int = Field(default=9090, ge=1024, le=65535)
     metrics_retention_days: int = Field(default=30, ge=1)
     alert_thresholds: Dict[str, float] = Field(default={})
-    
+
     # Health check settings
     health_check_interval_seconds: int = Field(default=30, ge=1)
     component_timeout_seconds: int = Field(default=10, ge=1)
@@ -375,6 +417,7 @@ class MonitoringConfig(BaseModel):
 # Error handling models
 class ValidationError(BaseModel):
     """Validation error details"""
+
     field: str
     message: str
     rejected_value: Any
@@ -382,6 +425,7 @@ class ValidationError(BaseModel):
 
 class APIError(BaseModel):
     """API error response"""
+
     error: str
     message: str
     status_code: int
@@ -393,34 +437,38 @@ class APIError(BaseModel):
 # Batch operation models
 class BatchOrderRequest(BaseModel):
     """Batch order request"""
+
     orders: List[OrderRequest] = Field(..., max_items=10)
-    
-    @validator('orders')
+
+    @validator("orders")
     def validate_orders(cls, v):
         """Validate order list"""
         if len(v) == 0:
-            raise ValueError('At least one order is required')
+            msg = "At least one order is required"
+            raise ValueError(msg)
         return v
 
 
 class BatchOrderResponse(BaseModel):
     """Batch order response"""
+
     submitted_orders: List[Order] = Field(default=[])
     failed_orders: List[Dict[str, Any]] = Field(default=[])
     success_count: int = Field(default=0, ge=0)
     failure_count: int = Field(default=0, ge=0)
-    
+
     @root_validator
     def calculate_counts(cls, values):
         """Calculate success and failure counts"""
-        values['success_count'] = len(values.get('submitted_orders', []))
-        values['failure_count'] = len(values.get('failed_orders', []))
+        values["success_count"] = len(values.get("submitted_orders", []))
+        values["failure_count"] = len(values.get("failed_orders", []))
         return values
 
 
 # Advanced analytics models
 class BacktestRequest(BaseModel):
     """Backtesting request"""
+
     strategy_id: str
     start_date: datetime
     end_date: datetime
@@ -431,6 +479,7 @@ class BacktestRequest(BaseModel):
 
 class BacktestResult(BaseModel):
     """Backtesting result"""
+
     strategy_id: str
     start_date: datetime
     end_date: datetime
@@ -441,11 +490,12 @@ class BacktestResult(BaseModel):
     win_rate: float = Field(..., ge=0, le=100)
     profit_factor: float
     final_balance: Decimal = Field(..., decimal_places=2)
-    
+
 
 # Health check models
 class HealthCheck(BaseModel):
     """Health check response"""
+
     status: str = "healthy"
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     version: str = "5.0.0"
@@ -455,6 +505,7 @@ class HealthCheck(BaseModel):
 
 class ComponentHealth(BaseModel):
     """Individual component health"""
+
     name: str
     status: ComponentStatus
     last_check: datetime
@@ -465,39 +516,57 @@ class ComponentHealth(BaseModel):
 # Export all models for easy importing
 __all__ = [
     # Enums
-    "ResponseStatus", "TradingState", "OrderSide", "OrderType", "OrderStatus", "ComponentStatus",
-    
+    "ResponseStatus",
+    "TradingState",
+    "OrderSide",
+    "OrderType",
+    "OrderStatus",
+    "ComponentStatus",
     # Base models
-    "BaseResponse", "ErrorResponse", "SuccessResponse",
-    
+    "BaseResponse",
+    "ErrorResponse",
+    "SuccessResponse",
     # Authentication
-    "LoginRequest", "LoginResponse", "RefreshTokenRequest", "TokenResponse",
-    
+    "LoginRequest",
+    "LoginResponse",
+    "RefreshTokenRequest",
+    "TokenResponse",
     # System status
-    "PerformanceMetrics", "ComponentInfo", "SystemStatus",
-    
+    "PerformanceMetrics",
+    "ComponentInfo",
+    "SystemStatus",
     # Trading
-    "TradingConfig", "MarketData", "Position", "Order", "PortfolioBalance", 
-    "PnLSummary", "PortfolioStatus", "TradingResponse", "OrderRequest", "SignalData",
-    
+    "TradingConfig",
+    "MarketData",
+    "Position",
+    "Order",
+    "PortfolioBalance",
+    "PnLSummary",
+    "PortfolioStatus",
+    "TradingResponse",
+    "OrderRequest",
+    "SignalData",
     # Performance
-    "AIComponentMetrics", "TradingMetrics", "SessionMetrics",
-    
+    "AIComponentMetrics",
+    "TradingMetrics",
+    "SessionMetrics",
     # WebSocket
-    "WebSocketMessage", "SubscriptionRequest", "HeartbeatMessage",
-    
+    "WebSocketMessage",
+    "SubscriptionRequest",
+    "HeartbeatMessage",
     # Configuration
-    "APIConfig", "MonitoringConfig",
-    
+    "APIConfig",
+    "MonitoringConfig",
     # Error handling
-    "ValidationError", "APIError",
-    
+    "ValidationError",
+    "APIError",
     # Batch operations
-    "BatchOrderRequest", "BatchOrderResponse",
-    
+    "BatchOrderRequest",
+    "BatchOrderResponse",
     # Analytics
-    "BacktestRequest", "BacktestResult",
-    
+    "BacktestRequest",
+    "BacktestResult",
     # Health
-    "HealthCheck", "ComponentHealth"
+    "HealthCheck",
+    "ComponentHealth",
 ]
