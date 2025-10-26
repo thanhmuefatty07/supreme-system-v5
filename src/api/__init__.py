@@ -41,8 +41,3 @@ API_SPECS = {
     "auth_methods": ["API_KEY", "JWT"],
     "default_port": 8000
 }
-
-print("🌐 Supreme System V5 - REST API Module Loaded")
-print(f"   Framework: {API_SPECS['framework']}")
-print(f"   Port: {API_SPECS['default_port']}")
-print("🚀 Production API Ready!")
