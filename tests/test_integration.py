@@ -1,296 +1,392 @@
+#!/usr/bin/env python3
 """
-🔗 SUPREME SYSTEM V5 - INTEGRATION TESTS
+🧪 Supreme System V5 - Integration Test Suite
+Comprehensive testing of full system integration
 
-End-to-end integration testing for complete system validation.
-Tests full workflow from API requests to AI processing to trading execution.
-
-Author: Supreme Team
-Date: 2025-10-25 10:41 AM
-Version: 5.0 Production Testing
+Features:
+- End-to-end system testing
+- Component integration validation
+- Performance benchmark testing
+- Data pipeline testing
+- AI system validation
+- Risk management testing
 """
 
-import pytest
 import asyncio
-import json
-import time
-from typing import Dict, Any, List
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+import logging
+import sys
+import unittest
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List
 
-from . import TESTING_CONFIG
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+logger = logging.getLogger(__name__)
 
-class TestSystemIntegration:
-    """
-    🔗 Full system integration tests
+# Import system components
+try:
+    from src.backtesting.backtest_engine import (
+        BacktestConfig,
+        BacktestEngine,
+        BacktestMode,
+        StrategyType,
+    )
+    from src.backtesting.historical_data import (
+        HistoricalDataProvider,
+        HistoricalDataStorage,
+        TimeFrame,
+    )
+    from src.backtesting.risk_manager import RiskConfig, RiskManager
     
-    Tests complete workflows:
-    - API → AI Engine → Trading pipeline
-    - Monitoring integration
-    - Real-time data flow
-    - Error propagation
-    """
+    BACKTESTING_AVAILABLE = True
+except ImportError:
+    BACKTESTING_AVAILABLE = False
+
+# Import AI components
+try:
+    from src.trading.engine import TradingEngine, TradingConfig
+    from src.neuromorphic.processor import NeuromorphicProcessor
+    from src.foundation_models.predictor import FoundationModelPredictor
     
-    @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_full_trading_pipeline(self, api_client, mock_neuromorphic_engine, mock_trading_engine, mock_market_data, performance_benchmark):
-        """Test complete trading pipeline integration"""
-        if not api_client:
-            pytest.skip("API client not available")
+    AI_COMPONENTS_AVAILABLE = True
+except ImportError:
+    AI_COMPONENTS_AVAILABLE = False
+
+# Import monitoring
+try:
+    from src.monitoring.health import HealthChecker
+    from src.monitoring.metrics import MetricsCollector
+    
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
+
+
+class IntegrationTestSuite(unittest.TestCase):
+    """Comprehensive integration test suite"""
+    
+    def setUp(self) -> None:
+        """Set up test environment"""
+        self.test_data_dir = Path("test_data")
+        self.test_data_dir.mkdir(exist_ok=True)
         
-        performance_benchmark.start()
+        # Test configuration
+        self.test_symbols = ["AAPL", "TSLA"]
+        self.test_start_date = datetime(2024, 6, 1)
+        self.test_end_date = datetime(2024, 8, 31)
         
-        # Step 1: Submit market data for AI analysis
-        with patch('src.neuromorphic.NeuromorphicEngine', return_value=mock_neuromorphic_engine), \
-             patch('src.trading.TradingEngine', return_value=mock_trading_engine):
+        logger.info("Integration test setup complete")
+    
+    @unittest.skipUnless(BACKTESTING_AVAILABLE, "Backtesting components not available")
+    def test_historical_data_pipeline(self) -> None:
+        """Test historical data pipeline integration"""
+        logger.info("📊 Testing historical data pipeline...")
+        
+        # Initialize data components
+        storage = HistoricalDataStorage("test_data/test_historical.db")
+        provider = HistoricalDataProvider(storage)
+        
+        async def run_test():
+            # Test data update
+            result = await provider.update_historical_data(
+                symbols=self.test_symbols,
+                timeframes=[TimeFrame.DAY_1],
+                years_back=1
+            )
             
-            try:
-                # API call to analyze market data
-                response = api_client.post("/api/v1/analysis/predict", json={
-                    "symbol": "BTCUSDT",
-                    "timeframe": "1m",
-                    "data_points": 100
-                })
+            self.assertGreater(result['total_bars_added'], 0, "Should add historical data")
+            self.assertGreater(result['success_rate'], 0, "Should have successful data updates")
+            
+            # Test data retrieval
+            from src.backtesting.historical_data import BacktestDataInterface
+            interface = BacktestDataInterface(provider)
+            
+            price_data = interface.get_price_data(
+                symbols=self.test_symbols,
+                timeframe=TimeFrame.DAY_1,
+                start_date=self.test_start_date,
+                end_date=self.test_end_date
+            )
+            
+            self.assertGreater(len(price_data), 0, "Should retrieve price data")
+            logger.info(f"   Retrieved {len(price_data)} data points")
+        
+        asyncio.run(run_test())
+        logger.info("✅ Historical data pipeline test passed")
+    
+    @unittest.skipUnless(BACKTESTING_AVAILABLE, "Backtesting components not available")
+    def test_risk_management_integration(self) -> None:
+        """Test risk management system integration"""
+        logger.info("🛡️ Testing risk management integration...")
+        
+        config = RiskConfig(
+            max_portfolio_risk=0.02,
+            max_position_size=0.1,
+            max_drawdown_limit=0.15,
+        )
+        
+        risk_manager = RiskManager(config)
+        
+        # Test position sizing
+        position_size = risk_manager.position_sizer.calculate_position_size(
+            symbol="AAPL",
+            entry_price=150.0,
+            stop_loss=145.0,
+            portfolio_value=100000.0,
+            volatility=0.25,
+            signal_strength=1.2
+        )
+        
+        self.assertGreater(position_size, 0, "Should calculate valid position size")
+        
+        # Test position limits
+        can_open, reason = risk_manager.can_open_position(
+            "AAPL", position_size * 150.0, 100000.0
+        )
+        
+        self.assertTrue(can_open, f"Should allow position: {reason}")
+        
+        # Test portfolio metrics update
+        metrics = risk_manager.update_portfolio_metrics(105000.0, datetime.now())
+        
+        self.assertIsInstance(metrics, dict, "Should return metrics dictionary")
+        
+        logger.info(f"   Position size: {position_size:.2f} shares")
+        logger.info(f"   Risk metrics: {len(metrics)} indicators")
+        logger.info("✅ Risk management integration test passed")
+    
+    @unittest.skipUnless(AI_COMPONENTS_AVAILABLE, "AI components not available")
+    def test_ai_system_integration(self) -> None:
+        """Test AI system integration"""
+        logger.info("🤖 Testing AI system integration...")
+        
+        async def run_ai_test():
+            # Test Neuromorphic processor
+            neuromorphic = NeuromorphicProcessor(neuron_count=128)
+            test_data = [100.0, 101.0, 99.5, 102.0, 98.0]
+            
+            pattern_result = await neuromorphic.analyze_pattern(test_data)
+            
+            self.assertIn('pattern_strength', pattern_result, "Should return pattern strength")
+            self.assertIn('complexity', pattern_result, "Should return complexity measure")
+            
+            # Test Foundation Models
+            predictor = FoundationModelPredictor()
+            await predictor.initialize()
+            
+            prediction = await predictor.zero_shot_predict(
+                "Predict AAPL price direction",
+                {"symbol": "AAPL", "price": 150.0, "volume": 1000000}
+            )
+            
+            self.assertIn('prediction', prediction, "Should return prediction")
+            self.assertIn('confidence', prediction, "Should return confidence")
+            
+            logger.info(f"   Neuromorphic pattern: {pattern_result['pattern_strength']:.3f}")
+            logger.info(f"   Foundation model confidence: {prediction['confidence']:.3f}")
+        
+        asyncio.run(run_ai_test())
+        logger.info("✅ AI system integration test passed")
+    
+    @unittest.skipUnless(BACKTESTING_AVAILABLE and AI_COMPONENTS_AVAILABLE, "Full components not available")
+    def test_end_to_end_backtest(self) -> None:
+        """Test complete end-to-end backtesting pipeline"""
+        logger.info("🏆 Testing end-to-end backtest integration...")
+        
+        async def run_e2e_test():
+            # Create test configuration
+            config = BacktestConfig(
+                start_date=self.test_start_date,
+                end_date=self.test_end_date,
+                initial_capital=50000.0,
+                symbols=self.test_symbols,
+                strategies=[StrategyType.TECHNICAL_ANALYSIS, StrategyType.NEUROMORPHIC],
+                mode=BacktestMode.FAST,
+                use_real_ai_signals=True,
+                years_of_data=1
+            )
+            
+            # Run backtest
+            engine = BacktestEngine(config)
+            result = await engine.run_backtest()
+            
+            # Validate results
+            self.assertIsNotNone(result, "Should return backtest result")
+            self.assertGreaterEqual(result.total_trades, 0, "Should track trades")
+            self.assertGreater(result.execution_time_seconds, 0, "Should track execution time")
+            self.assertGreater(result.data_points_processed, 0, "Should process data")
+            
+            # Validate performance metrics
+            summary = result.get_performance_summary()
+            self.assertIn('returns', summary, "Should include return metrics")
+            self.assertIn('risk_adjusted', summary, "Should include risk metrics")
+            self.assertIn('ai_performance', summary, "Should include AI metrics")
+            
+            logger.info(f"   Total trades: {result.total_trades}")
+            logger.info(f"   Execution time: {result.execution_time_seconds:.1f}s")
+            logger.info(f"   Data points: {result.data_points_processed:,}")
+            logger.info(f"   AI signals: {result.ai_signal_count:,}")
+            
+            if result.total_trades > 0:
+                logger.info(f"   Total return: {result.total_return_pct:.2f}%")
+                logger.info(f"   Win rate: {result.win_rate_pct:.1f}%")
+        
+        asyncio.run(run_e2e_test())
+        logger.info("✅ End-to-end backtest integration test passed")
+    
+    @unittest.skipUnless(MONITORING_AVAILABLE, "Monitoring components not available")
+    def test_monitoring_integration(self) -> None:
+        """Test monitoring system integration"""
+        logger.info("📊 Testing monitoring integration...")
+        
+        # Test health checker
+        health_checker = HealthChecker()
+        health_status = health_checker.perform_health_check()
+        
+        self.assertIn('status', health_status, "Should return health status")
+        self.assertIn('components', health_status, "Should check components")
+        
+        # Test metrics collector
+        metrics_collector = MetricsCollector()
+        metrics = metrics_collector.collect_system_metrics()
+        
+        self.assertIsInstance(metrics, dict, "Should return metrics dictionary")
+        self.assertGreater(len(metrics), 0, "Should collect metrics")
+        
+        logger.info(f"   System health: {health_status['status']}")
+        logger.info(f"   Metrics collected: {len(metrics)}")
+        logger.info("✅ Monitoring integration test passed")
+    
+    def test_performance_benchmark(self) -> None:
+        """Test system performance benchmarks"""
+        logger.info("⚡ Testing performance benchmarks...")
+        
+        async def run_performance_test():
+            if not BACKTESTING_AVAILABLE:
+                self.skipTest("Backtesting components not available")
+                return
+            
+            # Performance benchmark test
+            config = BacktestConfig(
+                start_date=datetime(2024, 8, 1),
+                end_date=datetime(2024, 8, 31),
+                initial_capital=100000.0,
+                symbols=["AAPL"],
+                strategies=[StrategyType.TECHNICAL_ANALYSIS],
+                mode=BacktestMode.FAST
+            )
+            
+            engine = BacktestEngine(config)
+            start_time = datetime.now()
+            
+            result = await engine.run_backtest()
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            
+            # Performance assertions
+            self.assertLess(execution_time, 30.0, "Should complete within 30 seconds")
+            self.assertGreater(result.data_quality_score, 0.7, "Should have good data quality")
+            
+            logger.info(f"   Execution time: {execution_time:.1f}s")
+            logger.info(f"   Data quality: {result.data_quality_score:.1%}")
+            logger.info(f"   Processing rate: {result.data_points_processed/execution_time:.0f} points/sec")
+        
+        asyncio.run(run_performance_test())
+        logger.info("✅ Performance benchmark test passed")
+    
+    def test_system_configuration(self) -> None:
+        """Test system configuration and hardware detection"""
+        logger.info("🔧 Testing system configuration...")
+        
+        try:
+            from src.config.hardware_profiles import hardware_detector, optimal_profile
+            
+            # Test hardware detection
+            detected_profile = hardware_detector.detect_optimal_profile()
+            self.assertIsNotNone(detected_profile, "Should detect hardware profile")
+            
+            # Test optimal profile
+            if optimal_profile:
+                self.assertHasAttr(optimal_profile, 'processor_type', "Should have processor type")
+                self.assertHasAttr(optimal_profile, 'memory_profile', "Should have memory profile")
                 
-                if response.status_code in [200, 404]:  # 404 if endpoint not implemented
-                    if response.status_code == 200:
-                        analysis_result = response.json()
-                        assert "prediction" in analysis_result or "analysis" in analysis_result
-                
-                # Step 2: Execute trade based on AI prediction
-                trade_response = api_client.post("/api/v1/trading/execute", json={
-                    "symbol": "BTCUSDT",
-                    "side": "buy",
-                    "quantity": 0.01,
-                    "order_type": "market"
-                })
-                
-                if trade_response.status_code in [200, 201, 404]:  # Various acceptable responses
-                    if trade_response.status_code in [200, 201]:
-                        trade_result = trade_response.json()
-                        assert "order_id" in trade_result or "status" in trade_result
-                
-            except Exception:
-                # Endpoints might not be fully implemented yet
-                pass
-        
-        performance_benchmark.stop()
-        
-        # Integration should complete within reasonable time
-        performance_benchmark.assert_under_threshold(2000)  # 2 second threshold
-    
-    @pytest.mark.integration
-    @pytest.mark.performance
-    def test_system_load_handling(self, api_client, mock_trading_engine):
-        """Test system behavior under load"""
-        if not api_client:
-            pytest.skip("API client not available")
-        
-        import threading
-        import time
-        
-        results = []
-        
-        def concurrent_request(request_id):
-            start_time = time.time()
-            try:
-                # Simulate concurrent API requests
-                response = api_client.get("/api/v1/health")
-                end_time = time.time()
-                
-                results.append({
-                    "request_id": request_id,
-                    "status_code": response.status_code,
-                    "response_time": (end_time - start_time) * 1000,
-                    "success": response.status_code == 200
-                })
-            except Exception as e:
-                end_time = time.time()
-                results.append({
-                    "request_id": request_id,
-                    "status_code": 500,
-                    "response_time": (end_time - start_time) * 1000,
-                    "success": False,
-                    "error": str(e)
-                })
-        
-        # Create 30 concurrent requests
-        threads = []
-        for i in range(30):
-            thread = threading.Thread(target=concurrent_request, args=(i,))
-            threads.append(thread)
-        
-        # Execute load test
-        start_time = time.time()
-        for thread in threads:
-            thread.start()
-        
-        for thread in threads:
-            thread.join()
-        
-        total_time = time.time() - start_time
-        
-        # Analyze load test results
-        if results:
-            success_rate = sum(1 for r in results if r["success"]) / len(results)
-            avg_response_time = sum(r["response_time"] for r in results) / len(results)
+                logger.info(f"   Processor: {optimal_profile.processor_type.value}")
+                logger.info(f"   Memory: {optimal_profile.memory_profile.value}")
             
-            # System should handle load gracefully
-            assert success_rate > 0.7  # 70% success rate under load
-            assert avg_response_time < 1000  # Average under 1 second
-            assert total_time < 30  # Complete within 30 seconds
+            logger.info("✅ System configuration test passed")
+            
+        except ImportError:
+            self.skipTest("Hardware detection not available")
+    
+    def assertHasAttr(self, obj, attr: str, msg: str = None) -> None:
+        """Assert object has attribute"""
+        if not hasattr(obj, attr):
+            raise AssertionError(msg or f"Object does not have attribute '{attr}'")
+    
+    def tearDown(self) -> None:
+        """Clean up after tests"""
+        # Clean up test data
+        import shutil
+        if self.test_data_dir.exists():
+            shutil.rmtree(self.test_data_dir)
+        
+        logger.info("Integration test cleanup complete")
 
 
-class TestAIEngineIntegration:
-    """
-    🤖 AI Engine integration tests
+class TestRunner:
+    """Custom test runner for integration tests"""
     
-    Tests AI component interactions:
-    - Multi-engine coordination
-    - Performance benchmarks
-    - Error handling
-    """
+    def __init__(self) -> None:
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
     
-    @pytest.mark.integration
-    @pytest.mark.ai_engine
-    def test_multi_engine_coordination(self, mock_neuromorphic_engine, mock_ultra_latency_engine, mock_foundation_model, performance_benchmark):
-        """Test coordination between multiple AI engines"""
-        performance_benchmark.start()
+    def run_all_tests(self) -> bool:
+        """Run all integration tests"""
+        print("🧪 SUPREME SYSTEM V5 - INTEGRATION TEST SUITE")
+        print("=" * 60)
         
-        # Test data
-        market_data = {
-            "symbol": "BTCUSDT",
-            "price": 67500.0,
-            "volume": 1250000,
-            "timestamp": "2025-10-25T10:41:00Z"
-        }
+        # Component availability check
+        print(f"Component Status:")
+        print(f"   Backtesting: {'\u2705' if BACKTESTING_AVAILABLE else '\u274c'}")
+        print(f"   AI Components: {'\u2705' if AI_COMPONENTS_AVAILABLE else '\u274c'}")
+        print(f"   Monitoring: {'\u2705' if MONITORING_AVAILABLE else '\u274c'}")
+        print()
         
-        with patch('src.neuromorphic.NeuromorphicEngine', return_value=mock_neuromorphic_engine), \
-             patch('src.ultra_low_latency.UltraLowLatencyEngine', return_value=mock_ultra_latency_engine), \
-             patch('src.foundation_models.FoundationModelEngine', return_value=mock_foundation_model):
-            
-            # Step 1: Ultra-low latency preprocessing
-            mock_ultra_latency_engine.process_market_data.return_value = {
-                "preprocessed_data": market_data,
-                "latency_us": 0.26
-            }
-            
-            preprocessed = mock_ultra_latency_engine.process_market_data(market_data)
-            
-            # Step 2: Neuromorphic analysis
-            mock_neuromorphic_engine.process_spike_train.return_value = [0.1, 0.8, 0.3, 0.9, 0.2]
-            
-            spike_analysis = mock_neuromorphic_engine.process_spike_train(preprocessed["preprocessed_data"])
-            
-            # Step 3: Foundation model prediction
-            mock_foundation_model.zero_shot_forecast.return_value = {
-                "prediction": 68250.0,
-                "confidence": 0.94,
-                "timestamp": "2025-10-25T10:41:01Z"
-            }
-            
-            prediction = mock_foundation_model.zero_shot_forecast(spike_analysis)
+        # Run test suite
+        suite = unittest.TestLoader().loadTestsFromTestCase(IntegrationTestSuite)
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
         
-        performance_benchmark.stop()
+        # Summary
+        total_tests = result.testsRun
+        failures = len(result.failures)
+        errors = len(result.errors)
+        skipped = len(result.skipped)
         
-        # Validate multi-engine coordination
-        assert preprocessed["latency_us"] < 1.0  # Ultra-low latency requirement
-        assert len(spike_analysis) > 0  # Neuromorphic processing
-        assert prediction["confidence"] > 0.8  # High confidence prediction
+        print(f"\n📊 Integration Test Results:")
+        print(f"   Total Tests: {total_tests}")
+        print(f"   Passed: {total_tests - failures - errors - skipped}")
+        print(f"   Failed: {failures}")
+        print(f"   Errors: {errors}")
+        print(f"   Skipped: {skipped}")
         
-        # Performance check - entire pipeline should be fast
-        performance_benchmark.assert_under_threshold(100)  # 100ms total
-
-
-class TestTradingIntegration:
-    """
-    💹 Trading system integration tests
-    
-    Tests trading workflows:
-    - Order execution pipeline
-    - Portfolio management
-    - Risk management
-    """
-    
-    @pytest.mark.integration
-    @pytest.mark.trading
-    @pytest.mark.asyncio
-    async def test_order_execution_pipeline(self, mock_trading_engine, mock_market_data, performance_benchmark):
-        """Test complete order execution pipeline"""
-        performance_benchmark.start()
+        success = (failures == 0 and errors == 0)
         
-        # Step 1: Market analysis
-        analysis_result = {
-            "signal": "buy",
-            "confidence": 0.89,
-            "target_price": 67600.0,
-            "stop_loss": 67200.0
-        }
+        if success:
+            print(f"\n🏆 ALL INTEGRATION TESTS PASSED!")
+            print("🚀 Supreme System V5 Ready for Production!")
+        else:
+            print(f"\n❌ Some tests failed. Please check the output above.")
         
-        # Step 2: Risk assessment
-        risk_assessment = {
-            "approved": True,
-            "max_position_size": 0.1,
-            "risk_score": 0.25
-        }
-        
-        # Step 3: Order execution
-        mock_trading_engine.execute_trade.return_value = {
-            "order_id": "BTC_12345",
-            "status": "executed",
-            "executed_price": 67580.0,
-            "executed_quantity": 0.05,
-            "timestamp": "2025-10-25T10:41:00Z"
-        }
-        
-        execution_result = await mock_trading_engine.execute_trade({
-            "symbol": "BTCUSDT",
-            "side": "buy",
-            "quantity": risk_assessment["max_position_size"],
-            "order_type": "limit",
-            "price": analysis_result["target_price"]
-        })
-        
-        performance_benchmark.stop()
-        
-        # Validate execution pipeline
-        assert execution_result["status"] == "executed"
-        assert execution_result["executed_quantity"] <= risk_assessment["max_position_size"]
-        
-        # Performance check
-        performance_benchmark.assert_under_threshold(1000)  # 1 second for full pipeline
-    
-    @pytest.mark.integration
-    @pytest.mark.trading
-    def test_portfolio_management_integration(self, mock_trading_engine):
-        """Test portfolio management system integration"""
-        # Initial portfolio state
-        mock_trading_engine.get_portfolio.return_value = {
-            "total_value": 100000.0,
-            "cash_balance": 50000.0,
-            "positions": {
-                "BTCUSDT": {"quantity": 0.5, "avg_price": 65000.0, "current_value": 33750.0},
-                "ETHUSDT": {"quantity": 10.0, "avg_price": 1600.0, "current_value": 16250.0}
-            },
-            "unrealized_pnl": 2500.0,
-            "realized_pnl": 1250.0
-        }
-        
-        portfolio = mock_trading_engine.get_portfolio()
-        
-        # Validate portfolio structure
-        assert portfolio["total_value"] > 0
-        assert "positions" in portfolio
-        assert "cash_balance" in portfolio
-        
-        # Test position calculations
-        btc_position = portfolio["positions"]["BTCUSDT"]
-        
-        # Portfolio management should track positions accurately
-        assert btc_position["quantity"] > 0
-        assert btc_position["avg_price"] > 0
+        return success
 
 
 if __name__ == "__main__":
-    # Run integration tests
-    pytest.main([__file__, "-v", "--tb=short", "-m", "integration"])
+    runner = TestRunner()
+    success = runner.run_all_tests()
+    sys.exit(0 if success else 1)
