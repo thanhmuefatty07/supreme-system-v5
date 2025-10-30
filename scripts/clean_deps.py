@@ -1,22 +1,31 @@
-﻿import subprocess
+import subprocess
 import sys
 import os
 
-print(" Supreme System V5 - Dependency Cleanup")
+print("Supreme System V5 - Dependency Cleanup")
 
 # Remove bloat packages
-bloat = ["matplotlib", "seaborn", "plotly", "bokeh", "scikit-learn", "torch", "transformers", "tensorflow", "jupyter", "ipython", "sphinx", "fastapi", "uvicorn", "pydantic", "scipy", "pyarrow", "requests", "yfinance", "ccxt"]
+bloat = [
+    "matplotlib", "seaborn", "plotly", "bokeh", 
+    "scikit-learn", "torch", "transformers", "tensorflow", 
+    "jupyter", "ipython", "sphinx", "fastapi", "uvicorn", 
+    "pydantic", "scipy", "pyarrow", "requests", "yfinance", "ccxt"
+]
 
 removed = 0
 for pkg in bloat:
     try:
-        subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", pkg], capture_output=True, check=True)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "uninstall", "-y", pkg], 
+            capture_output=True, 
+            check=True
+        )
         print(f"Removed: {pkg}")
         removed += 1
-    except:
-        pass
+    except Exception as e:
+        print(f"Skip {pkg}: {e}")
 
-print(f" Removed {removed} packages")
+print(f"Removed {removed} packages")
 
 # Install minimal requirements
 minimal = [
@@ -43,19 +52,29 @@ minimal = [
 installed = 0
 for pkg in minimal:
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", pkg, "--no-cache-dir"], capture_output=True, check=True)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", pkg, "--no-cache-dir"], 
+            capture_output=True, 
+            check=True
+        )
         print(f"Installed: {pkg}")
         installed += 1
     except Exception as e:
         print(f"Failed {pkg}: {e}")
 
-print(f" Installed {installed} packages")
+print(f"Installed {installed} packages")
 
-# Verify
+# Verify imports
 try:
-    import numpy, pandas, psutil, aiohttp, websockets, ta, finta
-    print(" Core imports successful")
+    import numpy
+    import pandas
+    import psutil
+    import aiohttp
+    import websockets
+    import ta
+    import finta
+    print("Core imports successful")
 except ImportError as e:
-    print(f" Import error: {e}")
+    print(f"Import error: {e}")
 
-print(" Cleanup completed!")
+print("Cleanup completed!")
