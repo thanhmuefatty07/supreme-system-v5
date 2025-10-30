@@ -1,0 +1,139 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "supreme-system-v5"
+version = "5.0.0"
+authors = [
+    {name = "Supreme Trading Team", email = "info@supremetrading.ai"},
+]
+description = "World's First Neuromorphic Trading System - Hybrid Python + Rust Architecture"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry", 
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # === CORE FRAMEWORK ===
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    
+    # === RUST INTEGRATION ===
+    "numpy>=1.24.0",  # Required for PyO3 array sharing
+    "polars>=0.19.0",  # Zero-copy data sharing with Rust
+    "pyarrow>=13.0.0", # Arrow format for Rust interop
+    
+    # === REAL-TIME DATA ===
+    "aiohttp>=3.8.0",
+    "websockets>=12.0",
+    "requests>=2.31.0",
+    "yfinance>=0.2.24",
+    "ccxt>=4.1.64",
+    
+    # === ASYNC & NETWORKING ===
+    "aiofiles>=23.0.0",
+    "asyncio-throttle>=1.0.2",
+    
+    # === TECHNICAL ANALYSIS (Python fallback) ===
+    "ta>=0.10.2",
+    "finta>=1.3",
+    
+    # === PERFORMANCE ===
+    "numba>=0.58.0",
+    "psutil>=5.9.0",
+    
+    # === MONITORING ===
+    "prometheus-client>=0.17.0",
+    "aioredis>=2.0.0",
+    
+    # === SECURITY ===
+    "pyjwt>=2.8.0",
+    "passlib[bcrypt]>=1.7.4",
+    "cryptography>=41.0.0",
+    
+    # === UTILITIES ===
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.2",
+    "rich>=13.7.0",
+    "click>=8.1.7",
+    "python-dateutil>=2.8.2",
+    "pytz>=2023.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.9.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.4.0",
+]
+ai = [
+    # Optional AI components for 8GB+ systems
+    "scikit-learn>=1.3.0",
+    "torch>=2.1.0",
+    "transformers>=4.35.0",
+]
+viz = [
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "plotly>=5.17.0",
+]
+docs = [
+    "sphinx>=7.2.0",
+    "sphinx-rtd-theme>=1.3.0",
+]
+all = [
+    "supreme-system-v5[dev,ai,viz,docs]",
+]
+
+[project.scripts]
+supreme = "supreme_system_v5.main:main"
+supreme-backtest = "supreme_system_v5.backtest:main"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "supreme_engine_rs"
+python-source = "python"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "W6"]
+ignore = ["E501", "E203", "E402", "F401", "F841", "I001"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "hardware: marks tests that require specific hardware",
+    "rust: marks tests that require Rust components",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
