@@ -1,257 +1,338 @@
-# Supreme System V5 - Production Makefile
-# Automated development, testing, and deployment workflows
+# Supreme System V5 - Hybrid Python + Rust Makefile
+# Comprehensive build system for world's first neuromorphic trading system
 
-.PHONY: help install install-dev install-prod clean test test-fast test-integration lint format type-check security build docker-build docker-run validate benchmark docs serve-docs
-
-# === HELP ===
-help: ## Show this help message
-	@echo "Supreme System V5 - Production Development Makefile"
-	@echo "=================================================="
-	@echo ""
-	@echo "Available targets:"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@echo ""
-	@echo "Hardware Profiles:"
-	@echo "  i3-4GB:  make install-i3   # Lightweight for i3-8th gen + 4GB"
-	@echo "  i5-8GB:  make install      # Standard for i5+ systems"
-	@echo "  i7-16GB: make install-prod # Full features for production"
+.PHONY: help install install-dev install-rust build-rust test clean docker benchmark
 
 # === VARIABLES ===
 PYTHON := python3
-PIP := pip3
-POETRY := poetry
-SOURCE_DIR := src
+CARGO := cargo
+MATURIN := maturin
+SOURCE_DIR := python/supreme_system_v5
+RUST_DIR := src
 TEST_DIR := tests
-DOCS_DIR := docs
 
-# Hardware detection
-HARDWARE_TYPE := $(shell python3 -c "import psutil; mem_gb = psutil.virtual_memory().total / (1024**3); print('i3' if mem_gb <= 5 else 'i5' if mem_gb <= 10 else 'i7')" 2>/dev/null || echo 'unknown')
-CPU_COUNT := $(shell python3 -c "import os; print(os.cpu_count())" 2>/dev/null || echo 4)
+# Hardware detection for optimization
+HARDWARE := $(shell $(PYTHON) -c "import psutil; print('i3' if psutil.virtual_memory().total/(1024**3) <= 5 else 'i5' if psutil.virtual_memory().total/(1024**3) <= 10 else 'i7')" 2>/dev/null || echo 'unknown')
+CPU_COUNT := $(shell $(PYTHON) -c "import os; print(os.cpu_count())" 2>/dev/null || echo 4)
+
+help: ## Show this help message
+	@echo "Supreme System V5 - Hybrid Python + Rust Build System"
+	@echo "===================================================="
+	@echo ""
+	@echo "Hardware detected: $(HARDWARE) ($(CPU_COUNT) cores)"
+	@echo ""
+	@echo "Available targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # === INSTALLATION ===
-install: ## Install for standard systems (i5+ 8GB)
-	@echo "📦 Installing Supreme System V5 - Standard Configuration"
-	$(PIP) install -e .
-	$(PIP) install -e ".[ai,data]"
-	@echo "✅ Installation complete for $(HARDWARE_TYPE) system"
+install: install-rust install-python ## Install complete hybrid system
 
-install-dev: ## Install with development dependencies
-	@echo "🔧 Installing Supreme System V5 - Development Configuration"
-	$(PIP) install -e ".[dev,ai,data,viz,docs]"
+install-python: ## Install Python dependencies
+	@echo "🐍 Installing Python dependencies..."
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install maturin
+	$(PYTHON) -m pip install -e . --config-settings=build-args="--release"
+	@echo "✅ Python installation complete"
+
+install-rust: ## Install Rust toolchain and dependencies
+	@echo "🦀 Installing Rust toolchain..."
+	@if ! command -v cargo >/dev/null 2>&1; then \
+		echo "Installing Rust..."; \
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
+		source ~/.cargo/env; \
+	fi
+	@echo "✅ Rust toolchain ready"
+
+install-dev: install-rust ## Install development dependencies
+	@echo "🔧 Installing development dependencies..."
+	$(PYTHON) -m pip install -e ".[dev]"
 	pre-commit install
 	@echo "✅ Development environment ready"
 
-install-prod: ## Install with full production dependencies
-	@echo "🏭 Installing Supreme System V5 - Production Configuration"
-	$(PIP) install -e ".[all]"
-	@echo "✅ Production installation complete"
+# === RUST COMPILATION ===
+build-rust: ## Build Rust engine with optimization
+	@echo "🛠️ Building Rust engine..."
+	@echo "Target hardware: $(HARDWARE)"
+ifeq ($(HARDWARE),i3)
+	@echo "Applying i3-4GB optimizations..."
+	CARGO_TARGET_CPU=generic $(MATURIN) build --release --features "python"
+else ifeq ($(HARDWARE),i5)
+	@echo "Applying i5-8GB optimizations..."
+	CARGO_TARGET_CPU=native $(MATURIN) build --release --features "python,simd"
+else
+	@echo "Applying i7+ maximum performance..."
+	RUSTFLAGS="-C target-cpu=native -C target-feature=+avx2" $(MATURIN) build --release --features "python,simd,parallel"
+endif
+	@echo "✅ Rust engine built successfully"
 
-install-i3: ## Lightweight installation for i3-8th gen + 4GB
-	@echo "⚡ Installing Supreme System V5 - i3 Optimized (Lightweight)"
-	$(PIP) install -e .
-	@echo "✅ i3-optimized installation complete (memory conserved)"
+build-rust-dev: ## Build Rust engine for development
+	@echo "🔧 Building Rust engine (development)..."
+	$(MATURIN) develop --features "python"
+	@echo "✅ Development Rust engine ready"
 
-install-poetry: ## Install using Poetry (recommended)
-	@echo "🎵 Installing with Poetry"
-	poetry install
-	poetry run pre-commit install
-	@echo "✅ Poetry installation complete"
-
-# === CLEANING ===
-clean: ## Clean build artifacts and cache
-	@echo "🧹 Cleaning build artifacts"
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	rm -rf build/ dist/ .coverage htmlcov/
-	rm -rf logs/ *.log
-	@echo "✅ Cleanup complete"
+build-wheel: build-rust ## Build distribution wheel
+	@echo "🎃 Building distribution wheel..."
+	$(MATURIN) build --release --out dist/
+	@echo "✅ Wheel built in dist/"
 
 # === TESTING ===
-test: ## Run full test suite
-	@echo "🧪 Running Supreme System V5 test suite"
-	pytest $(TEST_DIR) -v --cov=$(SOURCE_DIR) --cov-report=html --cov-report=term
-	@echo "✅ All tests completed"
+test: test-rust test-python ## Run all tests
 
-test-fast: ## Run fast unit tests only
-	@echo "⚡ Running fast unit tests"
-	pytest $(TEST_DIR) -v -m "not slow" --tb=short
-	@echo "✅ Fast tests completed"
+test-rust: ## Run Rust tests
+	@echo "🦀 Running Rust tests..."
+	$(CARGO) test --release
+	@echo "✅ Rust tests completed"
 
-test-integration: ## Run integration tests
-	@echo "🔗 Running integration tests"
-	pytest $(TEST_DIR) -v -m "integration" --tb=short
+test-python: ## Run Python tests
+	@echo "🐍 Running Python tests..."
+	pytest $(TEST_DIR) -v --tb=short
+	@echo "✅ Python tests completed"
+
+test-integration: build-rust-dev ## Run integration tests (Python + Rust)
+	@echo "🔗 Running integration tests..."
+	pytest $(TEST_DIR) -v -m "integration" 
 	@echo "✅ Integration tests completed"
 
-test-hardware: ## Test hardware-specific optimizations
-	@echo "💻 Testing hardware optimizations ($(HARDWARE_TYPE) detected)"
-	pytest $(TEST_DIR) -v -m "hardware" --hardware=$(HARDWARE_TYPE)
-	@echo "✅ Hardware tests completed"
-
-test-real-data: ## Test with real market data APIs (requires API keys)
-	@echo "📊 Testing with real market data"
-	pytest $(TEST_DIR) -v -m "real_data" --tb=short
-	@echo "✅ Real data tests completed"
+test-performance: build-rust ## Run performance benchmarks
+	@echo "🏁 Running performance benchmarks..."
+	$(CARGO) bench
+	pytest $(TEST_DIR) -v --benchmark-only --benchmark-sort=mean
+	@echo "✅ Performance benchmarks completed"
 
 # === CODE QUALITY ===
-lint: ## Run linting (ruff + flake8)
-	@echo "🔍 Running linters"
-	ruff check $(SOURCE_DIR) $(TEST_DIR)
-	flake8 $(SOURCE_DIR) $(TEST_DIR) --max-line-length=88
-	@echo "✅ Linting complete"
+lint: lint-rust lint-python ## Run all linters
 
-format: ## Format code (black + ruff)
-	@echo "🎨 Formatting code"
+lint-rust: ## Lint Rust code
+	@echo "🦀 Linting Rust code..."
+	$(CARGO) clippy --all-features -- -D warnings
+	$(CARGO) fmt --check
+	@echo "✅ Rust linting completed"
+
+lint-python: ## Lint Python code
+	@echo "🐍 Linting Python code..."
+	ruff check $(SOURCE_DIR)
+	black --check $(SOURCE_DIR)
+	mypy $(SOURCE_DIR)
+	@echo "✅ Python linting completed"
+
+format: format-rust format-python ## Format all code
+
+format-rust: ## Format Rust code
+	@echo "🦀 Formatting Rust code..."
+	$(CARGO) fmt
+
+format-python: ## Format Python code  
+	@echo "🐍 Formatting Python code..."
 	black $(SOURCE_DIR) $(TEST_DIR)
 	ruff check --fix $(SOURCE_DIR) $(TEST_DIR)
-	@echo "✅ Code formatting complete"
-
-type-check: ## Run type checking (mypy)
-	@echo "🔍 Type checking with mypy"
-	mypy $(SOURCE_DIR)
-	@echo "✅ Type checking complete"
-
-security: ## Run security checks (bandit)
-	@echo "🔒 Running security analysis"
-	bandit -r $(SOURCE_DIR) -f json -o security-report.json
-	bandit -r $(SOURCE_DIR)
-	@echo "✅ Security analysis complete"
-
-check: format lint type-check security ## Run all code quality checks
-	@echo "✅ All quality checks completed"
 
 # === VALIDATION ===
-validate: ## Validate system for production deployment
-	@echo "🔍 Running Supreme System V5 production validation"
-	python scripts/validate_system.py
-	@echo "✅ System validation complete"
+validate: build-rust-dev ## Validate system functionality
+	@echo "🔍 Validating Supreme System V5..."
+	$(PYTHON) -c "import supreme_system_v5; print('Python import: OK')"
+	$(PYTHON) -c "import supreme_engine_rs; print('Rust engine: OK')" 2>/dev/null || echo "Rust engine: Not available"
+	$(PYTHON) scripts/validate_system.py
+	@echo "✅ System validation completed"
 
-benchmark: ## Run performance benchmarks
-	@echo "🏁 Running performance benchmarks on $(HARDWARE_TYPE)"
-	pytest $(TEST_DIR) -v --benchmark-only --benchmark-sort=mean
-	@echo "✅ Benchmarks completed"
+# === BENCHMARKING ===
+benchmark: build-rust ## Run comprehensive benchmarks
+	@echo "🏁 Running comprehensive benchmarks..."
+	@echo "Hardware: $(HARDWARE) - $(CPU_COUNT) cores"
+	
+	@echo "\n1. Rust benchmarks:"
+	$(CARGO) bench --features "simd,parallel"
+	
+	@echo "\n2. Python benchmarks:"
+	pytest $(TEST_DIR) -v --benchmark-only
+	
+	@echo "\n3. Integration benchmarks:"
+	$(PYTHON) -c "import supreme_system_v5; print('System info:', supreme_system_v5.get_system_info())"
+	$(PYTHON) -c "import supreme_system_v5; print('Benchmark:', supreme_system_v5.benchmark_system(5))"
+	
+	@echo "✅ All benchmarks completed"
 
-# === BUILDING ===
-build: clean ## Build distribution packages
-	@echo "🛠️ Building Supreme System V5 packages"
-	python -m build
-	@echo "✅ Build complete"
-
-build-wheel: ## Build wheel package only
-	@echo "🍡 Building wheel package"
-	python -m build --wheel
-	@echo "✅ Wheel build complete"
-
-# === DOCKER ===
-docker-build: ## Build Docker image
-	@echo "🐳 Building Docker image"
-	docker build -t supreme-system-v5:latest .
+# === DEPLOYMENT ===
+docker-build: ## Build Docker image for current hardware
+	@echo "🐳 Building Docker image for $(HARDWARE)..."
+ifeq ($(HARDWARE),i3)
+	docker build -f docker/Dockerfile.i3 -t supreme-system-v5:$(HARDWARE)-optimized .
+else
+	docker build -f docker/Dockerfile.standard -t supreme-system-v5:latest .
+endif
 	@echo "✅ Docker image built"
 
-docker-build-i3: ## Build optimized Docker image for i3 systems
-	@echo "🐳 Building i3-optimized Docker image"
-	docker build -f Dockerfile.i3 -t supreme-system-v5:i3-optimized .
-	@echo "✅ i3-optimized Docker image built"
-
-docker-run: ## Run Docker container
-	@echo "🚀 Running Supreme System V5 in Docker"
+docker-run: docker-build ## Run system in Docker
+	@echo "🚀 Running Supreme System V5 in Docker..."
 	docker run -p 8000:8000 -p 9090:9090 --env-file .env supreme-system-v5:latest
 
-docker-run-i3: ## Run i3-optimized Docker container
-	@echo "🚀 Running i3-optimized Supreme System V5"
-	docker run -p 8000:8000 --env-file .env supreme-system-v5:i3-optimized
+# === DEVELOPMENT ===
+dev-setup: install-rust build-rust-dev install-dev ## Complete development setup
+	@echo "🚀 Development environment ready!"
+	@echo "Next steps:"
+	@echo "  1. make validate    # Check system"
+	@echo "  2. make test        # Run tests"
+	@echo "  3. make benchmark   # Performance test"
+	@echo "  4. make run-dev     # Start development server"
 
-docker-compose-dev: ## Start development environment with Docker Compose
-	@echo "🚀 Starting development environment"
-	docker-compose -f docker-compose.dev.yml up -d
-	@echo "✅ Development environment started"
+run-dev: build-rust-dev ## Start development server
+	@echo "💻 Starting development server..."
+	uvicorn supreme_system_v5.api:app --reload --host 0.0.0.0 --port 8000
 
-docker-compose-prod: ## Start production environment with Docker Compose
-	@echo "🏭 Starting production environment"
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-	@echo "✅ Production environment started"
+run-prod: build-rust ## Start production server
+	@echo "🏭 Starting production server..."
+	gunicorn supreme_system_v5.api:app -w $(CPU_COUNT) -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
+# === MONITORING ===
+monitor: ## Start monitoring stack
+	@echo "📈 Starting monitoring..."
+	docker-compose -f docker/docker-compose.monitoring.yml up -d
+	@echo "Grafana: http://localhost:3000"
+	@echo "Prometheus: http://localhost:9090"
+
+# === RELEASE ===
+release: clean build-rust build-wheel test ## Build release package
+	@echo "🏆 Building release package..."
+	@echo "Python version: $(shell $(PYTHON) --version)"
+	@echo "Rust version: $(shell $(CARGO) --version 2>/dev/null || echo 'Not available')"
+	@echo "Hardware optimized for: $(HARDWARE)"
+	@echo "✅ Release package ready in dist/"
+
+# === MAINTENANCE ===
+clean: ## Clean build artifacts
+	@echo "🧹 Cleaning build artifacts..."
+	$(CARGO) clean
+	rm -rf target/ dist/ build/ *.egg-info/
+	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete
+	rm -rf .pytest_cache/ .mypy_cache/ .coverage htmlcov/
+	@echo "✅ Cleanup completed"
+
+clean-logs: ## Clean log files
+	@echo "🧹 Cleaning log files..."
+	rm -rf logs/ *.log
+	mkdir -p logs
+	@echo "✅ Logs cleaned"
+
+update-deps: ## Update all dependencies
+	@echo "🔄 Updating dependencies..."
+	$(CARGO) update
+	$(PYTHON) -m pip install --upgrade pip setuptools wheel
+	$(PYTHON) -m pip install --upgrade -e ".[dev]"
+	@echo "✅ Dependencies updated"
+
+# === QUICK COMMANDS ===
+quick-test: build-rust-dev ## Quick test (no full rebuild)
+	pytest $(TEST_DIR) -v --tb=short -x
+
+quick-bench: ## Quick benchmark (5 second test)
+	$(PYTHON) -c "import supreme_system_v5; print(supreme_system_v5.benchmark_system(5))"
+
+fix-f541: ## Fix F541 errors using comprehensive fixer
+	@echo "🔧 Fixing F541 errors..."
+	$(PYTHON) scripts/fix_f541_comprehensive.py --live
+	@echo "✅ F541 errors fixed"
+
+# === STATUS CHECKS ===
+status: ## Show system status
+	@echo "Supreme System V5 - System Status"
+	@echo "================================"
+	@echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores)"
+	@echo "Python: $(shell $(PYTHON) --version)"
+	@echo "Rust: $(shell $(CARGO) --version 2>/dev/null || echo 'Not installed')"
+	@echo "Maturin: $(shell $(MATURIN) --version 2>/dev/null || echo 'Not installed')"
+	@echo ""
+	@echo "Rust engine status:"
+	@$(PYTHON) -c "try: import supreme_engine_rs; print('  ✅ Available:', supreme_engine_rs.__version__)\nexcept: print('  ❌ Not available')" 2>/dev/null
+	@echo ""
+	@echo "System validation:"
+	@$(PYTHON) -c "import supreme_system_v5; info=supreme_system_v5.get_system_info(); [print(f'  {k}: {v}') for k,v in info.items()]"
+
+health: build-rust-dev ## Check system health
+	@echo "🏥 System health check..."
+	$(PYTHON) -c "\
+	try:\
+		import supreme_system_v5;\
+		system = supreme_system_v5.get_system();\
+		status = system.get_system_status();\
+		print('System Status:', status['is_running']);\
+		print('Hardware:', status['hardware_profile']);\
+		print('Performance:', status['performance']);\
+	except Exception as e:\
+		print('Health check failed:', e)"
+
+# === CI/CD ===
+ci: clean install test lint ## Full CI pipeline
+	@echo "✅ CI pipeline completed successfully"
+
+ci-fast: format quick-test lint-python ## Fast CI checks
+	@echo "✅ Fast CI completed"
+
+# === HARDWARE-SPECIFIC TARGETS ===
+optimize-i3: ## Optimize for i3-4GB systems
+	@echo "⚡ Optimizing for i3-4GB systems..."
+	CARGO_TARGET_CPU=generic $(MATURIN) build --release --features "python" --no-default-features
+	$(PYTHON) -c "import psutil; print(f'Memory usage: {psutil.virtual_memory().percent}%')"
+
+optimize-i5: ## Optimize for i5-8GB systems  
+	@echo "⚡ Optimizing for i5-8GB systems..."
+	$(MATURIN) build --release --features "python,simd"
+
+optimize-i7: ## Optimize for i7+ systems
+	@echo "⚡ Optimizing for i7+ systems..."
+	RUSTFLAGS="-C target-cpu=native -C target-feature=+avx2" $(MATURIN) build --release --features "python,simd,parallel"
+
+# === PROFILING ===
+profile-rust: ## Profile Rust performance
+	@echo "🔍 Profiling Rust performance..."
+	$(CARGO) build --release --features "python,simd,parallel"
+	perf record --call-graph=dwarf target/release/benchmark
+	perf report
+
+profile-python: build-rust-dev ## Profile Python performance
+	@echo "🔍 Profiling Python performance..."
+	$(PYTHON) -m cProfile -o profile_output.prof -m supreme_system_v5.benchmark
+	$(PYTHON) -c "import pstats; pstats.Stats('profile_output.prof').sort_stats('cumulative').print_stats(20)"
+
+profile-memory: ## Profile memory usage
+	@echo "💾 Profiling memory usage..."
+	$(PYTHON) -m memory_profiler -m supreme_system_v5.benchmark
+
+# === MAINTENANCE ===
+security: ## Run security checks
+	@echo "🔒 Running security checks..."
+	bandit -r $(SOURCE_DIR)
+	$(CARGO) audit
+	@echo "✅ Security checks completed"
 
 # === DOCUMENTATION ===
 docs: ## Build documentation
-	@echo "📚 Building documentation"
-	cd $(DOCS_DIR) && make html
+	@echo "📚 Building documentation..."
+	$(CARGO) doc --no-deps --features "python,simd,parallel"
+	sphinx-build -b html docs/ docs/_build/html/
 	@echo "✅ Documentation built"
 
-serve-docs: ## Serve documentation locally
+serve-docs: docs ## Serve documentation locally
 	@echo "🌍 Serving documentation at http://localhost:8080"
-	cd $(DOCS_DIR)/_build/html && python -m http.server 8080
-
-# === DEVELOPMENT WORKFLOW ===
-dev: install-dev ## Quick development setup
-	@echo "🚀 Supreme System V5 development environment ready!"
-	@echo "Next steps:"
-	@echo "  1. Copy .env.example to .env and configure"
-	@echo "  2. Run 'make validate' to check system"
-	@echo "  3. Run 'make test-fast' for quick testing"
-	@echo "  4. Run 'make run-dev' to start development server"
-
-run-dev: ## Start development server
-	@echo "💻 Starting Supreme System V5 development server"
-	uvicorn supreme_system_v5.api.main:app --reload --host 0.0.0.0 --port 8000
-
-run-prod: ## Start production server
-	@echo "🏭 Starting Supreme System V5 production server"
-	gunicorn supreme_system_v5.api.main:app -w $(CPU_COUNT) -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-
-# === CONTINUOUS INTEGRATION ===
-ci: check test validate ## Run full CI pipeline
-	@echo "✅ Continuous integration pipeline completed"
-
-ci-fast: format lint test-fast ## Run fast CI checks
-	@echo "✅ Fast CI pipeline completed"
-
-# === DATABASE ===
-db-migrate: ## Run database migrations
-	@echo "📦 Running database migrations"
-	alembic upgrade head
-	@echo "✅ Database migrations completed"
-
-db-reset: ## Reset database (WARNING: destroys data)
-	@echo "⚠️ Resetting database (this will destroy all data)"
-	@read -p "Are you sure? [y/N] " -n 1 -r; echo; if [[ $$REPLY =~ ^[Yy]$$ ]]; then alembic downgrade base && alembic upgrade head; fi
-
-# === MONITORING ===
-monitoring: ## Start monitoring stack
-	@echo "📈 Starting monitoring stack"
-	docker-compose -f docker-compose.monitoring.yml up -d
-	@echo "✅ Monitoring stack started (Prometheus + Grafana)"
-
-# === UTILITIES ===
-env-example: ## Generate .env.example from current .env
-	@echo "⚙️ Generating .env.example"
-	sed 's/=.*/=/' .env > .env.example
-	@echo "✅ .env.example generated"
-
-requirements: ## Generate requirements.txt from pyproject.toml
-	@echo "📦 Generating requirements.txt"
-	pip-compile --resolver=backtracking
-	@echo "✅ requirements.txt generated"
-
-# === RELEASE ===
-release-patch: ## Bump patch version and create release
-	@echo "🏷️ Creating patch release"
-	bump2version patch
-	git push && git push --tags
-	@echo "✅ Patch release created"
-
-release-minor: ## Bump minor version and create release
-	@echo "🏷️ Creating minor release"
-	bump2version minor
-	git push && git push --tags
-	@echo "✅ Minor release created"
-
-release-major: ## Bump major version and create release
-	@echo "🏷️ Creating major release"
-	bump2version major
-	git push && git push --tags
-	@echo "✅ Major release created"
+	$(PYTHON) -m http.server 8080 -d docs/_build/html/
 
 # === DEFAULT TARGET ===
 .DEFAULT_GOAL := help
+
+# === SPECIAL TARGETS ===
+full-rebuild: clean install build-rust test ## Complete rebuild from scratch
+	@echo "🚀 Full rebuild completed successfully!"
+	@echo "System ready for production deployment."
+
+production-build: ## Build for production deployment
+	@echo "🏭 Building for production..."
+	make clean
+	make install-rust
+	RUSTFLAGS="-C opt-level=3 -C target-cpu=native" $(MATURIN) build --release --features "python,simd,parallel"
+	$(PYTHON) -m pip install dist/*.whl --force-reinstall
+	make validate
+	@echo "✅ Production build completed"
+
+demonstration: build-rust-dev ## Run system demonstration
+	@echo "🎤 Running Supreme System V5 demonstration..."
+	$(PYTHON) -m supreme_system_v5.demo
+	@echo "✅ Demonstration completed"
