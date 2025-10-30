@@ -34,8 +34,8 @@ services:
       - METRICS_RETENTION_HOURS=12
       
       # Performance limits
-      - MAX_CPU_USAGE=80
-      - MAX_MEMORY_GB=3.0
+      - MAX_CPU_USAGE=88
+      - MAX_MEMORY_GB=3.86
       - TARGET_LATENCY_MS=100
       
     volumes:
