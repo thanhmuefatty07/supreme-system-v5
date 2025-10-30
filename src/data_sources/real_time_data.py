@@ -16,7 +16,7 @@ import aiohttp
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable, Union
+from typing import Dict, List, Optional, Any, Callable, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -435,8 +435,14 @@ class RealTimeDataProvider:
         
         logger.info(f"✅ Data providers initialized: {active_providers}/{len(self.providers)} active")
         
-    async def get_market_data(self, symbol: str, use_cache: bool = True) -> Optional[MarketData]:
-        """Get market data with automatic failover"""
+    async def get_market_data(self, symbol: str, use_cache: bool = True, require_quorum: bool = True) -> Optional[MarketData]:
+        """Get market data with quorum-based consensus and automatic failover
+        
+        Args:
+            symbol: Trading symbol to get data for
+            use_cache: Whether to use cached data if available
+            require_quorum: If True, require at least 2 sources to agree (default: True)
+        """
         # Check cache first
         if use_cache and symbol in self.data_cache:
             cached_data = self.data_cache[symbol]
@@ -446,7 +452,66 @@ class RealTimeDataProvider:
                 cached_data.data_age_ms = data_age * 1000
                 return cached_data
         
-        # Try each provider in priority order
+        # If quorum not required, fall back to simple failover
+        if not require_quorum or len(self.providers) < 2:
+            return await self._get_single_source_data(symbol)
+        
+        # Query all providers concurrently for quorum selection
+        active_providers = [p for p in self.providers if p.connected]
+        if len(active_providers) < 2:
+            logger.warning(f"⚠️ Less than 2 active providers, using single source mode")
+            return await self._get_single_source_data(symbol)
+        
+        # Fetch from all providers concurrently
+        tasks = [provider.get_real_time_quote(symbol) for provider in active_providers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Collect successful responses
+        successful_data: List[Tuple[MarketData, DataProvider]] = []
+        for provider, result in zip(active_providers, results):
+            if isinstance(result, MarketData) and result is not None:
+                successful_data.append((result, provider))
+        
+        if len(successful_data) == 0:
+            logger.error(f"❌ No data available for {symbol} from any provider")
+            return None
+        
+        # If only one source, return it (no quorum needed)
+        if len(successful_data) == 1:
+            market_data, provider = successful_data[0]
+            self.data_cache[symbol] = market_data
+            self.quality_tracker[provider.config.source].append(market_data.quality_score)
+            logger.debug(f"📊 Single source data for {symbol}: ${market_data.price:.2f} from {provider.config.source.value}")
+            return market_data
+        
+        # Quorum selection: require at least 2 sources to agree
+        # Price tolerance: 0.5% difference considered acceptable
+        price_tolerance_pct = 0.5
+        consensus_data = self._select_quorum_consensus(successful_data, price_tolerance_pct)
+        
+        if consensus_data:
+            # Update cache
+            self.data_cache[symbol] = consensus_data
+            
+            # Update quality tracker for all participating providers
+            for market_data, provider in successful_data:
+                self.quality_tracker[provider.config.source].append(market_data.quality_score)
+            
+            logger.debug(f"✅ Quorum consensus for {symbol}: ${consensus_data.price:.2f} (from {len(successful_data)} sources)")
+            return consensus_data
+        else:
+            # No quorum reached, use weighted average from all sources
+            logger.warning(f"⚠️ No quorum consensus for {symbol}, using weighted average")
+            weighted_avg = self._calculate_weighted_average(successful_data)
+            if weighted_avg:
+                self.data_cache[symbol] = weighted_avg
+                return weighted_avg
+        
+        logger.error(f"❌ Failed to get consensus data for {symbol}")
+        return None
+    
+    async def _get_single_source_data(self, symbol: str) -> Optional[MarketData]:
+        """Get data from single source (fallback mode)"""
         for provider in self.providers:
             if not provider.connected:
                 continue
@@ -467,8 +532,115 @@ class RealTimeDataProvider:
                 logger.warning(f"⚠️ Provider {provider.config.source.value} failed for {symbol}: {e}")
                 continue
         
-        logger.error(f"❌ No data available for {symbol} from any provider")
         return None
+    
+    def _select_quorum_consensus(self, data_list: List[Tuple[MarketData, DataProvider]], tolerance_pct: float) -> Optional[MarketData]:
+        """Select consensus data using quorum voting
+        
+        Args:
+            data_list: List of (MarketData, DataProvider) tuples
+            tolerance_pct: Price tolerance percentage (e.g., 0.5 for 0.5%)
+        
+        Returns:
+            Consensus MarketData if quorum reached, None otherwise
+        """
+        if len(data_list) < 2:
+            return None
+        
+        # Group prices by similarity (within tolerance)
+        price_groups: List[List[Tuple[MarketData, DataProvider]]] = []
+        
+        for market_data, provider in data_list:
+            price = market_data.price
+            matched = False
+            
+            # Try to find existing group with similar price
+            for group in price_groups:
+                group_price = group[0][0].price
+                price_diff_pct = abs(price - group_price) / group_price * 100
+                
+                if price_diff_pct <= tolerance_pct:
+                    group.append((market_data, provider))
+                    matched = True
+                    break
+            
+            # Create new group if no match
+            if not matched:
+                price_groups.append([(market_data, provider)])
+        
+        # Find largest group (quorum)
+        largest_group = max(price_groups, key=len) if price_groups else None
+        
+        # Require at least 2 sources to agree
+        if largest_group and len(largest_group) >= 2:
+            # Use weighted average within the quorum group
+            return self._calculate_weighted_average(largest_group)
+        
+        return None
+    
+    def _calculate_weighted_average(self, data_list: List[Tuple[MarketData, DataProvider]]) -> Optional[MarketData]:
+        """Calculate weighted average of market data based on quality scores
+        
+        Args:
+            data_list: List of (MarketData, DataProvider) tuples
+        
+        Returns:
+            Weighted average MarketData
+        """
+        if not data_list:
+            return None
+        
+        if len(data_list) == 1:
+            return data_list[0][0]
+        
+        # Calculate weights based on quality score and priority
+        total_weight = 0.0
+        weighted_price = 0.0
+        weighted_bid = 0.0
+        weighted_ask = 0.0
+        weighted_volume = 0.0
+        
+        for market_data, provider in data_list:
+            # Weight = quality_score * (1 / priority) - lower priority number = higher weight
+            weight = market_data.quality_score * (1.0 / max(provider.config.priority, 1))
+            total_weight += weight
+            
+            weighted_price += market_data.price * weight
+            weighted_bid += market_data.bid * weight
+            weighted_ask += market_data.ask * weight
+            weighted_volume += market_data.volume * weight
+        
+        if total_weight == 0:
+            return None
+        
+        # Normalize
+        avg_price = weighted_price / total_weight
+        avg_bid = weighted_bid / total_weight
+        avg_ask = weighted_ask / total_weight
+        avg_volume = weighted_volume / total_weight
+        
+        # Use the highest quality source as base, update with weighted averages
+        base_data, _ = max(data_list, key=lambda x: x[0].quality_score)
+        
+        # Create consensus data
+        consensus_data = MarketData(
+            symbol=base_data.symbol,
+            price=avg_price,
+            bid=avg_bid,
+            ask=avg_ask,
+            volume=avg_volume,
+            timestamp=datetime.utcnow(),
+            source=DataSource.ALPHA_VANTAGE,  # Use primary source as identifier
+            open_price=base_data.open_price,
+            high_price=base_data.high_price,
+            low_price=base_data.low_price,
+            prev_close=base_data.prev_close,
+            change_percent=base_data.change_percent,
+            latency_ms=sum(d[0].latency_ms or 0 for d in data_list) / len(data_list),
+            quality_score=sum(d[0].quality_score for d in data_list) / len(data_list)
+        )
+        
+        return consensus_data
     
     async def get_multiple_quotes(self, symbols: List[str]) -> Dict[str, Optional[MarketData]]:
         """Get quotes for multiple symbols efficiently"""

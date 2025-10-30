@@ -27,7 +27,15 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# Initialize logger first to avoid NameError
+# Configure logging if not already configured
+# This ensures logger works even if logging.basicConfig hasn't been called
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+# Initialize logger after ensuring logging is configured
 logger = logging.getLogger(__name__)
 
 # Safe imports with fallback
