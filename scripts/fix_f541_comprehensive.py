@@ -65,8 +65,8 @@ class ComprehensiveF541Fixer:
             
             # Pattern đơn giản và hiệu quả - giới hạn độ dài để tránh catastrophic backtracking
             patterns = [
-                (r'f"([^"]{1,100}?)"', '"{}"'),    # f"short text" - limit to 100 chars
-                (r"f'([^']{1,100}?)'", "'{}'"),   # f'short text' - limit to 100 chars
+                (r'f"([^"]{1,100}?)"', '"{}"),    # f"short text" - limit to 100 chars
+                (r"f'([^']{1,100}?)'', "'{}''),   # f'short text' - limit to 100 chars
             ]
             
             for pattern, replacement_template in patterns:
@@ -202,7 +202,7 @@ class ComprehensiveF541Fixer:
     
     def fix_multiple_files(self, file_paths):
         """Sửa nhiều files"""
-        print(f"🚀 Comprehensive F541 Fixer")
+        print("🚀 Comprehensive F541 Fixer")
         print(f"Mode: {'DRY RUN' if self.dry_run else 'LIVE'}")
         print(f"Files to process: {len(file_paths)}")
         print("=" * 50)
@@ -256,7 +256,7 @@ Examples:
     else:
         # Default files from Supreme System V5
         files_to_fix = ['phase2_main.py', 'main.py', 'run_backtest.py']
-        files_to_fix = [f for f in files_to_fix if os.path.exists(f)]
+        files_to_fix = [f for f in files_to_fix if os.path.exists(f)]  
     
     if not files_to_fix:
         print("❌ No files to process")
