@@ -113,18 +113,42 @@ class SystemValidator:
         return success, missing_core, missing_optional
     
     def validate_imports(self) -> Tuple[bool, List[str]]:
-        """Validate project module imports"""
+        """Validate project module imports and critical imports"""
         print("\n🔗 Validating module imports...")
         
+        import_errors = []
+        
+        # First, validate critical imports (deque, fastapi, pydantic)
+        print("\n   Checking critical imports...")
+        critical_imports = [
+            ('collections.deque', 'from collections import deque'),
+            ('fastapi', 'import fastapi'),
+            ('pydantic', 'import pydantic'),
+        ]
+        
+        for import_name, import_statement in critical_imports:
+            try:
+                if import_name == 'collections.deque':
+                    from collections import deque
+                    if deque is None:
+                        raise ImportError(f"{import_name} import failed")
+                elif import_name == 'fastapi':
+                    import fastapi
+                elif import_name == 'pydantic':
+                    import pydantic
+                print(f"   ✅ {import_name}")
+            except ImportError as e:
+                import_errors.append(f"{import_name}: {str(e)}")
+                print(f"   ❌ {import_name}: {str(e)}")
+        
         # Test imports for major modules
+        print("\n   Checking module imports...")
         test_imports = [
             ('src.trading.engine', 'TradingEngine, TradingConfig'),
             ('src.config', '__init__'),
             ('src.api', '__init__'),
             ('src.monitoring', '__init__')
         ]
-        
-        import_errors = []
         
         # Add src to path temporarily
         if 'src' not in sys.path:
@@ -319,6 +343,173 @@ class SystemValidator:
         
         return success, memory_issues
     
+    def validate_environment_variables(self) -> Tuple[bool, List[str]]:
+        """Validate environment variables and API keys"""
+        print("\n🔐 Validating environment variables...")
+        
+        env_issues = []
+        env_warnings = []
+        
+        # Load .env file if exists
+        env_file = Path('.env')
+        env_example = Path('.env.example')
+        
+        # Try to load .env file using python-dotenv
+        try:
+            from dotenv import load_dotenv
+            if env_file.exists():
+                load_dotenv(env_file)
+                print("   ✅ .env file loaded")
+            elif env_example.exists():
+                env_warnings.append(".env file not found (using .env.example as reference)")
+                print("   ⚠️ .env file not found - using .env.example as reference")
+            else:
+                env_warnings.append("Neither .env nor .env.example file found")
+                print("   ⚠️ No .env file found")
+        except ImportError:
+            env_warnings.append("python-dotenv not installed - cannot load .env file")
+            print("   ⚠️ python-dotenv not available - skipping .env file loading")
+        
+        # Required environment variables
+        required_vars = [
+            'JWT_SECRET_KEY',
+            'ALPHA_VANTAGE_KEY',
+            'FINNHUB_KEY',
+        ]
+        
+        # Optional but recommended
+        optional_vars = [
+            'REDIS_URL',
+            'BINANCE_API_KEY',
+            'BINANCE_API_SECRET',
+            'LOG_LEVEL',
+            'ENVIRONMENT',
+        ]
+        
+        # Check required variables
+        print("\n   Checking required variables...")
+        for var in required_vars:
+            value = os.getenv(var, '')
+            if not value or value.startswith('your-') or value == '':
+                env_issues.append(f"Required environment variable {var} not set or has placeholder value")
+                print(f"   ❌ {var}: Not set or placeholder")
+            else:
+                # Validate format
+                if var == 'JWT_SECRET_KEY' and len(value) < 32:
+                    env_warnings.append(f"{var} should be at least 32 characters for security")
+                    print(f"   ⚠️ {var}: Too short (should be 32+ characters)")
+                else:
+                    print(f"   ✅ {var}: Set")
+        
+        # Check optional variables
+        print("\n   Checking optional variables...")
+        for var in optional_vars:
+            value = os.getenv(var, '')
+            if not value:
+                env_warnings.append(f"Optional environment variable {var} not set")
+                print(f"   ⚠️ {var}: Not set (optional)")
+            else:
+                print(f"   ✅ {var}: Set")
+        
+        # Validate API key formats
+        print("\n   Validating API key formats...")
+        alpha_key = os.getenv('ALPHA_VANTAGE_KEY', '')
+        if alpha_key and not alpha_key.startswith('your-'):
+            if len(alpha_key) < 10:
+                env_issues.append("ALPHA_VANTAGE_KEY appears invalid (too short)")
+                print(f"   ❌ ALPHA_VANTAGE_KEY: Invalid format")
+            else:
+                print(f"   ✅ ALPHA_VANTAGE_KEY: Format OK")
+        
+        finnhub_key = os.getenv('FINNHUB_KEY', '')
+        if finnhub_key and not finnhub_key.startswith('your-'):
+            if len(finnhub_key) < 10:
+                env_issues.append("FINNHUB_KEY appears invalid (too short)")
+                print(f"   ❌ FINNHUB_KEY: Invalid format")
+            else:
+                print(f"   ✅ FINNHUB_KEY: Format OK")
+        
+        jwt_key = os.getenv('JWT_SECRET_KEY', '')
+        if jwt_key and not jwt_key.startswith('your-'):
+            if len(jwt_key) < 32:
+                env_issues.append("JWT_SECRET_KEY should be at least 32 characters")
+                print(f"   ❌ JWT_SECRET_KEY: Too short")
+            else:
+                print(f"   ✅ JWT_SECRET_KEY: Format OK")
+        
+        success = len(env_issues) == 0
+        
+        if env_issues:
+            self.validation_results['critical_issues'].extend(env_issues)
+        if env_warnings:
+            self.validation_results['warnings'].extend(env_warnings)
+        
+        return success, env_issues
+    
+    def validate_network_connectivity(self) -> Tuple[bool, List[str]]:
+        """Validate network connectivity to external services"""
+        print("\n🌐 Validating network connectivity...")
+        
+        connectivity_issues = []
+        
+        import socket
+        import urllib.request
+        
+        # Test Redis connectivity
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        try:
+            # Parse Redis URL
+            if redis_url.startswith('redis://'):
+                parts = redis_url.replace('redis://', '').split('/')[0].split(':')
+                host = parts[0] if parts else 'localhost'
+                port = int(parts[1]) if len(parts) > 1 else 6379
+                
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2)
+                result = sock.connect_ex((host, port))
+                sock.close()
+                
+                if result == 0:
+                    print(f"   ✅ Redis: Connected to {host}:{port}")
+                else:
+                    connectivity_issues.append(f"Redis connection failed: {host}:{port}")
+                    print(f"   ⚠️ Redis: Cannot connect to {host}:{port}")
+        except Exception as e:
+            connectivity_issues.append(f"Redis connectivity check failed: {str(e)}")
+            print(f"   ⚠️ Redis: Connectivity check error")
+        
+        # Test external API endpoints (basic connectivity)
+        test_endpoints = [
+            ('Alpha Vantage', 'https://www.alphavantage.co/query'),
+            ('Finnhub', 'https://finnhub.io/api/v1'),
+        ]
+        
+        for name, url in test_endpoints:
+            try:
+                req = urllib.request.Request(url)
+                req.add_header('User-Agent', 'SupremeSystemV5/1.0')
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    if response.status in [200, 401, 403]:  # 401/403 means service is up
+                        print(f"   ✅ {name}: Service accessible")
+                    else:
+                        print(f"   ⚠️ {name}: Unexpected status {response.status}")
+            except urllib.error.HTTPError as e:
+                if e.code in [401, 403]:
+                    print(f"   ✅ {name}: Service accessible (auth required)")
+                else:
+                    connectivity_issues.append(f"{name} endpoint returned error: {e.code}")
+                    print(f"   ⚠️ {name}: HTTP {e.code}")
+            except Exception as e:
+                connectivity_issues.append(f"{name} connectivity failed: {str(e)}")
+                print(f"   ⚠️ {name}: Connection failed")
+        
+        success = len(connectivity_issues) == 0
+        
+        if connectivity_issues:
+            self.validation_results['warnings'].extend(connectivity_issues)
+        
+        return success, connectivity_issues
+    
     def run_smoke_test(self) -> Tuple[bool, List[str]]:
         """Run basic smoke test of core functionality"""
         print("\n💬 Running smoke test...")
@@ -384,6 +575,8 @@ class SystemValidator:
             ('Dependencies', self.validate_dependencies),
             ('File Structure', self.validate_files),
             ('Module Imports', self.validate_imports),
+            ('Environment Variables', self.validate_environment_variables),
+            ('Network Connectivity', self.validate_network_connectivity),
             ('Configuration', self.validate_configuration),
             ('Hardware Optimization', self.validate_hardware_optimization),
             ('Memory Requirements', self.validate_memory_usage),
