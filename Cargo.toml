@@ -1,0 +1,125 @@
+[package]
+name = "supreme-engine-rs"
+version = "5.0.0"
+edition = "2021"
+authors = ["Supreme Trading Team <info@supremetrading.ai>"]
+description = "Rust core engine for Supreme System V5 - World's First Neuromorphic Trading System"
+license = "MIT"
+repository = "https://github.com/thanhmuefatty07/supreme-system-v5"
+readme = "README.md"
+keywords = ["trading", "finance", "hft", "neuromorphic", "quantitative"]
+categories = ["science", "algorithms"]
+
+[lib]
+name = "supreme_engine_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+# === PyO3 for Python integration ===
+pyo3 = { version = "0.20", features = ["extension-module", "abi3-py38"] }
+numpy = "0.20"
+
+# === High-performance data structures ===
+polars = { version = "0.35", features = ["lazy", "temporal", "strings"] }
+arrow2 = { version = "0.18", features = ["compute_arithmetics", "compute_cast"] }
+
+# === Numerical computing ===
+ndarray = "0.15"
+num-traits = "0.2"
+num-complex = "0.4"
+
+# === Performance & SIMD ===
+rayon = "1.8"  # Parallel processing
+wide = "0.7"   # SIMD operations
+
+# === Time series analysis ===
+chrono = { version = "0.4", features = ["serde"] }
+
+# === Serialization ===
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# === Error handling ===
+anyhow = "1.0"
+thiserror = "1.0"
+
+# === Async runtime (optional) ===
+tokio = { version = "1.34", features = ["rt", "rt-multi-thread", "time"], optional = true }
+
+# === Logging ===
+log = "0.4"
+
+# === Random number generation ===
+rand = "0.8"
+rand_distr = "0.4"
+
+# === Mathematical functions ===
+libm = "0.2"  # Math functions for no_std compatibility
+
+# === Memory management ===
+memmap2 = "0.9"  # Memory-mapped files for large datasets
+
+[features]
+default = ["simd", "parallel"]
+simd = ["wide"]
+parallel = ["rayon"]
+async = ["tokio"]
+python = ["pyo3", "numpy"]
+
+# Hardware-specific optimizations
+avx2 = []  # AVX2 SIMD instructions
+avx512 = []  # AVX-512 instructions (high-end CPUs)
+neon = []  # ARM NEON SIMD
+
+# Trading-specific features
+neuromorphic = []  # Neuromorphic computing algorithms
+quantum = []      # Quantum-inspired optimization
+hft = ["simd", "parallel"]  # High-frequency trading optimizations
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 1
+debug = true
+
+# Profile for maximum performance (use for benchmarking)
+[profile.bench]
+inherits = "release"
+debug = true
+
+# Profile for production deployment
+[profile.production]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[[bin]]
+name = "benchmark"
+path = "src/bin/benchmark.rs"
+required-features = ["simd", "parallel"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+tokio-test = "0.4"
+
+[[bench]]
+name = "indicators"
+harness = false
+
+[[bench]]
+name = "backtesting"
+harness = false
+
+[[bench]]
+name = "risk_management"
+harness = false
