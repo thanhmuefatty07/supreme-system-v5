@@ -1,0 +1,111 @@
+# Supreme System V5 - Pre-commit Configuration
+# Enforces code quality standards before commits
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        name: "Black Code Formatter"
+        args: [--line-length=88, --target-version=py311]
+        exclude: ^src/.*\.py$  # Exclude legacy src/ Python files
+        files: \.(py)$
+        language: python
+        description: "Format Python code with Black"
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      - id: ruff
+        name: "Ruff Linter"
+        args: [--fix, --exit-non-zero-on-fix, --select=E,F,W,C90,I,N,UP,YTT,S,BLE,FBT,B,A,COM,C4,DTZ,T10,EM,EXE,FA,ISC,ICN,G,INP,PIE,T20,PYI,PT,Q,RSE,RET,SLF,SLOT,SIM,TID,TCH,INT,ARG,PTH,TD,FIX,PGH,PL,TRY,FLY,NPY,PERF]
+        exclude: ^src/.*\.py$  # Exclude legacy src/ Python files
+        files: \.(py)$
+        language: python
+        description: "Lint Python code with Ruff"
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: "Import Sorting"
+        args: [--profile=black, --line-length=88]
+        exclude: ^src/.*\.py$
+        files: \.(py)$
+        language: python
+        description: "Sort Python imports"
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: "Trim Trailing Whitespace"
+        exclude: \.(md|rst)$
+        description: "Remove trailing whitespace"
+      
+      - id: end-of-file-fixer
+        name: "Fix End of Files"
+        exclude: \.(md|rst)$
+        description: "Ensure files end with newline"
+      
+      - id: check-yaml
+        name: "Check YAML Syntax"
+        files: \.(yaml|yml)$
+        description: "Validate YAML files"
+      
+      - id: check-toml
+        name: "Check TOML Syntax"
+        files: \.(toml)$
+        description: "Validate TOML files"
+      
+      - id: check-json
+        name: "Check JSON Syntax"
+        files: \.(json)$
+        description: "Validate JSON files"
+      
+      - id: check-added-large-files
+        name: "Check Large Files"
+        args: [--maxkb=1024]
+        description: "Prevent large files from being committed"
+      
+      - id: check-merge-conflict
+        name: "Check Merge Conflicts"
+        description: "Check for merge conflict markers"
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: "Security Linting"
+        args: [-r, python/, scripts/, tests/, -f, json]
+        exclude: ^src/.*\.py$
+        files: \.(py)$
+        language: python
+        description: "Security-focused linting"
+
+# Configuration for specific tools
+default_language_version:
+  python: python3.11
+
+# Exclude patterns globally
+exclude: |
+  (?x)^(
+    src/.*\.py|
+    \.git/.*|
+    \.venv/.*|
+    venv/.*|
+    __pycache__/.*|
+    \.pytest_cache/.*|
+    target/.*|
+    \.cargo/.*|
+    node_modules/.*
+  )$
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Default stages
+default_stages: [commit, push]
+
+# Minimum pre-commit version
+minimum_pre_commit_version: 3.5.0
