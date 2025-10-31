@@ -1,4 +1,4 @@
-﻿# python/supreme_system_v5/utils.py
+# python/supreme_system_v5/utils.py
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional

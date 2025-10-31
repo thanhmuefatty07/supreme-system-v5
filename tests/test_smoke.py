@@ -1,4 +1,4 @@
-﻿# tests/test_smoke.py
+# tests/test_smoke.py
 import unittest
 import os
 import sys

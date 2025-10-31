@@ -1,4 +1,4 @@
-﻿import subprocess
+import subprocess
 import sys
 
 print(" Cleaning Supreme System V5 Dependencies...")

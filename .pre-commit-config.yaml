@@ -1,0 +1,20 @@
+﻿# .pre-commit-config.yaml
+# Nguồn chân lý cho chất lượng code - không thể bỏ qua
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        args: [--line-length=88, --target-version=py311]
+        # Loại trừ thư mục src legacy
+        exclude: ^src/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^src/
+      - id: ruff-format
+        exclude: ^src/
