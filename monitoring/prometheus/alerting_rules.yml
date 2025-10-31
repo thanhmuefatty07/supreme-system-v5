@@ -1,0 +1,141 @@
+groups:
+  - name: supreme_system_alerts
+    rules:
+      # System Health Alerts
+      - alert: SupremeSystemDown
+        expr: up{job="supreme-system"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Supreme System is down"
+          description: "Supreme trading system has been down for more than 1 minute"
+
+      # Risk Management Alerts
+      - alert: HighDrawdown
+        expr: current_drawdown_percent > 12
+        for: 30s
+        labels:
+          severity: critical
+          category: risk
+        annotations:
+          summary: "High portfolio drawdown detected"
+          description: "Portfolio drawdown has exceeded 12% threshold"
+
+      - alert: ExcessiveRiskViolations
+        expr: rate(risk_violations_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: risk
+        annotations:
+          summary: "High frequency of risk violations"
+          description: "More than 10 risk violations per minute detected"
+
+      - alert: CircuitBreakerActivated
+        expr: increase(risk_violations_total{violation_type="circuit_breaker"}[5m]) > 0
+        for: 10s
+        labels:
+          severity: critical
+          category: risk
+        annotations:
+          summary: "Circuit breaker activated"
+          description: "Risk management circuit breaker has been triggered"
+
+      # Performance Alerts
+      - alert: HighProcessingLatency
+        expr: histogram_quantile(0.95, rate(supreme_latency_seconds_bucket[5m])) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High processing latency detected"
+          description: "95th percentile processing latency exceeds 100ms"
+
+      - alert: EventBusBacklog
+        expr: sum(rate(events_published_total[5m])) - sum(rate(events_consumed_total[5m])) > 1000
+        for: 30s
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Event bus backlog detected"
+          description: "Event bus has more than 1000 unprocessed events"
+
+      # Trading Activity Alerts
+      - alert: NoTradingActivity
+        expr: rate(supreme_trades_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: info
+          category: trading
+        annotations:
+          summary: "No trading activity detected"
+          description: "No trades executed in the last 10 minutes"
+
+      - alert: ExcessiveTradingActivity
+        expr: rate(supreme_trades_total[5m]) > 60
+        for: 2m
+        labels:
+          severity: warning
+          category: trading
+        annotations:
+          summary: "Excessive trading activity"
+          description: "More than 60 trades per minute detected"
+
+      # Event Bus Health
+      - alert: EventBusSubscriberDropped
+        expr: increase(active_subscribers[5m]) < 0
+        for: 1m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Event bus subscriber dropped"
+          description: "An event bus subscriber has disconnected"
+
+  - name: supreme_system_resource_alerts
+    rules:
+      # Resource Monitoring
+      - alert: HighMemoryUsage
+        expr: (1 - system_memory_available_bytes / system_memory_total_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "High memory usage"
+          description: "System memory usage exceeds 85%"
+
+      - alert: HighCPUUsage
+        expr: rate(system_cpu_usage_percent[5m]) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage exceeds 80%"
+
+      # Data Feed Health
+      - alert: DataFeedLatency
+        expr: histogram_quantile(0.95, rate(data_feed_latency_seconds_bucket[5m])) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: data
+        annotations:
+          summary: "Data feed latency issue"
+          description: "95th percentile data feed latency exceeds 5 seconds"
+
+      - alert: DataFeedFailures
+        expr: rate(data_feed_request_failures_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          category: data
+        annotations:
+          summary: "Data feed failures detected"
+          description: "More than 10% of data feed requests are failing"

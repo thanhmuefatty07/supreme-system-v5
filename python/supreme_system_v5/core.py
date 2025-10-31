@@ -27,6 +27,9 @@ except ImportError:
     RUST_ENGINE_AVAILABLE = False
     logger.warning("⚠️ Rust engine not available, using Python fallback")
 
+# Import event bus
+from .event_bus import get_event_bus, create_market_data_event, create_signal_event, Event
+
 # Metrics
 TRADE_COUNTER = Counter('supreme_trades_total', 'Total number of trades executed')
 PNL_GAUGE = Gauge('supreme_pnl_current', 'Current P&L in USD')
@@ -129,14 +132,22 @@ class SupremeCore:
             'max_drawdown': 0.0,
             'sharpe_ratio': 0.0
         }
-        
+
+        # Initialize event bus
+        self.event_bus = get_event_bus()
+
+        # Subscribe to relevant events
+        self.event_bus.subscribe("market_data", "supreme_core", self._handle_market_data_event)
+        self.event_bus.subscribe("trading_signal", "supreme_core", self._handle_signal_event)
+
         # Validate configuration
         config_errors = self.config.validate()
         if config_errors:
             raise ValueError(f"Configuration errors: {config_errors}")
-            
+
         logger.info("✅ Supreme Core initialized successfully")
         logger.info(f"🔧 Rust engine: {'Available' if RUST_ENGINE_AVAILABLE else 'Fallback mode'}")
+        logger.info("📡 Event bus subscriptions active")
     
     def get_system_info(self) -> Dict[str, Any]:
         """
@@ -427,7 +438,7 @@ class SupremeCore:
     def update_market_data(self, symbol: str, price: float, volume: float, bid: float = 0.0, ask: float = 0.0):
         """
         Update real-time market data
-        Optimized for high-frequency updates
+        Optimized for high-frequency updates, publishes to event bus
         """
         self.market_data[symbol] = MarketData(
             symbol=symbol,
@@ -437,9 +448,21 @@ class SupremeCore:
             bid=bid or price * 0.9999,  # Mock bid
             ask=ask or price * 1.0001,  # Mock ask
         )
-        
+
         # Update metrics
         LATENCY_HISTOGRAM.observe(time.time() - self.market_data[symbol].timestamp)
+
+        # Publish market data event
+        event = create_market_data_event(
+            symbol=symbol,
+            price=price,
+            volume=volume,
+            source="supreme_core",
+            bid=self.market_data[symbol].bid,
+            ask=self.market_data[symbol].ask,
+            timestamp=self.market_data[symbol].timestamp
+        )
+        asyncio.create_task(self.event_bus.publish(event))
     
     def execute_trade(self, signal: TradingSignal) -> bool:
         """
@@ -544,6 +567,60 @@ class SupremeCore:
         
         logger.info("✅ Supreme System stopped gracefully")
 
+    # Event handlers for event bus
+    async def _handle_market_data_event(self, event: Event):
+        """Handle incoming market data events"""
+        try:
+            data = event.data
+            symbol = data.get('symbol')
+            if symbol:
+                # Update local market data cache
+                self.market_data[symbol] = MarketData(
+                    symbol=symbol,
+                    timestamp=event.timestamp,
+                    price=data['price'],
+                    volume=data['volume'],
+                    bid=data.get('bid', data['price'] * 0.9999),
+                    ask=data.get('ask', data['price'] * 1.0001)
+                )
+
+                logger.debug(f"📡 Market data event processed: {symbol} @ ${data['price']:.4f}")
+
+        except Exception as e:
+            logger.error(f"❌ Error handling market data event: {e}")
+
+    async def _handle_signal_event(self, event: Event):
+        """Handle incoming trading signal events"""
+        try:
+            data = event.data
+            symbol = data.get('symbol')
+            signal_type = data.get('signal_type')
+            confidence = data.get('confidence', 0.0)
+
+            if symbol and signal_type:
+                # Create TradingSignal object for execution
+                signal = TradingSignal(
+                    symbol=symbol,
+                    signal_type=signal_type,
+                    confidence=confidence,
+                    entry_price=data.get('entry_price', 0.0),
+                    stop_loss=data.get('stop_loss', 0.0),
+                    take_profit=data.get('take_profit', 0.0),
+                    quantity=data.get('quantity', 0.0),
+                    reasoning=data.get('reasoning', 'Event-driven signal')
+                )
+
+                # Execute the trade
+                if self.running:
+                    success = self.execute_trade(signal)
+                    if success:
+                        logger.info(f"✅ Event-driven trade executed: {signal_type} {symbol}")
+                    else:
+                        logger.warning(f"⚠️ Event-driven trade rejected: {signal_type} {symbol}")
+
+        except Exception as e:
+            logger.error(f"❌ Error handling signal event: {e}")
+
 class SupremeSystem:
     """
     Main system orchestrator
@@ -555,11 +632,15 @@ class SupremeSystem:
         self.config = SystemConfig()
         self.core = SupremeCore(self.config)
         self.start_time = datetime.now()
-        
+
+        # Initialize event bus
+        from .event_bus import init_event_bus
+        self.event_bus_initialized = False
+
         logger.info("🎆 Supreme System V5 initialized")
         logger.info(f"📅 Start time: {self.start_time}")
         logger.info(f"💻 Hardware target: i3-4GB optimized")
-        logger.info(f"🔗 Architecture: Hybrid Python+Rust")
+        logger.info(f"🔗 Architecture: Hybrid Python+Rust + Event Bus")
     
     async def run(self):
         """
@@ -567,13 +648,20 @@ class SupremeSystem:
         """
         try:
             logger.info("🏁 Supreme System starting...")
+
+            # Initialize event bus
+            from .event_bus import init_event_bus
+            await init_event_bus()
+            self.event_bus_initialized = True
+            logger.info("📡 Event bus initialized")
+
             await self.core.start()
         except KeyboardInterrupt:
             logger.info("🛑 Shutdown signal received")
-            await self.core.stop()
+            await self._shutdown()
         except Exception as e:
             logger.error(f"💥 System error: {e}")
-            await self.core.stop()
+            await self._shutdown()
             raise
     
     def get_status(self) -> Dict[str, Any]:
@@ -591,6 +679,25 @@ class SupremeSystem:
             'core_info': system_info,
             'performance': self.core.performance_metrics
         }
+
+    async def _shutdown(self):
+        """Shutdown all system components gracefully"""
+        try:
+            logger.info("🛑 Shutting down Supreme System...")
+
+            # Stop core first
+            await self.core.stop()
+
+            # Shutdown event bus
+            if self.event_bus_initialized:
+                from .event_bus import shutdown_event_bus
+                await shutdown_event_bus()
+                logger.info("📡 Event bus shutdown complete")
+
+            logger.info("✅ Supreme System shutdown complete")
+
+        except Exception as e:
+            logger.error(f"❌ Error during shutdown: {e}")
 
 # Factory function for easy instantiation
 def create_supreme_system(config: Optional[SystemConfig] = None) -> SupremeSystem:

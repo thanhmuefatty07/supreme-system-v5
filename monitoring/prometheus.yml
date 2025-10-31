@@ -17,14 +17,14 @@ alerting:
 
 # Load rules once and periodically evaluate them
 rule_files:
-  - "alert_rules.yml"
+  - "alerting_rules.yml"
 
 # Scrape configuration
 scrape_configs:
   # Supreme System V5 main application
-  - job_name: 'supreme-system-v5'
+  - job_name: 'supreme-system'
     static_configs:
-      - targets: ['supreme-system-v5:9090']
+      - targets: ['supreme-trading:8000']
     metrics_path: '/metrics'
     scrape_interval: 5s  # High frequency for trading system
     scrape_timeout: 4s
