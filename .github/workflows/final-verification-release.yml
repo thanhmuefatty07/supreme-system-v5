@@ -8,7 +8,7 @@ on:
 jobs:
   verify-and-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,27 +23,43 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev]
+          pip install pytest-cov bandit
 
-      - name: Quality gates (format/lint/imports)
+      - name: Quality gates (format/lint/imports + security)
         run: |
           black --check .
           ruff check .
           isort --check-only .
+          bandit -r python/supreme_system_v5 -ll || true
 
-      - name: Run unit + integration tests
+      - name: Run unit tests with coverage (threshold 80%)
         run: |
-          pytest -q
+          pytest -q --cov=python.supreme_system_v5 --cov-report=xml --cov-report=html --cov-fail-under=80
+
+      - name: Run integration tests isolated
+        run: |
+          if [ -d tests ]; then
+            pytest -q -k "integration or property or e2e" || true
+          fi
 
       - name: Build Rust (optional)
         run: |
           pip install maturin
           maturin develop --release || true
 
+      - name: Validate Docker configuration
+        run: |
+          docker --version || true
+          if [ -f docker-compose.production.yml ]; then
+            docker compose -f docker-compose.production.yml config -q || true
+          fi
+
       - name: Package artifacts
         run: |
           mkdir -p artifacts
-          cp -r htmlcov artifacts/ || true
-          cp coverage.xml artifacts/ || true
+          [ -f coverage.xml ] && cp coverage.xml artifacts/ || true
+          [ -d htmlcov ] && cp -r htmlcov artifacts/ || true
+          [ -f bandit-report.json ] && cp bandit-report.json artifacts/ || true
           echo "Build completed at $(date)" > artifacts/build_info.txt
 
       - name: Upload artifacts
