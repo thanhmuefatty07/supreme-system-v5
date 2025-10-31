@@ -6,30 +6,42 @@ ULTRA SFL implementation for scalable event-driven architecture
 import asyncio
 import json
 import time
-from typing import Dict, List, Any, Optional, Callable, Awaitable
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import defaultdict
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from loguru import logger
 from prometheus_client import Counter, Gauge, Histogram
 
 # Metrics
-EVENTS_PUBLISHED = Counter('events_published_total', 'Events published to bus', ['event_type'])
-EVENTS_CONSUMED = Counter('events_consumed_total', 'Events consumed from bus', ['event_type', 'consumer'])
-EVENT_BUS_LATENCY = Histogram('event_bus_latency_seconds', 'Event processing latency', ['operation'])
-ACTIVE_SUBSCRIBERS = Gauge('active_subscribers', 'Active subscribers per topic', ['topic'])
+EVENTS_PUBLISHED = Counter(
+    "events_published_total", "Events published to bus", ["event_type"]
+)
+EVENTS_CONSUMED = Counter(
+    "events_consumed_total", "Events consumed from bus", ["event_type", "consumer"]
+)
+EVENT_BUS_LATENCY = Histogram(
+    "event_bus_latency_seconds", "Event processing latency", ["operation"]
+)
+ACTIVE_SUBSCRIBERS = Gauge(
+    "active_subscribers", "Active subscribers per topic", ["topic"]
+)
+
 
 class EventPriority(Enum):
     """Event priority levels"""
+
     LOW = 0
     NORMAL = 1
     HIGH = 2
     CRITICAL = 3
 
+
 @dataclass
 class Event:
     """Event structure for message bus"""
+
     id: str
     type: str
     timestamp: float
@@ -47,13 +59,16 @@ class Event:
         if not self.timestamp:
             self.timestamp = time.time()
 
+
 @dataclass
 class Subscription:
     """Subscription configuration"""
+
     consumer_id: str
     callback: Callable[[Event], Awaitable[None]]
     filter_func: Optional[Callable[[Event], bool]] = None
     priority: int = 0  # Higher priority processed first
+
 
 class EventBus:
     """
@@ -138,25 +153,36 @@ class EventBus:
         try:
             # Add to appropriate priority queue
             await asyncio.wait_for(
-                self.queues[event.priority].put(event),
-                timeout=5.0  # 5 second timeout
+                self.queues[event.priority].put(event), timeout=5.0  # 5 second timeout
             )
 
             EVENTS_PUBLISHED.labels(event_type=event.type).inc()
-            EVENT_BUS_LATENCY.labels(operation='publish').observe(time.time() - start_time)
+            EVENT_BUS_LATENCY.labels(operation="publish").observe(
+                time.time() - start_time
+            )
 
-            logger.debug(f"📤 Published event: {event.type} ({event.id}) priority={event.priority.value}")
+            logger.debug(
+                f"📤 Published event: {event.type} ({event.id}) priority={event.priority.value}"
+            )
             return True
 
         except asyncio.TimeoutError:
-            logger.warning(f"⚠️ Event bus queue full for priority {event.priority.value}, dropping event {event.id}")
+            logger.warning(
+                f"⚠️ Event bus queue full for priority {event.priority.value}, dropping event {event.id}"
+            )
             return False
         except Exception as e:
             logger.error(f"❌ Failed to publish event {event.id}: {e}")
             return False
 
-    def subscribe(self, topic: str, consumer_id: str, callback: Callable[[Event], Awaitable[None]],
-                  filter_func: Optional[Callable[[Event], bool]] = None, priority: int = 0):
+    def subscribe(
+        self,
+        topic: str,
+        consumer_id: str,
+        callback: Callable[[Event], Awaitable[None]],
+        filter_func: Optional[Callable[[Event], bool]] = None,
+        priority: int = 0,
+    ):
         """
         Subscribe to a topic with filtering capability
         """
@@ -164,7 +190,7 @@ class EventBus:
             consumer_id=consumer_id,
             callback=callback,
             filter_func=filter_func,
-            priority=priority
+            priority=priority,
         )
 
         self.subscriptions[topic].append(subscription)
@@ -174,21 +200,28 @@ class EventBus:
 
         ACTIVE_SUBSCRIBERS.labels(topic=topic).set(len(self.subscriptions[topic]))
 
-        logger.info(f"📡 {consumer_id} subscribed to topic '{topic}' (priority: {priority})")
+        logger.info(
+            f"📡 {consumer_id} subscribed to topic '{topic}' (priority: {priority})"
+        )
 
     def unsubscribe(self, topic: str, consumer_id: str):
         """Unsubscribe from a topic"""
         if topic in self.subscriptions:
             original_count = len(self.subscriptions[topic])
             self.subscriptions[topic] = [
-                sub for sub in self.subscriptions[topic]
+                sub
+                for sub in self.subscriptions[topic]
                 if sub.consumer_id != consumer_id
             ]
 
             removed = original_count - len(self.subscriptions[topic])
             if removed > 0:
-                ACTIVE_SUBSCRIBERS.labels(topic=topic).set(len(self.subscriptions[topic]))
-                logger.info(f"📴 {consumer_id} unsubscribed from topic '{topic}' ({removed} subscriptions removed)")
+                ACTIVE_SUBSCRIBERS.labels(topic=topic).set(
+                    len(self.subscriptions[topic])
+                )
+                logger.info(
+                    f"📴 {consumer_id} unsubscribed from topic '{topic}' ({removed} subscriptions removed)"
+                )
 
     async def _process_queue(self, priority: EventPriority):
         """Process events from a specific priority queue"""
@@ -208,7 +241,9 @@ class EventBus:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"❌ Error processing event from priority {priority.value} queue: {e}")
+                logger.error(
+                    f"❌ Error processing event from priority {priority.value} queue: {e}"
+                )
                 await asyncio.sleep(1)  # Brief pause before retry
 
         logger.info(f"⚙️ Stopped processing queue for priority {priority.value}")
@@ -221,8 +256,8 @@ class EventBus:
         topics_to_check = [event.type]
 
         # Also check for wildcard subscriptions
-        if '*' in self.subscriptions:
-            topics_to_check.append('*')
+        if "*" in self.subscriptions:
+            topics_to_check.append("*")
 
         delivered_count = 0
 
@@ -244,19 +279,22 @@ class EventBus:
                     delivered_count += 1
 
                     EVENTS_CONSUMED.labels(
-                        event_type=event.type,
-                        consumer=subscription.consumer_id
+                        event_type=event.type, consumer=subscription.consumer_id
                     ).inc()
 
                 except Exception as e:
-                    logger.error(f"❌ Subscriber {subscription.consumer_id} failed to process event {event.id}: {e}")
+                    logger.error(
+                        f"❌ Subscriber {subscription.consumer_id} failed to process event {event.id}: {e}"
+                    )
                     continue
 
         processing_time = time.time() - start_time
-        EVENT_BUS_LATENCY.labels(operation='process').observe(processing_time)
+        EVENT_BUS_LATENCY.labels(operation="process").observe(processing_time)
 
         if delivered_count > 0:
-            logger.debug(f"✅ Event {event.id} processed in {processing_time:.4f}s, delivered to {delivered_count} subscribers")
+            logger.debug(
+                f"✅ Event {event.id} processed in {processing_time:.4f}s, delivered to {delivered_count} subscribers"
+            )
         else:
             logger.debug(f"⚠️ Event {event.id} processed but no subscribers matched")
 
@@ -280,47 +318,49 @@ class EventBus:
     def get_stats(self) -> Dict[str, Any]:
         """Get event bus statistics"""
         stats = {
-            'running': self.running,
-            'topics': len(self.subscriptions),
-            'total_subscriptions': sum(len(subs) for subs in self.subscriptions.values()),
-            'queue_sizes': {
+            "running": self.running,
+            "topics": len(self.subscriptions),
+            "total_subscriptions": sum(
+                len(subs) for subs in self.subscriptions.values()
+            ),
+            "queue_sizes": {
                 priority.value: self.queues[priority].qsize()
                 for priority in EventPriority
-            }
+            },
         }
 
         # Add topic details
         topic_details = {}
         for topic, subscriptions in self.subscriptions.items():
             topic_details[topic] = {
-                'subscribers': len(subscriptions),
-                'subscriber_ids': [sub.consumer_id for sub in subscriptions]
+                "subscribers": len(subscriptions),
+                "subscriber_ids": [sub.consumer_id for sub in subscriptions],
             }
-        stats['topics_detail'] = topic_details
+        stats["topics_detail"] = topic_details
 
         return stats
 
+
 # Convenience functions for common event types
 
-def create_market_data_event(symbol: str, price: float, volume: float,
-                           source: str, **kwargs) -> Event:
+
+def create_market_data_event(
+    symbol: str, price: float, volume: float, source: str, **kwargs
+) -> Event:
     """Create a market data event"""
     return Event(
         id=f"market_{symbol}_{int(time.time() * 1000)}",
         type="market_data",
         timestamp=time.time(),
         priority=EventPriority.NORMAL,
-        data={
-            'symbol': symbol,
-            'price': price,
-            'volume': volume,
-            **kwargs
-        },
-        source=source
+        data={"symbol": symbol, "price": price, "volume": volume, **kwargs},
+        source=source,
     )
 
-def create_signal_event(symbol: str, signal_type: str, confidence: float,
-                       entry_price: float, **kwargs) -> Event:
+
+def create_signal_event(
+    symbol: str, signal_type: str, confidence: float, entry_price: float, **kwargs
+) -> Event:
     """Create a trading signal event"""
     return Event(
         id=f"signal_{symbol}_{int(time.time() * 1000)}",
@@ -328,32 +368,33 @@ def create_signal_event(symbol: str, signal_type: str, confidence: float,
         timestamp=time.time(),
         priority=EventPriority.HIGH,
         data={
-            'symbol': symbol,
-            'signal_type': signal_type,
-            'confidence': confidence,
-            'entry_price': entry_price,
-            **kwargs
+            "symbol": symbol,
+            "signal_type": signal_type,
+            "confidence": confidence,
+            "entry_price": entry_price,
+            **kwargs,
         },
-        source="strategy"
+        source="strategy",
     )
 
-def create_risk_event(violation_type: str, symbol: str, details: Dict[str, Any]) -> Event:
+
+def create_risk_event(
+    violation_type: str, symbol: str, details: Dict[str, Any]
+) -> Event:
     """Create a risk violation event"""
     return Event(
         id=f"risk_{violation_type}_{symbol}_{int(time.time() * 1000)}",
         type="risk_violation",
         timestamp=time.time(),
         priority=EventPriority.CRITICAL,
-        data={
-            'violation_type': violation_type,
-            'symbol': symbol,
-            **details
-        },
-        source="risk_manager"
+        data={"violation_type": violation_type, "symbol": symbol, **details},
+        source="risk_manager",
     )
 
-def create_execution_event(order_id: str, symbol: str, side: str, quantity: float,
-                          price: float, **kwargs) -> Event:
+
+def create_execution_event(
+    order_id: str, symbol: str, side: str, quantity: float, price: float, **kwargs
+) -> Event:
     """Create an order execution event"""
     return Event(
         id=f"execution_{order_id}",
@@ -361,18 +402,20 @@ def create_execution_event(order_id: str, symbol: str, side: str, quantity: floa
         timestamp=time.time(),
         priority=EventPriority.HIGH,
         data={
-            'order_id': order_id,
-            'symbol': symbol,
-            'side': side,
-            'quantity': quantity,
-            'price': price,
-            **kwargs
+            "order_id": order_id,
+            "symbol": symbol,
+            "side": side,
+            "quantity": quantity,
+            "price": price,
+            **kwargs,
         },
-        source="execution"
+        source="execution",
     )
+
 
 # Global event bus instance
 _event_bus: Optional[EventBus] = None
+
 
 def get_event_bus() -> EventBus:
     """Get the global event bus instance"""
@@ -381,12 +424,14 @@ def get_event_bus() -> EventBus:
         _event_bus = EventBus()
     return _event_bus
 
+
 async def init_event_bus():
     """Initialize the global event bus"""
     global _event_bus
     if _event_bus is None:
         _event_bus = EventBus()
     await _event_bus.start()
+
 
 async def shutdown_event_bus():
     """Shutdown the global event bus"""

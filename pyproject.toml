@@ -30,6 +30,8 @@ dependencies = [
     # Async networking (lightweight)
     "aiohttp>=3.9.0,<4.0.0",
     "websockets>=12.0,<13.0.0",
+    "aioredis>=2.0.0,<3.0.0",
+    "async-timeout>=4.0.0,<5.0.0",
     
     # API framework (minimal)
     "fastapi>=0.104.0,<1.0.0",
@@ -184,6 +186,9 @@ select = [
     "PERF", # Perflint
 ]
 
+[tool.ruff.lint.isort]
+profile = "black"
+
 # ULTRA SFL: Minimal ignores - only absolutely necessary
 ignore = [
     "S101",   # Allow assert statements in tests
@@ -207,12 +212,6 @@ unfixable = ["F401", "F841"]  # Don't auto-remove imports/variables
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
-
-[tool.ruff.lint.isort]
-profile = "black"
-line-length = 88
-known-first-party = ["supreme_system_v5"]
-known-third-party = ["numpy", "polars", "aiohttp", "fastapi", "pydantic"]
 
 # ================================
 # ULTRA SFL LAYER 3: ISORT CONFIG
