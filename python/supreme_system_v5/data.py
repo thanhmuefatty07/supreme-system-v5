@@ -1,6 +1,7 @@
 # python/supreme_system_v5/data.py
+from typing import Any, Dict
+
 from .utils import get_logger
-from typing import Dict, Any
 
 logger = get_logger(__name__)
 
