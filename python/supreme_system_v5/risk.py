@@ -1,4 +1,4 @@
-﻿# python/supreme_system_v5/risk.py
+# python/supreme_system_v5/risk.py
 from .utils import get_logger
 from typing import Dict, Any
 

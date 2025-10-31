@@ -1,4 +1,4 @@
-﻿# python/supreme_system_v5/__init__.py
+# python/supreme_system_v5/__init__.py
 """
 Supreme System V5 - Minimal Hybrid Python + Rust Architecture
 """
