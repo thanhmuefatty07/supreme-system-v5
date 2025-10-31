@@ -172,46 +172,189 @@ class SupremeCore:
         except Exception as e:
             logger.error(f"❌ Metrics server failed: {e}")
     
-    def calculate_technical_indicators(self, symbol: str, lookback: int = 20) -> Dict[str, float]:
+    def calculate_technical_indicators(self, symbol: str, lookback: int = 100) -> Dict[str, float]:
         """
         Calculate technical indicators for trading decision
         Uses Rust engine if available, Python fallback otherwise
         """
         if not self.market_data.get(symbol):
             return {}
-            
-        # Mock implementation - in production this would use real price history
+
+        # Get price history for calculations
+        prices = self._get_price_history(symbol, lookback)
+        if len(prices) < 14:  # Minimum for RSI
+            return {}
+
         current_price = self.market_data[symbol].price
-        
+
         if RUST_ENGINE_AVAILABLE:
             # Use Rust engine for ultra-fast calculation
             try:
-                # This would call Rust implementation
+                import numpy as np
+
+                price_array = np.array(prices, dtype=np.float64)
+
+                # Calculate EMAs (5, 20, 50)
+                ema_5 = supreme_engine_rs.fast_ema(price_array, 5)[-1] if len(prices) >= 5 else current_price
+                ema_20 = supreme_engine_rs.fast_ema(price_array, 20)[-1] if len(prices) >= 20 else current_price
+                ema_50 = supreme_engine_rs.fast_ema(price_array, 50)[-1] if len(prices) >= 50 else current_price
+
+                # Calculate RSI
+                rsi_values = supreme_engine_rs.fast_rsi(price_array, 14)
+                rsi_14 = rsi_values[-1] if rsi_values else 50.0
+
+                # Calculate MACD
+                macd_result = supreme_engine_rs.fast_macd(price_array, 12, 26, 9)
+                macd_line, signal_line, histogram = macd_result
+                macd = macd_line[-1] - signal_line[-1] if macd_line and signal_line else 0.001
+
+                # Calculate Bollinger Bands
+                bb_result = supreme_engine_rs.bollinger_bands(price_array, 20, 2.0)
+                upper_bb, sma_20, lower_bb = bb_result
+
                 indicators = {
-                    'sma_5': current_price * 0.999,
-                    'sma_20': current_price * 0.998, 
-                    'rsi_14': 50.0,  # Mock RSI
-                    'macd': 0.001,   # Mock MACD
-                    'bb_upper': current_price * 1.002,
-                    'bb_lower': current_price * 0.998,
+                    'ema_5': ema_5,
+                    'ema_20': ema_20,
+                    'ema_50': ema_50,
+                    'sma_20': sma_20[-1] if sma_20 else current_price,
+                    'rsi_14': rsi_14,
+                    'macd': macd,
+                    'bb_upper': upper_bb[-1] if upper_bb else current_price * 1.002,
+                    'bb_lower': lower_bb[-1] if lower_bb else current_price * 0.998,
+                    'current_price': current_price,
+                    'price_history_count': len(prices)
                 }
-                logger.debug(f"⚡ Rust indicators calculated for {symbol}")
+
+                logger.debug(f"⚡ Rust indicators calculated for {symbol}: EMA5={ema_5:.4f}, RSI={rsi_14:.1f}")
                 return indicators
+
             except Exception as e:
                 logger.warning(f"Rust indicator calculation failed: {e}, using Python fallback")
-        
-        # Python fallback implementation
-        indicators = {
-            'sma_5': current_price * 0.999,
-            'sma_20': current_price * 0.998,
-            'rsi_14': 50.0,
-            'macd': 0.001,
-            'bb_upper': current_price * 1.002,
-            'bb_lower': current_price * 0.998,
-        }
-        
-        logger.debug(f"🐍 Python indicators calculated for {symbol}")
-        return indicators
+
+        # Python fallback implementation (using technical analysis library)
+        try:
+            from ta.trend import EMAIndicator, SMAIndicator
+            from ta.momentum import RSIIndicator
+            from ta.trend import MACD
+            from ta.volatility import BollingerBands
+            import pandas as pd
+
+            # Create DataFrame for ta library
+            df = pd.DataFrame({'close': prices})
+
+            # Calculate EMAs
+            ema_5 = EMAIndicator(df['close'], window=5).ema_indicator().iloc[-1] if len(df) >= 5 else current_price
+            ema_20 = EMAIndicator(df['close'], window=20).ema_indicator().iloc[-1] if len(df) >= 20 else current_price
+            ema_50 = EMAIndicator(df['close'], window=50).ema_indicator().iloc[-1] if len(df) >= 50 else current_price
+
+            # Calculate SMA for comparison
+            sma_20 = SMAIndicator(df['close'], window=20).sma_indicator().iloc[-1] if len(df) >= 20 else current_price
+
+            # Calculate RSI
+            rsi_14 = RSIIndicator(df['close'], window=14).rsi().iloc[-1] if len(df) >= 14 else 50.0
+
+            # Calculate MACD
+            macd_indicator = MACD(df['close'])
+            macd = macd_indicator.macd_diff().iloc[-1] if len(df) >= 26 else 0.001
+
+            # Calculate Bollinger Bands
+            bb_indicator = BollingerBands(df['close'], window=20, window_dev=2)
+            bb_upper = bb_indicator.bollinger_hband().iloc[-1] if len(df) >= 20 else current_price * 1.002
+            bb_lower = bb_indicator.bollinger_lband().iloc[-1] if len(df) >= 20 else current_price * 0.998
+
+            indicators = {
+                'ema_5': ema_5,
+                'ema_20': ema_20,
+                'ema_50': ema_50,
+                'sma_20': sma_20,
+                'rsi_14': rsi_14,
+                'macd': macd,
+                'bb_upper': bb_upper,
+                'bb_lower': bb_lower,
+                'current_price': current_price,
+                'price_history_count': len(prices)
+            }
+
+            logger.debug(f"🐍 Python TA indicators calculated for {symbol}: EMA5={ema_5:.4f}, RSI={rsi_14:.1f}")
+            return indicators
+
+        except ImportError:
+            # Ultimate fallback - simple calculations
+            logger.warning("TA library not available, using simple calculations")
+
+            # Simple EMA approximation
+            def simple_ema(prices, period):
+                if len(prices) < period:
+                    return prices[-1] if prices else current_price
+                alpha = 2.0 / (period + 1)
+                ema = prices[0]
+                for price in prices[1:]:
+                    ema = alpha * price + (1 - alpha) * ema
+                return ema
+
+            ema_5 = simple_ema(prices[-5:] if len(prices) >= 5 else prices, 5)
+            ema_20 = simple_ema(prices[-20:] if len(prices) >= 20 else prices, 20)
+            ema_50 = simple_ema(prices[-50:] if len(prices) >= 50 else prices, 50)
+
+            # Simple RSI approximation
+            def simple_rsi(prices, period=14):
+                if len(prices) < period + 1:
+                    return 50.0
+
+                gains = []
+                losses = []
+                for i in range(1, len(prices)):
+                    change = prices[i] - prices[i-1]
+                    gains.append(max(change, 0))
+                    losses.append(max(-change, 0))
+
+                avg_gain = sum(gains[-period:]) / period
+                avg_loss = sum(losses[-period:]) / period
+
+                if avg_loss == 0:
+                    return 100.0
+                rs = avg_gain / avg_loss
+                return 100 - (100 / (1 + rs))
+
+            rsi_14 = simple_rsi(prices, 14)
+
+            indicators = {
+                'ema_5': ema_5,
+                'ema_20': ema_20,
+                'ema_50': ema_50,
+                'sma_20': sum(prices[-20:]) / min(20, len(prices)) if prices else current_price,
+                'rsi_14': rsi_14,
+                'macd': 0.001,  # Simplified
+                'bb_upper': current_price * 1.02,
+                'bb_lower': current_price * 0.98,
+                'current_price': current_price,
+                'price_history_count': len(prices)
+            }
+
+            logger.debug(f"🔧 Simple indicators calculated for {symbol}: EMA5={ema_5:.4f}, RSI={rsi_14:.1f}")
+            return indicators
+
+    def _get_price_history(self, symbol: str, max_points: int = 100) -> List[float]:
+        """
+        Get price history for indicator calculations
+        This is a simplified implementation - in production this would
+        connect to the data fabric cache
+        """
+        # Mock price history - in production this would come from cache
+        if not hasattr(self, '_price_cache'):
+            self._price_cache = {}
+
+        if symbol not in self._price_cache:
+            self._price_cache[symbol] = []
+
+        # Add current price to history
+        current_price = self.market_data[symbol].price
+        self._price_cache[symbol].append(current_price)
+
+        # Keep only recent history
+        history = self._price_cache[symbol][-max_points:]
+
+        return history
     
     def generate_trading_signal(self, symbol: str) -> TradingSignal:
         """

@@ -95,14 +95,21 @@ class DataAggregator:
         self.sources: Dict[str, DataSource] = {}
         self.normalizer = DataNormalizer()
         self.quality_scorer = DataQualityScorer()
-        self.cache_manager = cache_manager
+
+        # Initialize cache manager if not provided
+        if cache_manager is None:
+            from .cache import CacheManager
+            self.cache_manager = CacheManager()
+        else:
+            self.cache_manager = cache_manager
+
         self.callbacks: Dict[str, List[Callable]] = {}
         self.running = False
-        
+
         # State tracking
         self.last_data: Dict[str, MarketDataPoint] = {}
         self.data_timestamps: Dict[str, float] = {}
-        
+
         logger.info("🏭 Data Fabric initialized")
     
     def add_source(self, source: DataSource):
@@ -123,11 +130,17 @@ class DataAggregator:
         Returns aggregated data from multiple sources with quality scoring
         """
         start_time = time.time()
-        
+
         # Check cache first
-        if self.cache_manager:
-            cached_data = await self.cache_manager.get(symbol)
+        if hasattr(self.cache_manager, 'get_market_data'):
+            # Using DataCache interface
+            cached_data = await self.cache_manager.get_market_data(symbol)
             if cached_data and (time.time() - cached_data.timestamp) < max_age_seconds:
+                return cached_data
+        elif self.cache_manager:
+            # Using raw CacheManager interface
+            cached_data = await self.cache_manager.get(f"market:{symbol}")
+            if cached_data and isinstance(cached_data, MarketDataPoint) and (time.time() - cached_data.timestamp) < max_age_seconds:
                 return cached_data
         
         # Get available sources sorted by priority and quality
@@ -183,7 +196,12 @@ class DataAggregator:
         
         # Cache result
         if self.cache_manager and aggregated_data:
-            await self.cache_manager.set(symbol, aggregated_data)
+            if hasattr(self.cache_manager, 'set_market_data'):
+                # Using DataCache interface
+                await self.cache_manager.set_market_data(symbol, aggregated_data)
+            else:
+                # Using raw CacheManager interface
+                await self.cache_manager.set(f"market:{symbol}", aggregated_data)
         
         # Update last data
         self.last_data[symbol] = aggregated_data

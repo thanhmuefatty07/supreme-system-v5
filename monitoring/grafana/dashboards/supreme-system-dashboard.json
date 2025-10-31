@@ -1,0 +1,145 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Supreme System V5 - Trading Performance",
+    "tags": ["trading", "supreme-system", "scalping"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Portfolio Value",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "supreme_pnl_current",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 0
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Positions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "supreme_positions_active",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Strategy Signals Generated",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(strategy_signals_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Risk Violations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "rate(risk_violations_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 5,
+        "title": "System Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 6,
+        "title": "Data Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(cache_hits_total[5m]) / rate(cache_requests_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "5s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

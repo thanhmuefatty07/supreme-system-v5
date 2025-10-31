@@ -6,19 +6,19 @@ Multi-source free API aggregation with enterprise-grade quality
 from .aggregator import DataAggregator, DataSource
 from .connectors import (
     CoinGeckoConnector,
-    CoinMarketCapConnector, 
+    CoinMarketCapConnector,
     CryptoCompareConnector,
     AlphaVantageConnector,
     BinancePublicConnector,
     OKXPublicConnector
 )
-from .cache import DataCache, CacheManager
+from .cache import DataCache, CacheManager, CacheConfig, MemoryCache, RedisCache, PostgreSQLPersistence
 from .quality import DataQualityScorer, QualityMetrics
 from .normalizer import DataNormalizer, MarketDataPoint
 
 __all__ = [
     'DataAggregator',
-    'DataSource', 
+    'DataSource',
     'CoinGeckoConnector',
     'CoinMarketCapConnector',
     'CryptoCompareConnector',
@@ -27,6 +27,10 @@ __all__ = [
     'OKXPublicConnector',
     'DataCache',
     'CacheManager',
+    'CacheConfig',
+    'MemoryCache',
+    'RedisCache',
+    'PostgreSQLPersistence',
     'DataQualityScorer',
     'QualityMetrics',
     'DataNormalizer',

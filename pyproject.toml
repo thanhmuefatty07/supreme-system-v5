@@ -297,7 +297,7 @@ warn_unused_configs = true
 no_implicit_reexport = true
 show_error_codes = true
 exclude = [
-    "^src/.*\.py$",
+    "^src/.*\\.py$",
     "^build/",
     "^dist/",
     "^target/",
