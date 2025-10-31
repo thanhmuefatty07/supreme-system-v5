@@ -4,7 +4,9 @@ import os
 import sys
 
 # Add python/supreme_system_v5 to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "python")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "python"))
+)
 
 try:
     from supreme_system_v5.utils import get_logger, Config
@@ -12,10 +14,12 @@ try:
     from supreme_system_v5.backtest import BacktestEngine
     from supreme_system_v5.strategies import Strategy
     from supreme_system_v5.risk import RiskManager
+
     MINIMAL_IMPORTS_OK = True
 except ImportError as e:
     print(f"Failed to import minimal components: {e}")
     MINIMAL_IMPORTS_OK = False
+
 
 class SmokeTestSuite(unittest.TestCase):
     """Smoke tests for the minimal hybrid system."""
@@ -79,6 +83,7 @@ class SmokeTestSuite(unittest.TestCase):
         result = risk_manager.evaluate_trade(trade)
         self.assertTrue(result)
         print(" Risk Manager evaluated mock trade successfully.")
+
 
 if __name__ == "__main__":
     print(" Running Smoke Tests for Supreme System V5 Minimal Hybrid Architecture")

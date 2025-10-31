@@ -4,8 +4,10 @@ from typing import Dict, Any
 
 logger = get_logger(__name__)
 
+
 class DataManager:
     """Minimal data manager stub."""
+
     def __init__(self):
         logger.info("Data Manager stub initialized.")
 
