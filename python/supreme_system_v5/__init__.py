@@ -12,20 +12,18 @@ RUST_AVAILABLE = False
 RustEngine = None
 
 # Import Python components
-from .utils import get_logger, Config
-from .data import DataManager
-from .backtest import BacktestEngine
-from .strategies import Strategy
+from .utils import get_logger
+from .core import SupremeCore, SupremeSystem, SystemConfig
+from .strategies import ScalpingStrategy
 from .risk import RiskManager
 
 __all__ = [
     "get_logger",
-    "Config",
-    "DataManager",
-    "BacktestEngine",
-    "Strategy",
+    "SupremeCore",
+    "SupremeSystem",
+    "SystemConfig",
+    "ScalpingStrategy",
     "RiskManager",
-    "RustEngine",
     "RUST_AVAILABLE",
     "__version__",
     "__author__",

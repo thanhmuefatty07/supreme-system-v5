@@ -13,7 +13,7 @@ from .okx_public import OKXPublicConnector
 __all__ = [
     'CoinGeckoConnector',
     'CoinMarketCapConnector',
-    'CryptoCompareConnector', 
+    'CryptoCompareConnector',
     'AlphaVantageConnector',
     'BinancePublicConnector',
     'OKXPublicConnector'

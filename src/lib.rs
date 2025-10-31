@@ -45,6 +45,8 @@ fn supreme_engine_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fast_rsi, m)?)?;
     m.add_function(wrap_pyfunction!(fast_macd, m)?)?;
     m.add_function(wrap_pyfunction!(stochastic_oscillator, m)?)?;
+    m.add_function(wrap_pyfunction!(commodity_channel_index, m)?)?;
+    m.add_function(wrap_pyfunction!(williams_percent_r, m)?)?;
     
     // Volatility indicators
     m.add_function(wrap_pyfunction!(bollinger_bands, m)?)?;
@@ -54,6 +56,9 @@ fn supreme_engine_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     // Volume indicators
     m.add_function(wrap_pyfunction!(volume_profile, m)?)?;
     m.add_function(wrap_pyfunction!(money_flow_index, m)?)?;
+    m.add_function(wrap_pyfunction!(volume_weighted_average_price, m)?)?;
+    m.add_function(wrap_pyfunction!(intraday_vwap, m)?)?;
+    m.add_function(wrap_pyfunction!(chaikin_money_flow, m)?)?;
     
     // === BACKTESTING ENGINE ===
     m.add_function(wrap_pyfunction!(simulate_orders, m)?)?;

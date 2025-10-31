@@ -384,6 +384,188 @@ pub fn volume_profile(
     Ok((price_levels, volume_by_price))
 }
 
+/// Volume Weighted Average Price (VWAP)
+#[pyfunction]
+pub fn volume_weighted_average_price(
+    high: PyReadonlyArray1<f64>,
+    low: PyReadonlyArray1<f64>,
+    close: PyReadonlyArray1<f64>,
+    volume: PyReadonlyArray1<f64>
+) -> PyResult<Vec<f64>> {
+    let high = high.as_slice()?;
+    let low = low.as_slice()?;
+    let close = close.as_slice()?;
+    let volume = volume.as_slice()?;
+
+    if high.len() != low.len() || low.len() != close.len() || close.len() != volume.len() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            "All arrays must have the same length"
+        ));
+    }
+
+    let mut vwap_values = Vec::new();
+    let mut cumulative_volume = 0.0;
+    let mut cumulative_volume_price = 0.0;
+
+    for i in 0..close.len() {
+        let typical_price = (high[i] + low[i] + close[i]) / 3.0;
+        let volume_price = typical_price * volume[i];
+
+        cumulative_volume += volume[i];
+        cumulative_volume_price += volume_price;
+
+        if cumulative_volume > 0.0 {
+            vwap_values.push(cumulative_volume_price / cumulative_volume);
+        } else {
+            vwap_values.push(typical_price); // Fallback if no volume
+        }
+    }
+
+    Ok(vwap_values)
+}
+
+/// Intraday VWAP (resets daily)
+#[pyfunction]
+pub fn intraday_vwap(
+    high: PyReadonlyArray1<f64>,
+    low: PyReadonlyArray1<f64>,
+    close: PyReadonlyArray1<f64>,
+    volume: PyReadonlyArray1<f64>,
+    session_length: usize
+) -> PyResult<Vec<f64>> {
+    let high = high.as_slice()?;
+    let low = low.as_slice()?;
+    let close = close.as_slice()?;
+    let volume = volume.as_slice()?;
+
+    let mut vwap_values = Vec::new();
+
+    for i in 0..close.len() {
+        let session_start = i.saturating_sub(session_length - 1);
+        let session_end = i + 1;
+
+        let mut cumulative_volume = 0.0;
+        let mut cumulative_volume_price = 0.0;
+
+        for j in session_start..session_end {
+            let typical_price = (high[j] + low[j] + close[j]) / 3.0;
+            cumulative_volume += volume[j];
+            cumulative_volume_price += typical_price * volume[j];
+        }
+
+        if cumulative_volume > 0.0 {
+            vwap_values.push(cumulative_volume_price / cumulative_volume);
+        } else {
+            vwap_values.push(close[i]); // Fallback to close price
+        }
+    }
+
+    Ok(vwap_values)
+}
+
+/// Commodity Channel Index
+#[pyfunction]
+pub fn commodity_channel_index(
+    high: PyReadonlyArray1<f64>,
+    low: PyReadonlyArray1<f64>,
+    close: PyReadonlyArray1<f64>,
+    period: usize
+) -> PyResult<Vec<f64>> {
+    let high = high.as_slice()?;
+    let low = low.as_slice()?;
+    let close = close.as_slice()?;
+
+    let mut typical_prices = Vec::new();
+
+    // Calculate typical price
+    for i in 0..close.len() {
+        typical_prices.push((high[i] + low[i] + close[i]) / 3.0);
+    }
+
+    let mut cci_values = Vec::new();
+
+    for i in period-1..typical_prices.len() {
+        let sma = typical_prices[i-(period-1)..=i].iter().sum::<f64>() / period as f64;
+
+        let mean_deviation: f64 = typical_prices[i-(period-1)..=i]
+            .iter()
+            .map(|&tp| (tp - sma).abs())
+            .sum::<f64>() / period as f64;
+
+        let cci = if mean_deviation != 0.0 {
+            (typical_prices[i] - sma) / (0.015 * mean_deviation)
+        } else {
+            0.0
+        };
+
+        cci_values.push(cci);
+    }
+
+    Ok(cci_values)
+}
+
+/// Williams %R
+#[pyfunction]
+pub fn williams_percent_r(
+    high: PyReadonlyArray1<f64>,
+    low: PyReadonlyArray1<f64>,
+    close: PyReadonlyArray1<f64>,
+    period: usize
+) -> PyResult<Vec<f64>> {
+    let high = high.as_slice()?;
+    let low = low.as_slice()?;
+    let close = close.as_slice()?;
+
+    let mut percent_r_values = Vec::new();
+
+    for i in period-1..close.len() {
+        let highest_high = high[i-(period-1)..=i].iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let lowest_low = low[i-(period-1)..=i].iter().fold(f64::INFINITY, |a, &b| a.min(b));
+
+        let percent_r = if highest_high != lowest_low {
+            -100.0 * (highest_high - close[i]) / (highest_high - lowest_low)
+        } else {
+            -50.0 // Neutral value when range is zero
+        };
+
+        percent_r_values.push(percent_r);
+    }
+
+    Ok(percent_r_values)
+}
+
+/// Chaikin Money Flow
+#[pyfunction]
+pub fn chaikin_money_flow(
+    high: PyReadonlyArray1<f64>,
+    low: PyReadonlyArray1<f64>,
+    close: PyReadonlyArray1<f64>,
+    volume: PyReadonlyArray1<f64>,
+    period: usize
+) -> PyResult<Vec<f64>> {
+    let high = high.as_slice()?;
+    let low = low.as_slice()?;
+    let close = close.as_slice()?;
+    let volume = volume.as_slice()?;
+
+    let mut money_flow_multipliers = Vec::new();
+    let mut money_flow_volumes = Vec::new();
+
+    for i in 0..close.len() {
+        let money_flow_multiplier = if high[i] != low[i] {
+            ((close[i] - low[i]) - (high[i] - close[i])) / (high[i] - low[i])
+        } else {
+            0.0
+        };
+
+        money_flow_multipliers.push(money_flow_multiplier);
+        money_flow_volumes.push(money_flow_multiplier * volume[i]);
+    }
+
+    // Calculate CMF as EMA of money flow volume
+    Ok(ema_internal(&money_flow_volumes, period))
+}
+
 /// Money Flow Index
 #[pyfunction]
 pub fn money_flow_index(
@@ -397,23 +579,23 @@ pub fn money_flow_index(
     let low = low.as_slice()?;
     let close = close.as_slice()?;
     let volume = volume.as_slice()?;
-    
+
     let mut typical_prices = Vec::new();
     let mut money_flows = Vec::new();
-    
+
     // Calculate typical price and raw money flow
     for i in 0..close.len() {
         let typical_price = (high[i] + low[i] + close[i]) / 3.0;
         typical_prices.push(typical_price);
         money_flows.push(typical_price * volume[i]);
     }
-    
+
     let mut result = Vec::new();
-    
+
     for i in period..typical_prices.len() {
         let mut positive_flow = 0.0;
         let mut negative_flow = 0.0;
-        
+
         for j in (i-period+1)..=i {
             if typical_prices[j] > typical_prices[j-1] {
                 positive_flow += money_flows[j];
@@ -421,17 +603,17 @@ pub fn money_flow_index(
                 negative_flow += money_flows[j];
             }
         }
-        
+
         let money_flow_ratio = if negative_flow != 0.0 {
             positive_flow / negative_flow
         } else {
             100.0
         };
-        
+
         let mfi = 100.0 - (100.0 / (1.0 + money_flow_ratio));
         result.push(mfi);
     }
-    
+
     Ok(result)
 }
 
