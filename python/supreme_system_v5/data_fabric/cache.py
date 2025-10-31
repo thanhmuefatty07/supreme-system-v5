@@ -1,574 +1,397 @@
 """
-Data Cache Layer - High-performance caching with Redis + PostgreSQL persistence
-ULTRA SFL implementation for enterprise-grade data caching
+Data Cache - Multi-tier caching system
+Memory -> Redis -> PostgreSQL with intelligent TTL management
 """
 
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
 from typing import Dict, Optional, Any, List
-from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
 import aioredis
 import asyncpg
 from loguru import logger
-from prometheus_client import Counter, Gauge, Histogram
 
 from .normalizer import MarketDataPoint
 
-# Metrics
-CACHE_HITS = Counter('cache_hits_total', 'Cache hit count', ['cache_type'])
-CACHE_MISSES = Counter('cache_misses_total', 'Cache miss count', ['cache_type'])
-CACHE_SIZE = Gauge('cache_size_bytes', 'Cache size in bytes', ['cache_type'])
-CACHE_LATENCY = Histogram('cache_latency_seconds', 'Cache operation latency', ['operation'])
-
-@dataclass
-class CacheConfig:
-    """Cache configuration"""
-    redis_url: str = "redis://localhost:6379/0"
-    postgres_url: str = "postgresql://postgres:supreme_password@localhost:5432/supreme_trading"
-
-    # Redis settings
-    redis_max_connections: int = 20
-    redis_ttl_seconds: int = 300  # 5 minutes default TTL
-
-    # PostgreSQL settings
-    pg_min_connections: int = 5
-    pg_max_connections: int = 20
-
-    # Cache settings
-    enable_memory_cache: bool = True
-    enable_redis_cache: bool = True
-    enable_postgres_persistence: bool = True
-
-    # Performance settings
-    max_memory_items: int = 10000
-    cleanup_interval_seconds: int = 300  # 5 minutes
-
-class MemoryCache:
-    """In-memory LRU cache for ultra-fast access"""
-
-    def __init__(self, max_items: int = 10000):
-        self.max_items = max_items
-        self.cache: Dict[str, Dict[str, Any]] = {}
-        self.access_times: Dict[str, float] = {}
-        self._lock = asyncio.Lock()
-
-    async def get(self, key: str) -> Optional[Any]:
-        """Get item from memory cache"""
-        async with self._lock:
-            if key in self.cache:
-                # Update access time for LRU
-                self.access_times[key] = time.time()
-                CACHE_HITS.labels(cache_type='memory').inc()
-                return self.cache[key]['data']
-            else:
-                CACHE_MISSES.labels(cache_type='memory').inc()
-                return None
-
-    async def set(self, key: str, value: Any, ttl_seconds: int = 300):
-        """Set item in memory cache"""
-        async with self._lock:
-            # Evict LRU items if at capacity
-            if len(self.cache) >= self.max_items:
-                await self._evict_lru()
-
-            expire_time = time.time() + ttl_seconds
-            self.cache[key] = {
-                'data': value,
-                'expire_time': expire_time
-            }
-            self.access_times[key] = time.time()
-
-            CACHE_SIZE.labels(cache_type='memory').set(len(self.cache))
-
-    async def delete(self, key: str):
-        """Delete item from memory cache"""
-        async with self._lock:
-            if key in self.cache:
-                del self.cache[key]
-                del self.access_times[key]
-                CACHE_SIZE.labels(cache_type='memory').set(len(self.cache))
-
-    async def cleanup_expired(self):
-        """Remove expired items"""
-        async with self._lock:
-            current_time = time.time()
-            expired_keys = [
-                key for key, data in self.cache.items()
-                if data['expire_time'] <= current_time
-            ]
-
-            for key in expired_keys:
-                del self.cache[key]
-                del self.access_times[key]
-
-            if expired_keys:
-                logger.debug(f"🧹 Memory cache cleanup: removed {len(expired_keys)} expired items")
-                CACHE_SIZE.labels(cache_type='memory').set(len(self.cache))
-
-    async def _evict_lru(self):
-        """Evict least recently used items"""
-        if not self.access_times:
-            return
-
-        # Find oldest access time
-        oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
-
-        # Remove oldest item
-        del self.cache[oldest_key]
-        del self.access_times[oldest_key]
-
-        logger.debug(f"🗑️ Memory cache LRU eviction: removed {oldest_key}")
-
-    def stats(self) -> Dict[str, Any]:
-        """Get cache statistics"""
-        return {
-            'items': len(self.cache),
-            'max_items': self.max_items,
-            'utilization_percent': (len(self.cache) / self.max_items) * 100,
-            'oldest_access': min(self.access_times.values()) if self.access_times else None,
-            'newest_access': max(self.access_times.values()) if self.access_times else None
-        }
-
-class RedisCache:
-    """Redis-based distributed cache"""
-
-    def __init__(self, redis_url: str, max_connections: int = 20):
-        self.redis_url = redis_url
-        self.max_connections = max_connections
+class DataCache:
+    """
+    Multi-tier cache for market data
+    Layer 1: Memory (sub-ms access)
+    Layer 2: Redis (ms access) 
+    Layer 3: PostgreSQL (persistence)
+    """
+    
+    def __init__(self, redis_url: str = None, postgres_url: str = None):
+        """Initialize multi-tier cache"""
+        self.redis_url = redis_url or "redis://localhost:6379/0"
+        self.postgres_url = postgres_url or "postgresql://postgres:supreme_password@localhost:5432/supreme_trading"
+        
+        # Memory cache (L1)
+        self.memory_cache: Dict[str, MarketDataPoint] = {}
+        self.memory_ttl: Dict[str, float] = {}
+        self.max_memory_items = 1000  # Limit for i3-4GB systems
+        
+        # Redis connection (L2)
         self.redis: Optional[aioredis.Redis] = None
-        self._lock = asyncio.Lock()
-
+        
+        # PostgreSQL connection (L3)
+        self.postgres: Optional[asyncpg.Connection] = None
+        
+        # Cache statistics
+        self.stats = {
+            'hits_memory': 0,
+            'hits_redis': 0,
+            'hits_postgres': 0,
+            'misses': 0,
+            'writes': 0,
+            'errors': 0
+        }
+    
     async def connect(self):
-        """Connect to Redis"""
+        """Connect to Redis and PostgreSQL"""
         try:
+            # Connect to Redis
             self.redis = aioredis.from_url(
                 self.redis_url,
-                max_connections=self.max_connections,
-                encoding='utf-8',
-                decode_responses=True
+                encoding="utf-8",
+                decode_responses=True,
+                max_connections=10
             )
             await self.redis.ping()
             logger.info("✅ Redis cache connected")
+            
         except Exception as e:
-            logger.error(f"❌ Redis cache connection failed: {e}")
+            logger.error(f"❌ Redis connection failed: {e}")
             self.redis = None
-
+        
+        try:
+            # Connect to PostgreSQL
+            self.postgres = await asyncpg.connect(self.postgres_url)
+            logger.info("✅ PostgreSQL cache connected")
+            
+            # Ensure market_data table exists
+            await self._ensure_tables()
+            
+        except Exception as e:
+            logger.error(f"❌ PostgreSQL connection failed: {e}")
+            self.postgres = None
+    
     async def disconnect(self):
-        """Disconnect from Redis"""
+        """Disconnect from cache backends"""
         if self.redis:
             await self.redis.close()
             self.redis = None
-            logger.info("✅ Redis cache disconnected")
-
-    async def get(self, key: str) -> Optional[Any]:
-        """Get item from Redis cache"""
-        if not self.redis:
-            return None
-
-        try:
-            start_time = time.time()
-            data = await self.redis.get(key)
-
-            if data:
-                # Deserialize JSON data
-                parsed_data = json.loads(data)
-                CACHE_HITS.labels(cache_type='redis').inc()
-                CACHE_LATENCY.labels(operation='get').observe(time.time() - start_time)
-                return parsed_data
+        
+        if self.postgres:
+            await self.postgres.close()
+            self.postgres = None
+            
+        self.memory_cache.clear()
+        self.memory_ttl.clear()
+        
+        logger.info("✅ Data cache disconnected")
+    
+    async def get(self, symbol: str, max_age_seconds: float = 60) -> Optional[MarketDataPoint]:
+        """
+        Get market data with intelligent cache hierarchy
+        """
+        cache_key = f"market:{symbol}"
+        current_time = time.time()
+        
+        # L1: Memory cache (fastest)
+        if cache_key in self.memory_cache:
+            if current_time - self.memory_ttl.get(cache_key, 0) < max_age_seconds:
+                self.stats['hits_memory'] += 1
+                return self.memory_cache[cache_key]
             else:
-                CACHE_MISSES.labels(cache_type='redis').inc()
-                CACHE_LATENCY.labels(operation='get').observe(time.time() - start_time)
-                return None
-
-        except Exception as e:
-            logger.error(f"❌ Redis cache get error for {key}: {e}")
-            return None
-
-    async def set(self, key: str, value: Any, ttl_seconds: int = 300):
-        """Set item in Redis cache"""
-        if not self.redis:
-            return
-
-        try:
-            start_time = time.time()
-            # Serialize data to JSON
-            data = json.dumps(value, default=str)
-            await self.redis.setex(key, ttl_seconds, data)
-            CACHE_LATENCY.labels(operation='set').observe(time.time() - start_time)
-
-        except Exception as e:
-            logger.error(f"❌ Redis cache set error for {key}: {e}")
-
-    async def delete(self, key: str):
-        """Delete item from Redis cache"""
-        if not self.redis:
-            return
-
-        try:
-            await self.redis.delete(key)
-        except Exception as e:
-            logger.error(f"❌ Redis cache delete error for {key}: {e}")
-
-    async def get_size(self) -> int:
-        """Get approximate cache size in bytes"""
-        if not self.redis:
-            return 0
-
-        try:
-            info = await self.redis.info('memory')
-            return info.get('used_memory', 0)
-        except Exception:
-            return 0
-
-class PostgreSQLPersistence:
-    """PostgreSQL-based persistent storage for historical data"""
-
-    def __init__(self, postgres_url: str, min_connections: int = 5, max_connections: int = 20):
-        self.postgres_url = postgres_url
-        self.min_connections = min_connections
-        self.max_connections = max_connections
-        self.pool: Optional[asyncpg.Pool] = None
-
-    async def connect(self):
-        """Connect to PostgreSQL"""
-        try:
-            self.pool = await asyncpg.create_pool(
-                self.postgres_url,
-                min_size=self.min_connections,
-                max_size=self.max_connections,
-                command_timeout=30
-            )
-
-            # Ensure tables exist
-            await self._create_tables()
-            logger.info("✅ PostgreSQL persistence connected")
-
-        except Exception as e:
-            logger.error(f"❌ PostgreSQL connection failed: {e}")
-            self.pool = None
-
-    async def disconnect(self):
-        """Disconnect from PostgreSQL"""
-        if self.pool:
-            await self.pool.close()
-            self.pool = None
-            logger.info("✅ PostgreSQL persistence disconnected")
-
-    async def _create_tables(self):
-        """Create necessary tables if they don't exist"""
-        if not self.pool:
-            return
-
-        try:
-            async with self.pool.acquire() as conn:
-                # Market data table
-                await conn.execute("""
-                    CREATE TABLE IF NOT EXISTS market_data (
-                        id SERIAL PRIMARY KEY,
-                        symbol VARCHAR(20) NOT NULL,
-                        timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-                        price DECIMAL(20, 10),
-                        volume_24h DECIMAL(30, 10),
-                        change_24h DECIMAL(10, 5),
-                        high_24h DECIMAL(20, 10),
-                        low_24h DECIMAL(20, 10),
-                        bid DECIMAL(20, 10),
-                        ask DECIMAL(20, 10),
-                        market_cap DECIMAL(30, 10),
-                        source VARCHAR(50) NOT NULL,
-                        quality_score DECIMAL(3, 2) DEFAULT 1.0,
-                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-
-                        UNIQUE(symbol, timestamp, source)
+                # Expired from memory
+                del self.memory_cache[cache_key]
+                del self.memory_ttl[cache_key]
+        
+        # L2: Redis cache (fast)
+        if self.redis:
+            try:
+                cached_json = await self.redis.get(cache_key)
+                if cached_json:
+                    cached_data = json.loads(cached_json)
+                    
+                    # Check if data is fresh enough
+                    if current_time - cached_data.get('timestamp', 0) < max_age_seconds:
+                        # Reconstruct MarketDataPoint
+                        market_data = MarketDataPoint(**cached_data)
+                        
+                        # Store in memory cache for next access
+                        self._set_memory(cache_key, market_data)
+                        
+                        self.stats['hits_redis'] += 1
+                        return market_data
+                        
+            except Exception as e:
+                logger.warning(f"⚠️ Redis get error: {e}")
+                self.stats['errors'] += 1
+        
+        # L3: PostgreSQL (persistence)
+        if self.postgres:
+            try:
+                query = """
+                    SELECT symbol, price, volume_24h, change_24h, high_24h, low_24h,
+                           bid, ask, source, quality_score, 
+                           EXTRACT(EPOCH FROM ts) as timestamp
+                    FROM market_data 
+                    WHERE symbol = $1 
+                    AND ts > NOW() - INTERVAL '%s seconds'
+                    ORDER BY ts DESC 
+                    LIMIT 1
+                """
+                
+                row = await self.postgres.fetchrow(query % max_age_seconds, symbol)
+                if row:
+                    market_data = MarketDataPoint(
+                        symbol=row['symbol'],
+                        timestamp=float(row['timestamp']),
+                        price=float(row['price']),
+                        volume_24h=float(row['volume_24h']) if row['volume_24h'] else 0.0,
+                        change_24h=float(row['change_24h']) if row['change_24h'] else 0.0,
+                        high_24h=float(row['high_24h']) if row['high_24h'] else 0.0,
+                        low_24h=float(row['low_24h']) if row['low_24h'] else 0.0,
+                        bid=float(row['bid']) if row['bid'] else 0.0,
+                        ask=float(row['ask']) if row['ask'] else 0.0,
+                        source=row['source'],
+                        quality_score=float(row['quality_score']) if row['quality_score'] else 1.0
                     )
-                """)
-
-                # Create indexes for performance
-                await conn.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_market_data_symbol_timestamp
-                    ON market_data (symbol, timestamp DESC)
-                """)
-
-                await conn.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_market_data_source_timestamp
-                    ON market_data (source, timestamp DESC)
-                """)
-
-                logger.debug("✅ PostgreSQL tables created/verified")
-
+                    
+                    # Cache in Redis and memory
+                    await self._set_redis(cache_key, market_data)
+                    self._set_memory(cache_key, market_data)
+                    
+                    self.stats['hits_postgres'] += 1
+                    return market_data
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ PostgreSQL get error: {e}")
+                self.stats['errors'] += 1
+        
+        # Cache miss
+        self.stats['misses'] += 1
+        return None
+    
+    async def set(self, symbol: str, data: MarketDataPoint, ttl_seconds: int = 300):
+        """
+        Set data in all cache layers
+        """
+        cache_key = f"market:{symbol}"
+        
+        try:
+            # L1: Memory cache
+            self._set_memory(cache_key, data)
+            
+            # L2: Redis cache
+            await self._set_redis(cache_key, data, ttl_seconds)
+            
+            # L3: PostgreSQL (persistence)
+            await self._set_postgres(data)
+            
+            self.stats['writes'] += 1
+            
         except Exception as e:
-            logger.error(f"❌ PostgreSQL table creation failed: {e}")
-
-    async def save_market_data(self, data_point: MarketDataPoint):
-        """Save market data point to PostgreSQL"""
-        if not self.pool or not data_point:
+            logger.error(f"❌ Cache set error for {symbol}: {e}")
+            self.stats['errors'] += 1
+    
+    def _set_memory(self, cache_key: str, data: MarketDataPoint):
+        """Set data in memory cache with size limits"""
+        # Evict old items if at capacity
+        if len(self.memory_cache) >= self.max_memory_items:
+            # Remove oldest item
+            oldest_key = min(self.memory_ttl.keys(), key=lambda k: self.memory_ttl[k])
+            del self.memory_cache[oldest_key]
+            del self.memory_ttl[oldest_key]
+        
+        self.memory_cache[cache_key] = data
+        self.memory_ttl[cache_key] = time.time()
+    
+    async def _set_redis(self, cache_key: str, data: MarketDataPoint, ttl_seconds: int = 300):
+        """Set data in Redis cache"""
+        if not self.redis:
             return
-
+            
         try:
-            async with self.pool.acquire() as conn:
-                await conn.execute("""
-                    INSERT INTO market_data (
-                        symbol, timestamp, price, volume_24h, change_24h,
-                        high_24h, low_24h, bid, ask, market_cap,
-                        source, quality_score
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                    ON CONFLICT (symbol, timestamp, source)
-                    DO UPDATE SET
-                        price = EXCLUDED.price,
-                        volume_24h = EXCLUDED.volume_24h,
-                        change_24h = EXCLUDED.change_24h,
-                        high_24h = EXCLUDED.high_24h,
-                        low_24h = EXCLUDED.low_24h,
-                        bid = EXCLUDED.bid,
-                        ask = EXCLUDED.ask,
-                        market_cap = EXCLUDED.market_cap,
-                        quality_score = EXCLUDED.quality_score
-                """,
-                data_point.symbol,
-                datetime.fromtimestamp(data_point.timestamp, tz=timezone.utc),
-                data_point.price,
-                data_point.volume_24h,
-                data_point.change_24h,
-                data_point.high_24h,
-                data_point.low_24h,
-                data_point.bid,
-                data_point.ask,
-                data_point.market_cap,
-                data_point.source,
-                data_point.quality_score
+            # Convert MarketDataPoint to JSON
+            data_dict = {
+                'symbol': data.symbol,
+                'timestamp': data.timestamp,
+                'price': data.price,
+                'volume_24h': data.volume_24h,
+                'change_24h': data.change_24h,
+                'high_24h': data.high_24h,
+                'low_24h': data.low_24h,
+                'bid': data.bid,
+                'ask': data.ask,
+                'source': data.source,
+                'quality_score': data.quality_score
+            }
+            
+            await self.redis.setex(
+                cache_key,
+                ttl_seconds,
+                json.dumps(data_dict)
+            )
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Redis set error: {e}")
+    
+    async def _set_postgres(self, data: MarketDataPoint):
+        """Persist data to PostgreSQL"""
+        if not self.postgres:
+            return
+            
+        try:
+            query = """
+                INSERT INTO market_data 
+                (symbol, price, volume_24h, change_24h, high_24h, low_24h, 
+                 bid, ask, source, quality_score, ts)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TO_TIMESTAMP($11))
+            """
+            
+            await self.postgres.execute(
+                query,
+                data.symbol, data.price, data.volume_24h, data.change_24h,
+                data.high_24h, data.low_24h, data.bid, data.ask,
+                data.source, data.quality_score, data.timestamp
+            )
+            
+        except Exception as e:
+            logger.warning(f"⚠️ PostgreSQL insert error: {e}")
+    
+    async def _ensure_tables(self):
+        """Ensure required tables exist in PostgreSQL"""
+        if not self.postgres:
+            return
+            
+        try:
+            # Create market_data table if not exists (matches sql/init.sql)
+            await self.postgres.execute("""
+                CREATE TABLE IF NOT EXISTS market_data (
+                    id SERIAL PRIMARY KEY,
+                    symbol VARCHAR(32) NOT NULL,
+                    price NUMERIC(18,8) NOT NULL,
+                    volume_24h NUMERIC(24,8),
+                    change_24h NUMERIC(8,4),
+                    high_24h NUMERIC(18,8),
+                    low_24h NUMERIC(18,8),
+                    bid NUMERIC(18,8),
+                    ask NUMERIC(18,8),
+                    source VARCHAR(32),
+                    quality_score NUMERIC(6,4),
+                    ts TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
-
-                logger.debug(f"💾 PostgreSQL saved: {data_point.symbol} @ {data_point.price}")
-
+            """)
+            
+            # Create index for fast lookups
+            await self.postgres.execute("""
+                CREATE INDEX IF NOT EXISTS idx_market_data_symbol_ts 
+                ON market_data(symbol, ts DESC)
+            """)
+            
+            logger.info("✅ PostgreSQL tables ensured")
+            
         except Exception as e:
-            logger.error(f"❌ PostgreSQL save error: {e}")
-
-    async def get_historical_data(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get historical data for symbol"""
-        if not self.pool:
-            return []
-
-        try:
-            async with self.pool.acquire() as conn:
-                rows = await conn.fetch("""
-                    SELECT * FROM market_data
-                    WHERE symbol = $1
-                    ORDER BY timestamp DESC
-                    LIMIT $2
-                """, symbol, limit)
-
-                return [dict(row) for row in rows]
-
-        except Exception as e:
-            logger.error(f"❌ PostgreSQL historical data error for {symbol}: {e}")
-            return []
+            logger.error(f"❌ PostgreSQL table creation error: {e}")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache performance statistics"""
+        total_requests = sum([
+            self.stats['hits_memory'],
+            self.stats['hits_redis'], 
+            self.stats['hits_postgres'],
+            self.stats['misses']
+        ])
+        
+        return {
+            'total_requests': total_requests,
+            'hit_rate': (total_requests - self.stats['misses']) / max(1, total_requests),
+            'memory_hit_rate': self.stats['hits_memory'] / max(1, total_requests),
+            'redis_hit_rate': self.stats['hits_redis'] / max(1, total_requests),
+            'postgres_hit_rate': self.stats['hits_postgres'] / max(1, total_requests),
+            'miss_rate': self.stats['misses'] / max(1, total_requests),
+            'error_rate': self.stats['errors'] / max(1, self.stats['writes']),
+            'memory_items': len(self.memory_cache),
+            **self.stats
+        }
 
 class CacheManager:
     """
-    Unified cache manager with multi-layer caching
-    Memory -> Redis -> PostgreSQL hierarchy
+    Cache manager orchestrating multiple cache instances
+    Handles cache warming, cleanup, and health monitoring
     """
-
-    def __init__(self, config: Optional[CacheConfig] = None):
-        self.config = config or CacheConfig()
-
-        # Initialize cache layers
-        self.memory_cache = MemoryCache(self.config.max_memory_items) if self.config.enable_memory_cache else None
-        self.redis_cache = RedisCache(self.config.redis_url, self.config.redis_max_connections) if self.config.enable_redis_cache else None
-        self.postgres = PostgreSQLPersistence(self.config.postgres_url, self.config.pg_min_connections, self.config.pg_max_connections) if self.config.enable_postgres_persistence else None
-
-        # Background cleanup task
+    
+    def __init__(self, cache: DataCache):
+        """Initialize cache manager"""
+        self.cache = cache
+        self.warming_symbols: List[str] = []
         self.cleanup_task: Optional[asyncio.Task] = None
         self.running = False
-
-        logger.info("🏗️ Cache manager initialized")
-
-    async def start(self):
-        """Start cache manager and connect to backends"""
-        logger.info("🚀 Starting cache manager...")
-
-        # Connect to Redis if enabled
-        if self.redis_cache:
-            await self.redis_cache.connect()
-
-        # Connect to PostgreSQL if enabled
-        if self.postgres:
-            await self.postgres.connect()
-
-        # Start cleanup task
+    
+    async def start(self, symbols: List[str]):
+        """Start cache manager with symbol warming"""
+        await self.cache.connect()
+        
+        self.warming_symbols = symbols
         self.running = True
+        
+        # Start background tasks
         self.cleanup_task = asyncio.create_task(self._cleanup_loop())
-
-        logger.info("✅ Cache manager started")
-
+        
+        logger.info(f"🔥 Cache manager started with {len(symbols)} symbols")
+    
     async def stop(self):
-        """Stop cache manager and disconnect from backends"""
-        logger.info("🛑 Stopping cache manager...")
-
+        """Stop cache manager"""
         self.running = False
-
+        
         if self.cleanup_task:
             self.cleanup_task.cancel()
             try:
                 await self.cleanup_task
             except asyncio.CancelledError:
                 pass
-
-        if self.redis_cache:
-            await self.redis_cache.disconnect()
-
-        if self.postgres:
-            await self.postgres.disconnect()
-
+        
+        await self.cache.disconnect()
         logger.info("✅ Cache manager stopped")
-
-    async def get(self, key: str) -> Optional[Any]:
-        """
-        Get data from cache hierarchy
-        Memory -> Redis -> PostgreSQL (for historical data)
-        """
-        # Try memory cache first
-        if self.memory_cache:
-            data = await self.memory_cache.get(key)
-            if data:
-                return data
-
-        # Try Redis cache
-        if self.redis_cache:
-            data = await self.redis_cache.get(key)
-            if data:
-                # Populate memory cache for faster future access
-                if self.memory_cache:
-                    await self.memory_cache.set(key, data, self.config.redis_ttl_seconds)
-                return data
-
-        # For historical data, try PostgreSQL (different key format)
-        if self.postgres and key.startswith('historical:'):
-            symbol = key.replace('historical:', '')
-            historical_data = await self.postgres.get_historical_data(symbol, 1000)
-            if historical_data:
-                # Cache in Redis for future requests
-                if self.redis_cache:
-                    await self.redis_cache.set(key, historical_data, 3600)  # 1 hour TTL
-                return historical_data
-
-        return None
-
-    async def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None):
-        """
-        Set data in cache hierarchy
-        Memory + Redis (for current data)
-        PostgreSQL (for persistent storage)
-        """
-        ttl = ttl_seconds or self.config.redis_ttl_seconds
-
-        # Set in memory cache
-        if self.memory_cache:
-            await self.memory_cache.set(key, value, ttl)
-
-        # Set in Redis cache
-        if self.redis_cache:
-            await self.redis_cache.set(key, value, ttl)
-
-        # Persist to PostgreSQL if it's market data
-        if self.postgres and isinstance(value, MarketDataPoint):
-            await self.postgres.save_market_data(value)
-
-    async def delete(self, key: str):
-        """Delete data from all cache layers"""
-        if self.memory_cache:
-            await self.memory_cache.delete(key)
-
-        if self.redis_cache:
-            await self.redis_cache.delete(key)
-
-        # Note: PostgreSQL data is kept for historical purposes
-
+    
     async def _cleanup_loop(self):
-        """Background cleanup loop"""
+        """Background cleanup of stale cache entries"""
         while self.running:
             try:
-                # Memory cache cleanup
-                if self.memory_cache:
-                    await self.memory_cache.cleanup_expired()
-
-                # Wait for next cleanup cycle
-                await asyncio.sleep(self.config.cleanup_interval_seconds)
-
+                # Clean memory cache
+                current_time = time.time()
+                expired_keys = [
+                    key for key, ttl in self.cache.memory_ttl.items()
+                    if current_time - ttl > 300  # 5 minutes
+                ]
+                
+                for key in expired_keys:
+                    del self.cache.memory_cache[key]
+                    del self.cache.memory_ttl[key]
+                
+                if expired_keys:
+                    logger.debug(f"🧹 Cleaned {len(expired_keys)} stale cache entries")
+                
+                # Wait 60 seconds between cleanup runs
+                await asyncio.sleep(60)
+                
             except Exception as e:
                 logger.error(f"❌ Cache cleanup error: {e}")
-                await asyncio.sleep(60)  # Wait before retrying
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Get comprehensive cache statistics"""
-        stats = {
-            'config': {
-                'memory_enabled': self.config.enable_memory_cache,
-                'redis_enabled': self.config.enable_redis_cache,
-                'postgres_enabled': self.config.enable_postgres_persistence,
-                'redis_ttl_seconds': self.config.redis_ttl_seconds,
-                'max_memory_items': self.config.max_memory_items
-            }
-        }
-
-        # Memory cache stats
-        if self.memory_cache:
-            stats['memory'] = self.memory_cache.stats()
-
-        # Redis cache stats
-        if self.redis_cache:
-            stats['redis'] = {
-                'connected': self.redis_cache.redis is not None,
-                'size_bytes': self.redis_cache.get_size() if self.redis_cache.redis else 0
-            }
-
-        # PostgreSQL stats
-        stats['postgres'] = {
-            'connected': self.postgres.pool is not None if self.postgres else False
-        }
-
-        return stats
-
-# DataCache class for backward compatibility
-class DataCache:
-    """
-    Simplified cache interface for data operations
-    Wraps CacheManager for easier usage
-    """
-
-    def __init__(self, cache_manager: CacheManager):
-        self.cache_manager = cache_manager
-
-    async def get_market_data(self, symbol: str) -> Optional[MarketDataPoint]:
-        """Get cached market data for symbol"""
-        data = await self.cache_manager.get(f"market:{symbol}")
-        if data and isinstance(data, dict):
-            # Reconstruct MarketDataPoint from dict
-            try:
-                return MarketDataPoint(**data)
-            except Exception:
-                return None
-        return data
-
-    async def set_market_data(self, symbol: str, data_point: MarketDataPoint):
-        """Cache market data for symbol"""
-        await self.cache_manager.set(f"market:{symbol}", data_point)
-
-    async def get_historical_data(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get historical data for symbol"""
-        data = await self.cache_manager.get(f"historical:{symbol}")
-        if data and isinstance(data, list):
-            return data[:limit]
-        return []
-
-    async def invalidate_symbol(self, symbol: str):
-        """Invalidate all cached data for symbol"""
-        await self.cache_manager.delete(f"market:{symbol}")
-        await self.cache_manager.delete(f"historical:{symbol}")
-
-    async def get_cache_health(self) -> Dict[str, Any]:
+                await asyncio.sleep(60)  # Continue trying
+    
+    def get_health(self) -> Dict[str, Any]:
         """Get cache health status"""
-        return self.cache_manager.get_stats()
+        stats = self.cache.get_stats()
+        
+        return {
+            'status': 'healthy' if stats['error_rate'] < 0.1 else 'degraded',
+            'redis_connected': self.cache.redis is not None,
+            'postgres_connected': self.cache.postgres is not None,
+            'memory_usage_percent': (len(self.cache.memory_cache) / self.cache.max_memory_items) * 100,
+            **stats
+        }

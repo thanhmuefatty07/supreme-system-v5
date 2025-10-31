@@ -1,6 +1,7 @@
 """
-OKX Public Connector - WebSocket and REST for real-time crypto data
-Free tier: Unlimited public endpoints, 300 requests/min with API key
+OKX Public API Connector - Real-time WebSocket feeds
+Unlimited public endpoints with high-frequency market data
+Optimized for futures scalping with minimal latency
 """
 
 import asyncio
@@ -14,30 +15,22 @@ from loguru import logger
 
 class OKXPublicConnector:
     """
-    OKX Public API connector - WebSocket + REST for real-time crypto data
-    Free tier: Unlimited public endpoints, 300 requests/min with API key
+    OKX Public API connector - Real-time market data
+    Free unlimited public WebSocket streams
+    Optimized for high-frequency trading
     """
-
-    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
-        """Initialize OKX connector"""
-        self.rest_url = "https://www.okx.com/api/v5"
+    
+    def __init__(self):
+        """Initialize OKX public connector"""
+        self.base_url = "https://www.okx.com/api/v5"
         self.ws_url = "wss://ws.okx.com:8443/ws/v5/public"
-        self.api_key = api_key
-        self.api_secret = api_secret
-
         self.session: Optional[aiohttp.ClientSession] = None
-        self.ws: Optional[websockets.WebSocketServerProtocol] = None
-        self.ws_connected = False
-
-        # Rate limiting (300 calls/min with API key, 10 calls/min without)
-        self.rate_limit_delay = 0.2 if api_key else 6.0  # 300/min vs 10/min
-        self.last_call = 0.0
-
-        # WebSocket subscriptions
-        self.subscriptions: Dict[str, List[Callable]] = {}
-        self.ws_task: Optional[asyncio.Task] = None
-
-        # Symbol mapping (OKX uses BTC-USDT format)
+        self.websocket: Optional[websockets.WebSocketServerProtocol] = None
+        self.connected = False
+        self.subscriptions: Dict[str, Callable] = {}
+        self.heartbeat_task: Optional[asyncio.Task] = None
+        
+        # Symbol mapping to OKX format
         self.symbol_map = {
             'BTC-USDT': 'BTC-USDT',
             'ETH-USDT': 'ETH-USDT',
@@ -50,423 +43,286 @@ class OKXPublicConnector:
             'DOT-USDT': 'DOT-USDT',
             'AVAX-USDT': 'AVAX-USDT'
         }
-
+    
     async def connect(self):
-        """Initialize HTTP session and WebSocket connection"""
-        if not self.session:
-            timeout = aiohttp.ClientTimeout(total=30, connect=10)
-            headers = {
-                'User-Agent': 'Supreme-System-V5/1.0',
-                'Accept': 'application/json'
-            }
-
-            if self.api_key:
-                headers.update({
-                    'OK-ACCESS-KEY': self.api_key,
-                    'OK-ACCESS-TIMESTAMP': str(int(time.time())),
-                    'OK-ACCESS-PASSPHRASE': self.api_secret or '',
-                })
-
-            self.session = aiohttp.ClientSession(
-                timeout=timeout,
-                headers=headers
+        """Connect to OKX public WebSocket"""
+        try:
+            logger.info("🔗 Connecting to OKX public WebSocket...")
+            
+            # HTTP session for REST calls
+            if not self.session:
+                timeout = aiohttp.ClientTimeout(total=30, connect=10)
+                self.session = aiohttp.ClientSession(
+                    timeout=timeout,
+                    headers={
+                        'User-Agent': 'Supreme-System-V5/1.0',
+                        'Accept': 'application/json'
+                    }
+                )
+            
+            # WebSocket connection with optimized settings
+            self.websocket = await websockets.connect(
+                self.ws_url,
+                max_size=2**20,  # 1MB buffer
+                max_queue=500,   # High-frequency queue
+                ping_interval=20,
+                ping_timeout=10,
+                close_timeout=10
             )
-
-            logger.info("✅ OKX REST connector initialized")
-
-        # Connect WebSocket for real-time data
-        await self._connect_websocket()
-        logger.info("✅ OKX connector ready")
-
+            
+            self.connected = True
+            logger.info("✅ OKX public WebSocket connected")
+            
+            # Start message handler and heartbeat
+            asyncio.create_task(self._handle_messages())
+            self.heartbeat_task = asyncio.create_task(self._heartbeat())
+            
+        except Exception as e:
+            logger.error(f"❌ OKX connection failed: {e}")
+            self.connected = False
+            raise
+    
     async def disconnect(self):
-        """Close HTTP session and WebSocket connection"""
-        if self.ws_task:
-            self.ws_task.cancel()
+        """Disconnect from OKX WebSocket"""
+        logger.info("🔌 Disconnecting from OKX...")
+        
+        self.connected = False
+        
+        # Cancel heartbeat
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
             try:
-                await self.ws_task
+                await self.heartbeat_task
             except asyncio.CancelledError:
                 pass
-
-        if self.ws and self.ws_connected:
-            await self.ws.close()
-            self.ws_connected = False
-
+        
+        # Close WebSocket
+        if self.websocket:
+            try:
+                await self.websocket.close()
+            except Exception as e:
+                logger.warning(f"WebSocket close error: {e}")
+            self.websocket = None
+            
+        # Close HTTP session
         if self.session:
             await self.session.close()
             self.session = None
-
-        logger.info("✅ OKX connector disconnected")
-
-    async def _connect_websocket(self):
-        """Establish WebSocket connection"""
-        try:
-            self.ws = await websockets.connect(
-                self.ws_url,
-                extra_headers={
-                    'User-Agent': 'Supreme-System-V5/1.0'
-                },
-                ping_interval=20,
-                ping_timeout=10,
-                close_timeout=5
-            )
-            self.ws_connected = True
-
-            # Start WebSocket message handler
-            self.ws_task = asyncio.create_task(self._handle_websocket_messages())
-
-            logger.info("✅ OKX WebSocket connected")
-
-        except Exception as e:
-            logger.error(f"❌ OKX WebSocket connection failed: {e}")
-            self.ws_connected = False
-
-    async def _handle_websocket_messages(self):
-        """Handle incoming WebSocket messages"""
-        try:
-            while self.ws_connected and self.ws:
-                try:
-                    message = await asyncio.wait_for(self.ws.recv(), timeout=30)
-                    await self._process_websocket_message(message)
-                except asyncio.TimeoutError:
-                    # Send ping to keep connection alive
-                    await self.ws.ping()
-                except websockets.exceptions.ConnectionClosed:
-                    logger.warning("⚠️ OKX WebSocket connection closed")
-                    self.ws_connected = False
-                    break
-
-        except Exception as e:
-            logger.error(f"❌ OKX WebSocket handler error: {e}")
-            self.ws_connected = False
-
-        # Attempt reconnection
-        if not self.ws_connected:
-            logger.info("🔄 Attempting OKX WebSocket reconnection...")
-            await asyncio.sleep(5)
-            await self._connect_websocket()
-
-    async def _process_websocket_message(self, message: str):
-        """Process incoming WebSocket message"""
-        try:
-            data = json.loads(message)
-
-            if 'event' in data:
-                event = data['event']
-                if event == 'subscribe':
-                    logger.debug(f"✅ OKX subscription confirmed: {data}")
-                elif event == 'error':
-                    logger.error(f"❌ OKX subscription error: {data}")
-                return
-
-            # Process market data
-            if 'arg' in data and 'data' in data:
-                channel = data['arg'].get('channel', '')
-                symbol = data['arg'].get('instId', '')
-
-                if symbol in self.subscriptions:
-                    for callback in self.subscriptions[symbol]:
-                        try:
-                            await callback(data['data'], channel)
-                        except Exception as e:
-                            logger.error(f"❌ OKX callback error for {symbol}: {e}")
-
-        except json.JSONDecodeError as e:
-            logger.error(f"❌ OKX message parsing error: {e}")
-
-    async def _enforce_rate_limit(self):
-        """Enforce API rate limits"""
-        current_time = time.time()
-        elapsed = current_time - self.last_call
-
-        if elapsed < self.rate_limit_delay:
-            await asyncio.sleep(self.rate_limit_delay - elapsed)
-
-        self.last_call = time.time()
-
+            
+        logger.info("✅ OKX disconnected")
+    
+    async def _heartbeat(self):
+        """Maintain WebSocket connection with heartbeat"""
+        while self.connected and self.websocket:
+            try:
+                # OKX uses ping frames for heartbeat
+                await self.websocket.ping()
+                await asyncio.sleep(20)
+            except Exception as e:
+                logger.error(f"❌ OKX heartbeat failed: {e}")
+                self.connected = False
+                break
+    
     async def get_price_data(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
-        Get latest price data via REST API
+        Get current price data via REST API (for initial data)
         """
-        await self._enforce_rate_limit()
-
-        if symbol not in self.symbol_map:
-            logger.warning(f"⚠️ Symbol {symbol} not mapped for OKX")
+        if not self.session:
+            await self.connect()
+        
+        okx_symbol = self.symbol_map.get(symbol)
+        if not okx_symbol:
+            logger.warning(f"⚠️ Unknown OKX symbol: {symbol}")
             return None
-
-        okx_symbol = self.symbol_map[symbol]
-
+        
         try:
-            params = {
-                'instId': okx_symbol,
-                'sz': '1'  # Only latest trade
-            }
-
-            async with self.session.get(f"{self.rest_url}/market/trades", params=params) as response:
+            url = f"{self.base_url}/market/ticker"
+            params = {'instId': okx_symbol}
+            
+            async with self.session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return self._parse_price_response(data, symbol)
+                    
+                    if 'data' in data and data['data']:
+                        ticker = data['data'][0]
+                        
+                        return {
+                            'symbol': symbol,
+                            'price': float(ticker['last']),
+                            'volume_24h': float(ticker['vol24h']),
+                            'change_24h': float(ticker['change24h']) * 100,  # Convert to percentage
+                            'high_24h': float(ticker['high24h']),
+                            'low_24h': float(ticker['low24h']),
+                            'bid': float(ticker['bidPx']) if ticker['bidPx'] else 0.0,
+                            'ask': float(ticker['askPx']) if ticker['askPx'] else 0.0,
+                            'open_24h': float(ticker['open24h']),
+                            'source': 'okx_public',
+                            'timestamp': time.time()
+                        }
                 else:
                     logger.error(f"❌ OKX REST API error: {response.status}")
                     return None
-
+                    
         except Exception as e:
             logger.error(f"❌ OKX REST error for {symbol}: {e}")
-            return None
-
-    def _parse_price_response(self, data: Dict, symbol: str) -> Dict[str, Any]:
-        """Parse OKX REST price response"""
-        result = {
-            'symbol': symbol,
-            'source': 'okx',
-            'timestamp': time.time()
-        }
-
-        try:
-            if data.get('code') == '0' and 'data' in data:
-                trades = data['data']
-                if trades:
-                    latest_trade = trades[0]  # Most recent trade
-                    result.update({
-                        'price': float(latest_trade.get('px', 0)),
-                        'volume': float(latest_trade.get('sz', 0)),
-                        'side': latest_trade.get('side', ''),
-                        'timestamp': int(latest_trade.get('ts', 0)) / 1000,  # Convert ms to s
-                        'trade_id': latest_trade.get('tradeId', ''),
-                        'success': True
-                    })
-
-                    logger.debug(f"✅ OKX REST: {symbol} = ${result.get('price', 0):.4f}")
-                    return result
-
-            result['success'] = False
-            result['error'] = data.get('msg', 'Unknown error')
-            return result
-
-        except (KeyError, ValueError, TypeError) as e:
-            logger.error(f"❌ OKX REST parsing error: {e}")
-            result['success'] = False
-            result['error'] = str(e)
-            return result
-
-    async def subscribe_price_stream(self, symbol: str, callback: Callable):
+            raise
+        
+        return None
+    
+    async def subscribe_ticker(self, symbol: str, callback: Callable):
         """
-        Subscribe to real-time price updates via WebSocket
+        Subscribe to real-time ticker updates via WebSocket
         """
-        if symbol not in self.symbol_map:
-            logger.warning(f"⚠️ Symbol {symbol} not mapped for OKX WebSocket")
+        if not self.websocket or not self.connected:
+            await self.connect()
+            
+        okx_symbol = self.symbol_map.get(symbol)
+        if not okx_symbol:
+            logger.error(f"❌ Unknown OKX symbol: {symbol}")
             return
-
-        okx_symbol = self.symbol_map[symbol]
-
-        if symbol not in self.subscriptions:
-            self.subscriptions[symbol] = []
-
-        self.subscriptions[symbol].append(callback)
-
-        if self.ws_connected and self.ws:
-            # Send subscription message
-            subscription_msg = {
-                "op": "subscribe",
-                "args": [{
-                    "channel": "trades",
+        
+        # Subscribe to tickers channel
+        subscribe_msg = {
+            "op": "subscribe",
+            "args": [
+                {
+                    "channel": "tickers",
                     "instId": okx_symbol
-                }]
-            }
-
-            try:
-                await self.ws.send(json.dumps(subscription_msg))
-                logger.info(f"✅ OKX WebSocket subscribed to {symbol}")
-            except Exception as e:
-                logger.error(f"❌ OKX WebSocket subscription failed for {symbol}: {e}")
-
-    async def unsubscribe_price_stream(self, symbol: str, callback: Callable = None):
-        """
-        Unsubscribe from real-time price updates
-        """
-        if symbol not in self.subscriptions:
-            return
-
-        if callback:
-            if callback in self.subscriptions[symbol]:
-                self.subscriptions[symbol].remove(callback)
-        else:
-            self.subscriptions[symbol].clear()
-
-        if not self.subscriptions[symbol]:
-            del self.subscriptions[symbol]
-
-            if self.ws_connected and self.ws:
-                # Send unsubscribe message
-                okx_symbol = self.symbol_map[symbol]
-                unsubscribe_msg = {
-                    "op": "unsubscribe",
-                    "args": [{
-                        "channel": "trades",
-                        "instId": okx_symbol
-                    }]
                 }
-
+            ]
+        }
+        
+        await self.websocket.send(json.dumps(subscribe_msg))
+        
+        # Register callback
+        callback_key = f"tickers:{okx_symbol}"
+        self.subscriptions[callback_key] = callback
+        
+        logger.info(f"📡 Subscribed to OKX ticker: {symbol}")
+    
+    async def subscribe_orderbook(self, symbol: str, callback: Callable, depth: str = "5"):
+        """
+        Subscribe to order book updates (for spread analysis)
+        """
+        if not self.websocket or not self.connected:
+            await self.connect()
+            
+        okx_symbol = self.symbol_map.get(symbol)
+        if not okx_symbol:
+            return
+        
+        subscribe_msg = {
+            "op": "subscribe",
+            "args": [
+                {
+                    "channel": "books",
+                    "instId": okx_symbol
+                }
+            ]
+        }
+        
+        await self.websocket.send(json.dumps(subscribe_msg))
+        
+        callback_key = f"books:{okx_symbol}"
+        self.subscriptions[callback_key] = callback
+        
+        logger.info(f"📊 Subscribed to OKX orderbook: {symbol}")
+    
+    async def _handle_messages(self):
+        """
+        Handle incoming WebSocket messages with error recovery
+        """
+        logger.info("👂 OKX message handler started")
+        
+        try:
+            async for message in self.websocket:
                 try:
-                    await self.ws.send(json.dumps(unsubscribe_msg))
-                    logger.info(f"✅ OKX WebSocket unsubscribed from {symbol}")
+                    data = json.loads(message)
+                    
+                    # Handle subscription confirmations
+                    if data.get('event') == 'subscribe':
+                        logger.info(f"✅ OKX subscription confirmed: {data.get('arg', {})}")
+                        continue
+                    
+                    # Handle data messages
+                    if 'data' in data and 'arg' in data:
+                        channel = data['arg'].get('channel')
+                        inst_id = data['arg'].get('instId')
+                        callback_key = f"{channel}:{inst_id}"
+                        
+                        if callback_key in self.subscriptions:
+                            # Convert symbol back to our format
+                            symbol = next(
+                                (k for k, v in self.symbol_map.items() if v == inst_id),
+                                inst_id
+                            )
+                            
+                            # Process based on channel type
+                            if channel == 'tickers':
+                                await self._process_ticker_data(symbol, data['data'][0])
+                            elif channel == 'books':
+                                await self._process_orderbook_data(symbol, data['data'][0])
+                            
+                            # Call registered callback
+                            await self.subscriptions[callback_key](data['data'][0])
+                            
+                except json.JSONDecodeError as e:
+                    logger.warning(f"⚠️ OKX invalid JSON: {e}")
                 except Exception as e:
-                    logger.error(f"❌ OKX WebSocket unsubscription failed for {symbol}: {e}")
-
-    async def get_orderbook(self, symbol: str, depth: int = 20) -> Optional[Dict[str, Any]]:
-        """
-        Get order book snapshot
-        """
-        await self._enforce_rate_limit()
-
-        if symbol not in self.symbol_map:
-            logger.warning(f"⚠️ Symbol {symbol} not mapped for OKX")
-            return None
-
-        okx_symbol = self.symbol_map[symbol]
-
-        try:
-            params = {
-                'instId': okx_symbol,
-                'sz': str(depth)
-            }
-
-            async with self.session.get(f"{self.rest_url}/market/books", params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return self._parse_orderbook_response(data, symbol)
-                else:
-                    logger.error(f"❌ OKX orderbook API error: {response.status}")
-                    return None
-
+                    logger.error(f"❌ OKX message processing error: {e}")
+                    
+        except websockets.exceptions.ConnectionClosed:
+            logger.warning("⚠️ OKX WebSocket connection closed")
+            self.connected = False
         except Exception as e:
-            logger.error(f"❌ OKX orderbook error for {symbol}: {e}")
-            return None
-
-    def _parse_orderbook_response(self, data: Dict, symbol: str) -> Dict[str, Any]:
-        """Parse OKX orderbook response"""
-        result = {
-            'symbol': symbol,
-            'source': 'okx',
-            'timestamp': time.time()
-        }
-
-        try:
-            if data.get('code') == '0' and 'data' in data:
-                books = data['data']
-                if books:
-                    book = books[0]
-                    timestamp = int(book.get('ts', 0)) / 1000
-
-                    # Parse bids and asks
-                    bids = []
-                    asks = []
-
-                    for bid in book.get('bids', []):
-                        bids.append({
-                            'price': float(bid[0]),
-                            'volume': float(bid[1]),
-                            'orders': int(bid[3]) if len(bid) > 3 else 1
-                        })
-
-                    for ask in book.get('asks', []):
-                        asks.append({
-                            'price': float(ask[0]),
-                            'volume': float(ask[1]),
-                            'orders': int(ask[3]) if len(ask) > 3 else 1
-                        })
-
-                    result.update({
-                        'bids': bids,
-                        'asks': asks,
-                        'timestamp': timestamp,
-                        'success': True
-                    })
-
-                    if bids and asks:
-                        result.update({
-                            'bid': bids[0]['price'],
-                            'ask': asks[0]['price'],
-                            'spread': asks[0]['price'] - bids[0]['price'],
-                            'spread_bps': ((asks[0]['price'] - bids[0]['price']) / bids[0]['price']) * 10000
-                        })
-
-                    logger.debug(f"✅ OKX orderbook: {symbol} bid={result.get('bid', 0):.4f} ask={result.get('ask', 0):.4f}")
-                    return result
-
-            result['success'] = False
-            result['error'] = data.get('msg', 'Unknown error')
-            return result
-
-        except (KeyError, ValueError, TypeError) as e:
-            logger.error(f"❌ OKX orderbook parsing error: {e}")
-            result['success'] = False
-            result['error'] = str(e)
-            return result
-
-    async def get_24h_stats(self, symbol: str) -> Optional[Dict[str, Any]]:
+            logger.error(f"❌ OKX message handler error: {e}")
+            self.connected = False
+    
+    async def _process_ticker_data(self, symbol: str, ticker_data: Dict):
         """
-        Get 24-hour statistics
+        Process ticker data and emit normalized format
         """
-        await self._enforce_rate_limit()
-
-        if symbol not in self.symbol_map:
-            logger.warning(f"⚠️ Symbol {symbol} not mapped for OKX")
-            return None
-
-        okx_symbol = self.symbol_map[symbol]
-
         try:
-            params = {
-                'instId': okx_symbol
+            normalized_data = {
+                'symbol': symbol,
+                'price': float(ticker_data['last']),
+                'volume_24h': float(ticker_data['vol24h']),
+                'change_24h': float(ticker_data['change24h']) * 100,
+                'high_24h': float(ticker_data['high24h']),
+                'low_24h': float(ticker_data['low24h']),
+                'bid': float(ticker_data['bidPx']) if ticker_data['bidPx'] else 0.0,
+                'ask': float(ticker_data['askPx']) if ticker_data['askPx'] else 0.0,
+                'open_24h': float(ticker_data['open24h']),
+                'source': 'okx_public',
+                'timestamp': time.time(),
+                'ws_timestamp': int(ticker_data['ts']) / 1000  # OKX timestamp in ms
             }
-
-            async with self.session.get(f"{self.rest_url}/market/ticker", params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return self._parse_24h_response(data, symbol)
-                else:
-                    logger.error(f"❌ OKX 24h stats API error: {response.status}")
-                    return None
-
+            
+            logger.debug(f"📈 OKX {symbol}: ${normalized_data['price']:.4f} vol={normalized_data['volume_24h']:.0f}")
+            
         except Exception as e:
-            logger.error(f"❌ OKX 24h stats error for {symbol}: {e}")
-            return None
-
-    def _parse_24h_response(self, data: Dict, symbol: str) -> Dict[str, Any]:
-        """Parse OKX 24h statistics response"""
-        result = {
-            'symbol': symbol,
-            'source': 'okx',
-            'timestamp': time.time()
-        }
-
+            logger.error(f"❌ OKX ticker processing error: {e}")
+    
+    async def _process_orderbook_data(self, symbol: str, book_data: Dict):
+        """
+        Process order book data for spread analysis
+        """
         try:
-            if data.get('code') == '0' and 'data' in data:
-                stats = data['data']
-                if stats:
-                    stat = stats[0]
-
-                    result.update({
-                        'price': float(stat.get('last', 0)),
-                        'high_24h': float(stat.get('high24h', 0)),
-                        'low_24h': float(stat.get('low24h', 0)),
-                        'open_24h': float(stat.get('open24h', 0)),
-                        'volume_24h': float(stat.get('vol24h', 0)),
-                        'change_24h': float(stat.get('change24h', 0)),
-                        'change_percent_24h': float(stat.get('changePercent24h', '0').rstrip('%')),
-                        'timestamp': int(stat.get('ts', 0)) / 1000,
-                        'success': True
-                    })
-
-                    logger.debug(f"✅ OKX 24h: {symbol} price=${result.get('price', 0):.4f} change={result.get('change_percent_24h', 0):.2f}%")
-                    return result
-
-            result['success'] = False
-            result['error'] = data.get('msg', 'Unknown error')
-            return result
-
-        except (KeyError, ValueError, TypeError) as e:
-            logger.error(f"❌ OKX 24h parsing error: {e}")
-            result['success'] = False
-            result['error'] = str(e)
-            return result
+            bids = book_data.get('bids', [])
+            asks = book_data.get('asks', [])
+            
+            if bids and asks:
+                best_bid = float(bids[0][0]) if bids[0] else 0.0
+                best_ask = float(asks[0][0]) if asks[0] else 0.0
+                
+                spread = abs(best_ask - best_bid)
+                spread_bps = (spread / best_bid * 10000) if best_bid > 0 else 0
+                
+                logger.debug(f"📊 OKX {symbol} spread: {spread:.4f} ({spread_bps:.1f} bps)")
+                
+        except Exception as e:
+            logger.error(f"❌ OKX orderbook processing error: {e}")
+    
+    async def get_supported_symbols(self) -> List[str]:
+        """Get supported trading symbols"""
+        return list(self.symbol_map.keys())
