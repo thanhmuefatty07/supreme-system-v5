@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🛠️ Supreme System V5 - Comprehensive F541 Fixer
+Supreme System V5 - Comprehensive F541 Fixer
 Giải pháp tối ưu, triệt để nhất để sửa lỗi F541
 """
 
@@ -48,7 +48,7 @@ class ComprehensiveF541Fixer:
                 # Remove f prefix
                 regular_string = f_string[1:]  # Remove 'f' prefix
                 modified_content = modified_content.replace(f_string, regular_string)
-                fixes.append(f"Fixed: {f_string} -> {regular_string}")
+                fixes.append("Fixed: " + f_string + " -> " + regular_string)
                 self.stats['method_stats']['simple'] += 1
         
         return modified_content, fixes
@@ -65,8 +65,8 @@ class ComprehensiveF541Fixer:
             
             # Pattern đơn giản và hiệu quả - giới hạn độ dài để tránh catastrophic backtracking
             patterns = [
-                (r'f"([^"]{1,100}?)"', '"{}"),    # f"short text" - limit to 100 chars
-                (r"f'([^']{1,100}?)'', "'{}''),   # f'short text' - limit to 100 chars
+                (r'f"([^"]{1,100}?)"', '"{}"'),    # f"short text" - limit to 100 chars
+                (r"f'([^']{1,100}?)'", "'{}'"),   # f'short text' - limit to 100 chars
             ]
             
             for pattern, replacement_template in patterns:
@@ -87,11 +87,11 @@ class ComprehensiveF541Fixer:
                     # Count differences
                     count = old_content.count('f"') + old_content.count("f'") - (modified_content.count('f"') + modified_content.count("f'"))
                     if count > 0:
-                        fixes.append(f"Regex method fixed {count} f-strings")
+                        fixes.append("Regex method fixed " + str(count) + " f-strings")
                         self.stats['method_stats']['regex'] += count
         
         except Exception as e:
-            fixes.append(f"Regex method error (fallback used): {e}")
+            fixes.append("Regex method error (fallback used): " + str(e))
         
         return modified_content, fixes
     
@@ -119,8 +119,10 @@ class ComprehensiveF541Fixer:
                         f_string_content = line[pos+2:end_pos]
                         if '{' not in f_string_content or '}' not in f_string_content:
                             # Replace f"content" with "content"
-                            modified_line = modified_line.replace(f'f"{f_string_content}"', f'"{f_string_content}"', 1)
-                            fixes.append(f"Line {line_num}: Fixed f-string without placeholder")
+                            old_f_string = 'f"' + f_string_content + '"'
+                            new_string = '"' + f_string_content + '"'
+                            modified_line = modified_line.replace(old_f_string, new_string, 1)
+                            fixes.append("Line " + str(line_num) + ": Fixed f-string without placeholder")
                             self.stats['method_stats']['line_by_line'] += 1
                     
                     pos += 2
@@ -137,8 +139,10 @@ class ComprehensiveF541Fixer:
                     if end_pos != -1:
                         f_string_content = line[pos+2:end_pos]
                         if '{' not in f_string_content or '}' not in f_string_content:
-                            modified_line = modified_line.replace(f"f'{f_string_content}'", f"'{f_string_content}'", 1)
-                            fixes.append(f"Line {line_num}: Fixed f-string without placeholder")
+                            old_f_string = "f'" + f_string_content + "'"
+                            new_string = "'" + f_string_content + "'"
+                            modified_line = modified_line.replace(old_f_string, new_string, 1)
+                            fixes.append("Line " + str(line_num) + ": Fixed f-string without placeholder")
                             self.stats['method_stats']['line_by_line'] += 1
                     
                     pos += 2
@@ -151,7 +155,7 @@ class ComprehensiveF541Fixer:
         """Sửa file với tất cả phương pháp"""
         try:
             if self.verbose:
-                print(f"\n🔧 Processing: {file_path}")
+                print("\n🔧 Processing: " + str(file_path))
             
             # Read file
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -182,48 +186,48 @@ class ComprehensiveF541Fixer:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         f.write(content)
                     self.stats['files_modified'] += 1
-                    print(f"✅ Fixed {file_path} - {len(all_fixes)} changes")
+                    print("✅ Fixed " + str(file_path) + " - " + str(len(all_fixes)) + " changes")
                 else:
-                    print(f"🧪 DRY RUN: Would fix {file_path} - {len(all_fixes)} changes")
+                    print("🧪 DRY RUN: Would fix " + str(file_path) + " - " + str(len(all_fixes)) + " changes")
                 
                 if self.verbose:
                     for fix in all_fixes:
-                        print(f"    {fix}")
+                        print("    " + fix)
             else:
                 if self.verbose:
-                    print(f"✅ No F541 issues in {file_path}")
+                    print("✅ No F541 issues in " + str(file_path))
             
             self.stats['files_processed'] += 1
             return len(all_fixes) > 0
             
         except Exception as e:
-            print(f"❌ Error processing {file_path}: {e}")
+            print("❌ Error processing " + str(file_path) + ": " + str(e))
             return False
     
     def fix_multiple_files(self, file_paths):
         """Sửa nhiều files"""
         print("🚀 Comprehensive F541 Fixer")
-        print(f"Mode: {'DRY RUN' if self.dry_run else 'LIVE'}")
-        print(f"Files to process: {len(file_paths)}")
+        print("Mode: " + ("DRY RUN" if self.dry_run else "LIVE"))
+        print("Files to process: " + str(len(file_paths)))
         print("=" * 50)
         
         for file_path in file_paths:
             if os.path.exists(file_path):
                 self.fix_file(file_path)
             else:
-                print(f"⚠️ File not found: {file_path}")
+                print("⚠️ File not found: " + str(file_path))
     
     def print_summary(self):
         """In summary báo cáo"""
         print("\n" + "=" * 50)
         print("📊 COMPREHENSIVE F541 FIXING SUMMARY")
         print("=" * 50)
-        print(f"Files processed: {self.stats['files_processed']}")
-        print(f"Files modified: {self.stats['files_modified']}")
-        print(f"Total fixes: {self.stats['total_fixes']}")
+        print("Files processed: " + str(self.stats['files_processed']))
+        print("Files modified: " + str(self.stats['files_modified']))
+        print("Total fixes: " + str(self.stats['total_fixes']))
         print("\nMethod breakdown:")
         for method, count in self.stats['method_stats'].items():
-            print(f"  {method}: {count} fixes")
+            print("  " + method + ": " + str(count) + " fixes")
         
         if self.dry_run:
             print("\n🧪 This was a DRY RUN - no files were actually modified")
