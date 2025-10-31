@@ -1,13 +1,64 @@
 {
   "dashboard": {
     "id": null,
-    "title": "Supreme System V5 - Trading Performance",
-    "tags": ["trading", "supreme-system", "scalping"],
+    "title": "Supreme System V5 - ULTRA SFL Trading Dashboard",
+    "tags": ["trading", "supreme-system", "scalping", "ultra-sfl"],
     "timezone": "UTC",
     "panels": [
       {
         "id": 1,
-        "title": "Portfolio Value",
+        "title": "System Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"supreme-system\"}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red",
+                    "index": 1
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green",
+                    "index": 0
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Current P&L",
         "type": "stat",
         "targets": [
           {
@@ -17,6 +68,60 @@
         ],
         "fieldConfig": {
           "defaults": {
+            "unit": "currencyUSD",
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 0
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Active Positions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_positions_count",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Current Drawdown %",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "current_drawdown_percent",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
             "mappings": [],
             "thresholds": {
               "mode": "absolute",
@@ -26,95 +131,55 @@
                   "value": null
                 },
                 {
+                  "color": "orange",
+                  "value": 10
+                },
+                {
                   "color": "red",
-                  "value": 0
+                  "value": 15
                 }
               ]
             }
           }
         },
         "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
+          "h": 4,
+          "w": 6,
+          "x": 18,
           "y": 0
-        }
-      },
-      {
-        "id": 2,
-        "title": "Active Positions",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "supreme_positions_active",
-            "refId": "A"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 0
-        }
-      },
-      {
-        "id": 3,
-        "title": "Strategy Signals Generated",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "rate(strategy_signals_total[5m])",
-            "refId": "A"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 8
-        }
-      },
-      {
-        "id": 4,
-        "title": "Risk Violations",
-        "type": "table",
-        "targets": [
-          {
-            "expr": "rate(risk_violations_total[5m])",
-            "refId": "A"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 16
         }
       },
       {
         "id": 5,
-        "title": "System Health",
-        "type": "stat",
+        "title": "Trading Performance",
+        "type": "graph",
         "targets": [
           {
-            "expr": "up",
+            "expr": "supreme_pnl_current",
+            "legendFormat": "Current P&L",
             "refId": "A"
+          },
+          {
+            "expr": "daily_pnl_usd",
+            "legendFormat": "Daily P&L",
+            "refId": "B"
           }
         ],
         "gridPos": {
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 24
+          "y": 4
         }
       },
       {
         "id": 6,
-        "title": "Data Cache Performance",
+        "title": "Trade Execution",
         "type": "graph",
         "targets": [
           {
-            "expr": "rate(cache_hits_total[5m]) / rate(cache_requests_total[5m])",
+            "expr": "rate(supreme_trades_total[5m])",
+            "legendFormat": "Trades/min",
             "refId": "A"
           }
         ],
@@ -122,7 +187,159 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 24
+          "y": 4
+        }
+      },
+      {
+        "id": 7,
+        "title": "Risk Violations by Type",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "sum(rate(risk_violations_total[5m])) by (violation_type)",
+            "legendFormat": "{{violation_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        }
+      },
+      {
+        "id": 8,
+        "title": "Event Bus Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(events_published_total[5m])",
+            "legendFormat": "Events Published/min",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(events_consumed_total[5m])",
+            "legendFormat": "Events Consumed/min",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        }
+      },
+      {
+        "id": 9,
+        "title": "Processing Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(supreme_latency_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(supreme_latency_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 20
+        }
+      },
+      {
+        "id": 10,
+        "title": "Event Bus Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(event_bus_latency_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(event_bus_latency_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        }
+      },
+      {
+        "id": 11,
+        "title": "Risk Checks Summary",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum(rate(risk_checks_total[5m])) by (result)",
+            "legendFormat": "{{result}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        }
+      },
+      {
+        "id": 12,
+        "title": "Active Subscribers by Topic",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "active_subscribers",
+            "legendFormat": "{{topic}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        }
+      },
+      {
+        "id": 13,
+        "title": "System Alerts",
+        "type": "alertlist",
+        "targets": [],
+        "options": {
+          "showOptions": "current",
+          "alertName": "",
+          "dashboardTitle": "",
+          "folderId": null,
+          "tags": ["supreme-system"]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 34
         }
       }
     ],
@@ -135,11 +352,24 @@
       "list": []
     },
     "annotations": {
-      "list": []
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
     },
     "refresh": "5s",
-    "schemaVersion": 27,
-    "version": 0,
+    "schemaVersion": 38,
+    "version": 1,
     "links": []
   }
 }
