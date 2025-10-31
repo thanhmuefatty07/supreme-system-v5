@@ -6,19 +6,34 @@ print("Supreme System V5 - Dependency Cleanup")
 
 # Remove bloat packages
 bloat = [
-    "matplotlib", "seaborn", "plotly", "bokeh", 
-    "scikit-learn", "torch", "transformers", "tensorflow", 
-    "jupyter", "ipython", "sphinx", "fastapi", "uvicorn", 
-    "pydantic", "scipy", "pyarrow", "requests", "yfinance", "ccxt"
+    "matplotlib",
+    "seaborn",
+    "plotly",
+    "bokeh",
+    "scikit-learn",
+    "torch",
+    "transformers",
+    "tensorflow",
+    "jupyter",
+    "ipython",
+    "sphinx",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "scipy",
+    "pyarrow",
+    "requests",
+    "yfinance",
+    "ccxt",
 ]
 
 removed = 0
 for pkg in bloat:
     try:
         subprocess.run(
-            [sys.executable, "-m", "pip", "uninstall", "-y", pkg], 
-            capture_output=True, 
-            check=True
+            [sys.executable, "-m", "pip", "uninstall", "-y", pkg],
+            capture_output=True,
+            check=True,
         )
         print(f"Removed: {pkg}")
         removed += 1
@@ -30,7 +45,7 @@ print(f"Removed {removed} packages")
 # Install minimal requirements
 minimal = [
     "numpy>=1.24.0,<2.0.0",
-    "pandas>=2.1.0,<3.0.0", 
+    "pandas>=2.1.0,<3.0.0",
     "psutil>=5.9.0,<6.0.0",
     "aiohttp>=3.9.0,<4.0.0",
     "websockets>=12.0,<13.0.0",
@@ -53,9 +68,9 @@ installed = 0
 for pkg in minimal:
     try:
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", pkg, "--no-cache-dir"], 
-            capture_output=True, 
-            check=True
+            [sys.executable, "-m", "pip", "install", pkg, "--no-cache-dir"],
+            capture_output=True,
+            check=True,
         )
         print(f"Installed: {pkg}")
         installed += 1
@@ -73,6 +88,7 @@ try:
     import websockets
     import ta
     import finta
+
     print("Core imports successful")
 except ImportError as e:
     print(f"Import error: {e}")

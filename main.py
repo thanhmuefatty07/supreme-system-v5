@@ -113,9 +113,7 @@ class SupremeSystemV5:
         try:
             # Generate sample market data
             np.random.seed(42)
-            market_data = (
-                np.random.randn(1000) * 0.01 + 100.0
-            )  # Price movements
+            market_data = np.random.randn(1000) * 0.01 + 100.0  # Price movements
 
             start_time = time.perf_counter()
 
@@ -138,9 +136,7 @@ class SupremeSystemV5:
                 if np.random.random() > 0.7:  # 30% signal rate
                     signals_generated += 1
 
-            latency_time = (
-                time.perf_counter() - start_time
-            ) * 1000000  # microseconds
+            latency_time = (time.perf_counter() - start_time) * 1000000  # microseconds
 
             # Calculate performance metrics
             self.performance_metrics = {
@@ -251,9 +247,7 @@ Examples:
     parser.add_argument(
         "--demo", action="store_true", help="Run performance demonstration"
     )
-    parser.add_argument(
-        "--init", action="store_true", help="Initialize system only"
-    )
+    parser.add_argument("--init", action="store_true", help="Initialize system only")
     parser.add_argument(
         "--version", action="version", version="Supreme System V5 - v5.0.0"
     )

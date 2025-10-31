@@ -4,8 +4,10 @@ from typing import Dict, Any
 
 logger = get_logger(__name__)
 
+
 class RiskManager:
     """Minimal risk manager stub."""
+
     def __init__(self):
         logger.info("Risk Manager stub initialized.")
 

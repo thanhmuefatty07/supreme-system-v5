@@ -20,7 +20,7 @@ from .risk import RiskManager
 
 __all__ = [
     "get_logger",
-    "Config", 
+    "Config",
     "DataManager",
     "BacktestEngine",
     "Strategy",
@@ -28,5 +28,5 @@ __all__ = [
     "RustEngine",
     "RUST_AVAILABLE",
     "__version__",
-    "__author__"
+    "__author__",
 ]

@@ -17,10 +17,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
 try:
     from supreme_system_v5.utils import get_logger
+
     logger = get_logger(__name__)
 except ImportError:
     # Fallback logging
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
@@ -40,10 +42,7 @@ def check_rust_installed() -> bool:
     """Check if Rust is installed."""
     try:
         result = subprocess.run(
-            ["cargo", "--version"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["cargo", "--version"], capture_output=True, text=True, check=True
         )
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -61,6 +60,7 @@ def get_system_info() -> Dict[str, str]:
 
     try:
         import psutil
+
         memory = psutil.virtual_memory()
         info["memory_gb"] = f"{round(memory.total / (1024**3), 2)}"
     except ImportError:
@@ -82,6 +82,7 @@ def validate_minimal_imports() -> bool:
         from supreme_system_v5.backtest import BacktestEngine
         from supreme_system_v5.strategies import Strategy
         from supreme_system_v5.risk import RiskManager
+
         return True
     except ImportError as e:
         print(f"Minimal import validation failed: {e}")
@@ -110,12 +111,16 @@ def main():
     # Check Rust toolchain (optional for minimal setup)
     rust_ok = check_rust_installed()
     status = "" if rust_ok else ""
-    print(f"{status} Rust Toolchain (cargo): {'Installed' if rust_ok else 'Not Installed (optional)'}")
+    print(
+        f"{status} Rust Toolchain (cargo): {'Installed' if rust_ok else 'Not Installed (optional)'}"
+    )
 
     # Validate minimal Python imports
     imports_ok = validate_minimal_imports()
     status = "" if imports_ok else ""
-    print(f"{status} Minimal Python Package Imports: {'OK' if imports_ok else 'Failed'}")
+    print(
+        f"{status} Minimal Python Package Imports: {'OK' if imports_ok else 'Failed'}"
+    )
     if not imports_ok:
         all_passed = False
 

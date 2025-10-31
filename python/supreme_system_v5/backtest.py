@@ -4,8 +4,10 @@ from typing import Dict, Any
 
 logger = get_logger(__name__)
 
+
 class BacktestEngine:
     """Minimal backtest engine stub, will bridge to Rust."""
+
     def __init__(self):
         logger.info("Backtest Engine stub initialized (Python side).")
 

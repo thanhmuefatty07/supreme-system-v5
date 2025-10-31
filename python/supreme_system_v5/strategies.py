@@ -4,8 +4,10 @@ from typing import Dict, Any
 
 logger = get_logger(__name__)
 
+
 class Strategy:
     """Base class for trading strategies."""
+
     def __init__(self, name: str):
         self.name = name
         logger.info(f"Strategy '{self.name}' base initialized.")
