@@ -122,8 +122,9 @@ async def main():
 
     print("📊 Configuration:")
     print(f"  Symbols: {', '.join(args.symbols)}")
-    print(".2f"    print(f"  Data Sources: {', '.join(args.sources)}")
-    print(".1f"    print(f"  Risk Management: {'Disabled' if args.no_risk else 'Enabled'}")
+    print(f"  Initial Balance: ${args.balance:.2f}")
+    print(f"  Data Sources: {', '.join(args.sources)}")
+    print(f"  Risk Management: {'Disabled' if args.no_risk else 'Enabled'}")
     print(f"  Historical Days: {args.historical_days}")
     print(f"  Max Position Size: {args.max_position:.1%}")
     print()
