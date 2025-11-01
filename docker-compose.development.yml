@@ -1,0 +1,140 @@
+# Supreme System V5 - Development Environment
+# Full-featured development setup with debugging and hot-reload
+
+version: '3.8'
+
+services:
+  # ================================
+  # SUPREME TRADING SYSTEM - DEVELOPMENT
+  # ================================
+  supreme-trading:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: supreme-trading-dev
+    environment:
+      PYTHONPATH: /app
+      TZ: UTC
+      LOG_LEVEL: DEBUG
+      ENVIRONMENT: development
+      DEBUG: true
+      TRADING_MODE: sandbox
+      ENABLE_DEBUG_ENDPOINTS: true
+      # Development-specific settings
+      SINGLE_THREAD_MODE: false
+      MAX_SYMBOLS: 10
+      UPDATE_FREQUENCY_MS: 1000
+      # API Keys (use test/demo keys in development)
+      OKX_API_KEY: ${OKX_API_KEY:-demo_key}
+      OKX_SECRET_KEY: ${OKX_SECRET_KEY:-demo_secret}
+      OKX_PASSPHRASE: ${OKX_PASSPHRASE:-demo_passphrase}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-demo_key}
+      BINANCE_SECRET_KEY: ${BINANCE_SECRET_KEY:-demo_secret}
+    ports:
+      - "8000:8000"  # API server
+      - "8080:8080"  # Web interface
+      - "5678:5678"  # Debug port (if using debugger)
+    volumes:
+      - .:/app:delegated  # Mount source for hot-reload
+      - /app/target       # Rust build cache
+      - /app/__pycache__  # Exclude Python cache
+      - logs_dev:/app/logs
+      - data_dev:/app/data
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]  # Basic health check
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # ================================
+  # DEVELOPMENT INFRASTRUCTURE OVERRIDES
+  # ================================
+
+  # Expose all ports for development
+  redis:
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G  # More memory for development
+          cpus: '0.5'
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: supreme_trading_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password_dev
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # More memory for development
+          cpus: '0.5'
+
+  prometheus:
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_dev:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'  # Shorter retention for dev
+      - '--web.enable-lifecycle'
+
+  grafana:
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_DEV_PASSWORD:-dev_admin}
+      GF_USERS_ALLOW_SIGN_UP: true  # Allow signups in development
+      GF_LOG_LEVEL: debug
+
+# ================================
+# DEVELOPMENT VOLUMES
+# ================================
+volumes:
+  logs_dev:
+    driver: local
+  data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+  postgres_data_dev:
+    driver: local
+  prometheus_data_dev:
+    driver: local
+
+# ================================
+# DEVELOPMENT SECRETS
+# ================================
+secrets:
+  postgres_password_dev:
+    file: ./secrets/postgres_password_dev.txt
+  grafana_password:
+    file: ./secrets/grafana_password_dev.txt
