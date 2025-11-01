@@ -83,17 +83,21 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+overflow-checks = false
+incremental = false
 
 [profile.dev]
 opt-level = 1
 debug = true
+overflow-checks = true
 
 # Profile for maximum performance (use for benchmarking)
 [profile.bench]
 inherits = "release"
 debug = true
+strip = false
 
-# Profile for production deployment
+# Profile for production deployment - ULTRA OPTIMIZED
 [profile.production]
 inherits = "release"
 opt-level = 3
@@ -101,6 +105,22 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+overflow-checks = false
+incremental = false
+
+# Enable CPU-specific optimizations
+[profile.production.package."*"]
+opt-level = 3
+
+# SIMD-specific optimizations
+[target.'cfg(target_feature = "avx2")']
+rustflags = ["-C", "target-cpu=native", "-C", "target-feature=+avx2"]
+
+[target.'cfg(target_feature = "avx512")']
+rustflags = ["-C", "target-cpu=native", "-C", "target-feature=+avx512"]
+
+[target.'cfg(target_arch = "aarch64")']
+rustflags = ["-C", "target-cpu=native", "-C", "target-feature=+neon"]
 
 [[bin]]
 name = "benchmark"

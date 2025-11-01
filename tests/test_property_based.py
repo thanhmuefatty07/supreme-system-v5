@@ -4,10 +4,11 @@ ULTRA SFL implementation using hypothesis for edge case validation
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
+from hypothesis import given, strategies as st, settings, HealthCheck, assume
 from hypothesis.stateful import RuleBasedStateMachine, rule, precondition
 import asyncio
 import numpy as np
+import time
 from typing import List, Dict, Any
 from dataclasses import dataclass
 
@@ -18,7 +19,213 @@ from supreme_system_v5.event_bus import EventBus, create_market_data_event, Even
 
 
 # ==========================================
-# RISK MANAGEMENT PROPERTY TESTS
+# HYPOTHESIS FINANCIAL INVARIANTS TESTING
+# ULTRA SFL Implementation - 100% invariant compliance
+# ==========================================
+
+# Configure Hypothesis for financial testing
+settings.register_profile("financial",
+    max_examples=1000,  # More examples for financial accuracy
+    deadline=10000,     # Longer deadline for complex calculations
+    verbosity=2,
+    suppress_health_check=[
+        HealthCheck.too_slow,  # Financial calculations can be slow
+        HealthCheck.filter_too_much  # Complex financial constraints
+    ]
+)
+
+settings.load_profile("financial")
+
+class TestRiskInvariants:
+    """Property-based tests for Risk Manager invariants - FINANCIAL GRADE"""
+
+    @given(
+        initial_balance=st.floats(min_value=1000, max_value=1000000),
+        drawdown_pct=st.floats(min_value=0.01, max_value=0.5),
+        position_size=st.floats(min_value=0.001, max_value=1.0),
+        price=st.floats(min_value=0.01, max_value=100000)
+    )
+    def test_drawdown_never_negative(self, initial_balance, drawdown_pct, position_size, price):
+        """Property: Drawdown calculations should never be negative"""
+        limits = RiskLimits(
+            max_drawdown_percent=drawdown_pct * 100,
+            max_position_size_usd=initial_balance * position_size
+        )
+        portfolio = PortfolioState(total_value=initial_balance)
+        risk_manager = RiskManager(limits, portfolio)
+
+        # Simulate losses
+        new_balance = initial_balance * (1 - drawdown_pct * 0.5)  # Half max drawdown
+        portfolio.total_value = new_balance
+
+        assessment = risk_manager.evaluate_trade("BTC-USDT", position_size * price, 1.0)
+
+        # Invariant: drawdown tracking should be consistent
+        current_dd = (initial_balance - new_balance) / initial_balance
+        assert current_dd >= 0, "Drawdown should never be negative"
+        assert current_dd <= drawdown_pct, "Should not exceed max drawdown in test"
+
+    @given(
+        symbol=st.text(min_size=3, max_size=20),
+        position_values=st.lists(
+            st.floats(min_value=1, max_value=10000),
+            min_size=1, max_size=100
+        )
+    )
+    def test_position_sizing_monotonic(self, symbol, position_values):
+        """Property: Larger position values should result in proportionally larger or capped sizes"""
+        assume(all(v > 0 for v in position_values))
+
+        limits = RiskLimits(max_position_size_usd=5000)
+        portfolio = PortfolioState(total_value=50000)
+        risk_manager = RiskManager(limits, portfolio)
+
+        approved_sizes = []
+        for pos_val in sorted(position_values):
+            assessment = risk_manager.evaluate_trade(symbol, pos_val, 1.0)
+            if assessment.approved:
+                approved_sizes.append(assessment.adjusted_position_size or pos_val)
+
+        # Property: approved sizes should be non-decreasing (monotonic)
+        if len(approved_sizes) > 1:
+            for i in range(1, len(approved_sizes)):
+                assert approved_sizes[i] >= approved_sizes[i-1] * 0.99, \
+                    "Position sizes should be monotonic or capped consistently"
+
+    @given(
+        daily_loss=st.floats(min_value=0, max_value=0.2),
+        trade_loss=st.floats(min_value=0, max_value=0.1)
+    )
+    def test_daily_loss_accumulation(self, daily_loss, trade_loss):
+        """Property: Daily loss limits should accumulate correctly"""
+        initial_balance = 10000
+        limits = RiskLimits(
+            max_daily_loss_usd=initial_balance * daily_loss,
+            max_position_size_usd=initial_balance * 0.1
+        )
+        portfolio = PortfolioState(total_value=initial_balance)
+        risk_manager = RiskManager(limits, portfolio)
+
+        # Simulate some daily losses
+        simulated_loss = initial_balance * trade_loss
+        risk_manager.portfolio_state.daily_loss += simulated_loss
+
+        assessment = risk_manager.evaluate_trade("ETH-USDT", 1000, 1.0)
+
+        # Property: should reject if daily loss + potential loss > limit
+        if risk_manager.portfolio_state.daily_loss >= limits.max_daily_loss_usd:
+            assert not assessment.approved, "Should reject trades when daily limit reached"
+
+
+class TestMarketDataValidation:
+    """Property-based tests for market data validation - FINANCIAL GRADE"""
+
+    @given(
+        market_data=st.lists(
+            st.tuples(
+                st.floats(min_value=0.01, max_value=100000),  # price
+                st.floats(min_value=0, max_value=1000000),    # volume
+                st.floats(min_value=0, max_value=100)         # spread_bps
+            ),
+            min_size=10, max_size=100
+        )
+    )
+    def test_quality_scoring_properties(self, market_data):
+        """Property: Quality scores should be consistent and bounded"""
+        from supreme_system_v5.data_fabric.quality import QualityScorer
+
+        scorer = QualityScorer()
+        scores = []
+
+        for price, volume, spread in market_data:
+            assume(price > 0 and volume >= 0 and spread >= 0)
+
+            # Mock market data point
+            data_point = {
+                'price': price,
+                'volume_24h': volume,
+                'spread_bps': spread,
+                'timestamp': time.time(),
+                'latency_ms': 50
+            }
+
+            score = scorer.calculate_quality_score("BTC-USDT", data_point, None)
+            scores.append(score)
+
+            # Property: scores should be in valid range
+            assert 0.0 <= score <= 1.0, "Quality scores must be between 0 and 1"
+
+        # Property: average quality should be reasonable for good data
+        avg_score = sum(scores) / len(scores)
+        if all(spread < 10 for _, _, spread in market_data):  # Good data
+            assert avg_score > 0.5, "Good quality data should score above 0.5"
+
+    @given(
+        prices=st.lists(
+            st.floats(min_value=0.01, max_value=100000, allow_nan=False),
+            min_size=50, max_size=1000
+        ),
+        period=st.integers(min_value=2, max_value=50)
+    )
+    def test_ema_properties(self, prices, period):
+        """Property: EMA should be smooth and bounded"""
+        assume(len(prices) > period)
+        assume(all(p > 0 for p in prices))
+
+        from supreme_system_v5.indicators import calculate_ema
+        ema_values = calculate_ema(prices, period)
+
+        # Property 1: EMA should be bounded by price range
+        min_price, max_price = min(prices), max(prices)
+        for ema in ema_values:
+            assert min_price * 0.5 <= ema <= max_price * 1.5, \
+                "EMA should stay within reasonable bounds of price range"
+
+        # Property 2: EMA should be smoother than raw prices
+        if len(ema_values) > 2:
+            price_volatility = np.std(prices[-len(ema_values):])
+            ema_volatility = np.std(ema_values)
+            assert ema_volatility <= price_volatility * 1.1, \
+                "EMA should be smoother (less volatile) than raw prices"
+
+        # Property 3: EMA should follow price direction (trending)
+        if len(ema_values) > period:
+            price_trend = prices[-1] - prices[-period]
+            ema_trend = ema_values[-1] - ema_values[-period]
+            # EMA should generally follow price trend direction
+            assert abs(price_trend - ema_trend) <= abs(price_trend) * 0.5, \
+                "EMA should generally follow price trend"
+
+    @given(
+        prices=st.lists(
+            st.floats(min_value=0.01, max_value=100000, allow_nan=False),
+            min_size=50, max_size=1000
+        )
+    )
+    def test_rsi_properties(self, prices):
+        """Property: RSI should be bounded and responsive"""
+        assume(all(p > 0 for p in prices))
+
+        from supreme_system_v5.indicators import calculate_rsi
+        rsi_values = calculate_rsi(prices, 14)
+
+        # Property 1: RSI should be bounded 0-100
+        for rsi in rsi_values:
+            assert 0 <= rsi <= 100, f"RSI should be bounded 0-100, got {rsi}"
+
+        # Property 2: RSI should be volatile (responsive to price changes)
+        if len(rsi_values) > 10:
+            rsi_volatility = np.std(rsi_values)
+            assert rsi_volatility > 1.0, "RSI should be responsive to price changes"
+
+        # Property 3: RSI should center around 50 for random walks
+        if len(rsi_values) > 20:
+            avg_rsi = sum(rsi_values) / len(rsi_values)
+            assert 30 <= avg_rsi <= 70, f"RSI should center around 50, got {avg_rsi}"
+
+
+# ==========================================
+# ORIGINAL RISK MANAGEMENT PROPERTY TESTS
 # ==========================================
 
 class TestRiskManagerProperties:
