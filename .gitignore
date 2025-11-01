@@ -207,6 +207,7 @@ trading_logs/
 market_data_cache/
 backtest_results/
 live_trading_logs/
+run_artifacts/
 
 # Financial Data (sensitive)
 api_keys.json
