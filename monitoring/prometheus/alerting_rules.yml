@@ -12,6 +12,99 @@ groups:
           summary: "Supreme System is down"
           description: "Supreme trading system has been down for more than 1 minute"
 
+      # Data Fabric Quality Alerts
+      - alert: DataFabricLowQualityScore
+        expr: avg_over_time(data_fabric_quality_score[5m]) < 0.8
+        for: 2m
+        labels:
+          severity: critical
+          category: data_quality
+        annotations:
+          summary: "Data Fabric quality score too low"
+          description: "Average data quality score below 0.8 threshold for 2 minutes"
+
+      - alert: DataFabricHighErrorRate
+        expr: rate(data_fabric_errors_total[5m]) / rate(data_fabric_requests_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          category: data_quality
+        annotations:
+          summary: "Data Fabric high error rate"
+          description: "Data Fabric error rate exceeds 10% for 1 minute"
+
+      - alert: SourceCircuitBreaker
+        expr: source_health_status{status="down"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          category: data_quality
+        annotations:
+          summary: "Data source circuit breaker activated"
+          description: "A data source has been marked as down due to consecutive failures"
+
+      - alert: SourceDegradedPerformance
+        expr: source_health_status{status="degraded"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: data_quality
+        annotations:
+          summary: "Data source performance degraded"
+          description: "A data source is showing degraded performance"
+
+      # Latency and Performance Alerts
+      - alert: HighDataLatencyP95
+        expr: histogram_quantile(0.95, rate(data_feed_latency_seconds_bucket[5m])) > 2.0
+        for: 1m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High data latency (P95)"
+          description: "95th percentile data latency exceeds 2 seconds"
+
+      - alert: HighDataLatencyP99
+        expr: histogram_quantile(0.99, rate(data_feed_latency_seconds_bucket[5m])) > 5.0
+        for: 30s
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "Critical data latency (P99)"
+          description: "99th percentile data latency exceeds 5 seconds"
+
+      - alert: IndicatorCalculationLatency
+        expr: histogram_quantile(0.95, rate(indicator_calculation_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Slow indicator calculations"
+          description: "95th percentile indicator calculation time exceeds 500ms"
+
+      # Spread and Market Quality Alerts
+      - alert: WideBidAskSpread
+        expr: avg_over_time(market_spread_bps[5m]) > 50
+        for: 1m
+        labels:
+          severity: warning
+          category: market_quality
+        annotations:
+          summary: "Wide bid-ask spreads detected"
+          description: "Average bid-ask spread exceeds 50 basis points"
+
+      - alert: ExtremeSpreadAlert
+        expr: histogram_quantile(0.99, rate(market_spread_bps_bucket[5m])) > 200
+        for: 30s
+        labels:
+          severity: critical
+          category: market_quality
+        annotations:
+          summary: "Extreme market spreads"
+          description: "99th percentile spread exceeds 200 basis points - possible market stress"
+
       # Risk Management Alerts
       - alert: HighDrawdown
         expr: current_drawdown_percent > 12
@@ -96,6 +189,27 @@ groups:
           summary: "Event bus subscriber dropped"
           description: "An event bus subscriber has disconnected"
 
+      # Volume and Liquidity Alerts
+      - alert: LowVolumeAlert
+        expr: avg_over_time(market_volume_24h[5m]) < 1000000
+        for: 5m
+        labels:
+          severity: info
+          category: market_quality
+        annotations:
+          summary: "Low market volume detected"
+          description: "24h volume below 1M units - potential liquidity issues"
+
+      - alert: VolumeSpikeAlert
+        expr: rate(market_volume_24h[5m]) > 5
+        for: 30s
+        labels:
+          severity: warning
+          category: market_quality
+        annotations:
+          summary: "Volume spike detected"
+          description: "Sudden volume increase may indicate market event"
+
   - name: supreme_system_resource_alerts
     rules:
       # Resource Monitoring
@@ -119,6 +233,16 @@ groups:
           summary: "High CPU usage"
           description: "CPU usage exceeds 80%"
 
+      - alert: DiskSpaceLow
+        expr: (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "Low disk space"
+          description: "Available disk space below 15%"
+
       # Data Feed Health
       - alert: DataFeedLatency
         expr: histogram_quantile(0.95, rate(data_feed_latency_seconds_bucket[5m])) > 5
@@ -139,3 +263,66 @@ groups:
         annotations:
           summary: "Data feed failures detected"
           description: "More than 10% of data feed requests are failing"
+
+      # Database Health
+      - alert: DatabaseConnectionPoolExhausted
+        expr: database_connections_active / database_connections_total > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database connection pool near capacity"
+          description: "Database connection pool utilization exceeds 90%"
+
+      - alert: DatabaseSlowQueries
+        expr: histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[5m])) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time exceeds 1 second"
+
+      # Cache Performance
+      - alert: CacheMissRateHigh
+        expr: rate(cache_misses_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "High cache miss rate"
+          description: "Cache miss rate exceeds 30% - performance impact"
+
+      - alert: CacheEvictionRateHigh
+        expr: rate(cache_evictions_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "High cache eviction rate"
+          description: "Cache evictions exceed 100 per minute - memory pressure"
+
+      # Network Health
+      - alert: NetworkLatencyHigh
+        expr: histogram_quantile(0.95, rate(network_request_duration_seconds_bucket[5m])) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High network latency"
+          description: "95th percentile network request latency exceeds 1 second"
+
+      - alert: NetworkErrorRateHigh
+        expr: rate(network_request_errors_total[5m]) / rate(network_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High network error rate"
+          description: "Network error rate exceeds 5%"

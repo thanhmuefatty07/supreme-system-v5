@@ -15,6 +15,15 @@ from .connectors import (
 )
 from .normalizer import DataNormalizer, MarketDataPoint
 from .quality import DataQualityScorer, QualityMetrics
+from .quality_tracker import (
+    QualityTracker,
+    QualityTrackerConfig,
+    SourceHealth,
+    QualityMetrics as QualityTrackerMetrics,
+    record_data_quality,
+    check_source_health,
+    get_quality_tracker
+)
 
 __all__ = [
     "DataAggregator",
@@ -31,4 +40,11 @@ __all__ = [
     "QualityMetrics",
     "DataNormalizer",
     "MarketDataPoint",
+    "QualityTracker",
+    "QualityTrackerConfig",
+    "SourceHealth",
+    "QualityTrackerMetrics",
+    "record_data_quality",
+    "check_source_health",
+    "get_quality_tracker",
 ]
