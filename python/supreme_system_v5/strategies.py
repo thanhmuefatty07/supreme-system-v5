@@ -614,11 +614,6 @@ class ScalpingStrategy:
 
         if config:
             self.config.update(config)
-            "stop_loss_percent": 0.5,  # 0.5%
-            "trend_confirmation": True,
-            "volume_confirmation": True,
-            "min_price_history": 100,  # Minimum historical prices needed
-        }
 
         # Update with provided config
         if config:

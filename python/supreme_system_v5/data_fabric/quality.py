@@ -70,7 +70,15 @@ class DataQualityScorer:
         if not data_point:
             return QualityMetrics(0, 0, 0, 0, 0)
 
-        source_key = f"{source or data_point.get('source', 'unknown')}:{symbol}"
+        # Handle both dict (raw data) and MarketDataPoint (normalized data)
+        if hasattr(data_point, 'source'):
+            # MarketDataPoint object
+            data_source = source or data_point.source
+        else:
+            # Dict object
+            data_source = source or data_point.get('source', 'unknown')
+
+        source_key = f"{data_source}:{symbol}"
 
         # Score components
         latency_score = self._score_latency(data_point, source_key)
@@ -89,12 +97,15 @@ class DataQualityScorer:
             overall_score=0.0,  # Will be calculated in __post_init__
         )
 
-    def _score_latency(self, data_point: Dict, source_key: str) -> float:
+    def _score_latency(self, data_point: Any, source_key: str) -> float:
         """
         Score latency (0.0 = slow, 1.0 = fast)
         """
         current_time = time.time()
-        data_timestamp = data_point.get("timestamp", current_time)
+        if hasattr(data_point, 'timestamp'):
+            data_timestamp = data_point.timestamp
+        else:
+            data_timestamp = data_point.get("timestamp", current_time)
 
         latency = current_time - data_timestamp
 
@@ -116,7 +127,7 @@ class DataQualityScorer:
 
         return score
 
-    def _score_completeness(self, data_point: Dict) -> float:
+    def _score_completeness(self, data_point: Any) -> float:
         """
         Score data completeness based on available fields
         """
@@ -124,21 +135,31 @@ class DataQualityScorer:
         available_weight = 0.0
 
         for field, weight in self.required_fields.items():
-            if field in data_point and data_point[field] is not None:
-                # Check for non-zero values (many APIs return 0 for missing data)
-                value = data_point[field]
-                if isinstance(value, (int, float)) and value > 0:
-                    available_weight += weight
-                elif isinstance(value, str) and value:
-                    available_weight += weight
+            try:
+                if hasattr(data_point, field):
+                    value = getattr(data_point, field)
+                else:
+                    value = data_point.get(field) if hasattr(data_point, 'get') else None
+
+                if value is not None:
+                    # Check for non-zero values (many APIs return 0 for missing data)
+                    if isinstance(value, (int, float)) and value > 0:
+                        available_weight += weight
+                    elif isinstance(value, str) and value:
+                        available_weight += weight
+            except (AttributeError, KeyError, TypeError):
+                continue
 
         return available_weight / total_weight if total_weight > 0 else 0.0
 
-    def _score_consistency(self, data_point: Dict, source_key: str) -> float:
+    def _score_consistency(self, data_point: Any, source_key: str) -> float:
         """
         Score consistency against historical data
         """
-        price = data_point.get("price", 0)
+        if hasattr(data_point, 'price'):
+            price = data_point.price
+        else:
+            price = data_point.get("price", 0)
         if not price or price <= 0:
             return 0.0
 
@@ -172,11 +193,14 @@ class DataQualityScorer:
 
         return score
 
-    def _score_freshness(self, data_point: Dict) -> float:
+    def _score_freshness(self, data_point: Any) -> float:
         """
         Score data freshness (0.0 = stale, 1.0 = fresh)
         """
-        data_timestamp = data_point.get("timestamp", time.time())
+        if hasattr(data_point, 'timestamp'):
+            data_timestamp = data_point.timestamp
+        else:
+            data_timestamp = data_point.get("timestamp", time.time())
         current_time = time.time()
 
         age_seconds = current_time - data_timestamp
@@ -195,11 +219,15 @@ class DataQualityScorer:
 
         return score
 
-    def _update_history(self, data_point: Dict, source_key: str):
+    def _update_history(self, data_point: Any, source_key: str):
         """
         Update rolling history for statistical analysis
         """
-        price = data_point.get("price")
+        if hasattr(data_point, 'price'):
+            price = data_point.price
+        else:
+            price = data_point.get("price")
+
         if price and price > 0:
             self.price_history[source_key].append(price)
 
