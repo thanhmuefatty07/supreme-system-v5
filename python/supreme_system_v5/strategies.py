@@ -382,9 +382,203 @@ class TechnicalIndicators:
         return vwap_values
 
 
+class MultiTimeframeConfirmation:
+    """Multi-timeframe analysis for signal confirmation"""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {
+            "higher_tf_ema_period": 21,  # 21-period EMA on higher timeframe
+            "lower_tf_ema_period": 5,    # 5-period EMA on lower timeframe
+            "trend_alignment_threshold": 0.7,  # Minimum alignment score
+            "higher_tf_weight": 0.6,     # Weight for higher timeframe
+            "lower_tf_weight": 0.4,      # Weight for lower timeframe
+        }
+
+    def analyze_trend_alignment(self, symbol: str, strategy_instance) -> float:
+        """
+        Analyze trend alignment across timeframes
+        Returns alignment score between 0-1 (1 = perfect alignment)
+        """
+        try:
+            # Get higher timeframe data (simulated - would use different resolution)
+            # For now, we'll use a subset of the data to simulate higher TF
+            price_history = strategy_instance.price_history.get(symbol, [])
+            if len(price_history) < 50:
+                return 0.5  # Neutral if insufficient data
+
+            # Simulate higher timeframe by taking every 4th point
+            higher_tf_prices = [price for i, (ts, price, vol) in enumerate(price_history) if i % 4 == 0]
+            if len(higher_tf_prices) < 20:
+                return 0.5
+
+            higher_tf_prices = higher_tf_prices[-50:]  # Last 50 points for higher TF
+
+            # Calculate EMAs for both timeframes
+            lower_tf_ema = TechnicalIndicators.calculate_ema(
+                [p for ts, p, vol in price_history[-50:]], self.config["lower_tf_ema_period"]
+            )
+            higher_tf_ema = TechnicalIndicators.calculate_ema(
+                higher_tf_prices, self.config["higher_tf_ema_period"]
+            )
+
+            if not lower_tf_ema or not higher_tf_ema:
+                return 0.5
+
+            # Get latest EMA values
+            latest_lower_ema = lower_tf_ema[-1] if lower_tf_ema else 0
+            latest_higher_ema = higher_tf_ema[-1] if higher_tf_ema else 0
+
+            # Get current price
+            current_price = price_history[-1][1] if price_history else 0
+
+            if current_price == 0:
+                return 0.5
+
+            # Calculate trend directions
+            lower_tf_trend = 1 if current_price > latest_lower_ema else -1
+            higher_tf_trend = 1 if current_price > latest_higher_ema else -1
+
+            # Perfect alignment = 1.0, opposite = 0.0
+            alignment = 1.0 if lower_tf_trend == higher_tf_trend else 0.0
+
+            # Weight the alignment
+            weighted_alignment = (
+                alignment * self.config["higher_tf_weight"] +
+                alignment * self.config["lower_tf_weight"]
+            )
+
+            return max(0.0, min(1.0, weighted_alignment))
+
+        except Exception as e:
+            logger.warning(f"Multi-timeframe analysis error for {symbol}: {e}")
+            return 0.5  # Neutral on error
+
+
+class VolatilityFilter:
+    """Volatility-based signal filtering"""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {
+            "atr_period": 14,
+            "min_volatility_threshold": 0.005,   # 0.5% minimum volatility
+            "max_volatility_threshold": 0.05,    # 5% maximum volatility (too noisy)
+            "volatility_lookback": 20,           # Periods to look back for volatility
+            "high_volatility_penalty": 0.3,      # Reduce signal strength in high vol
+            "low_volatility_boost": 1.2,         # Boost signal strength in low vol
+        }
+
+    def calculate_atr(self, highs: List[float], lows: List[float], closes: List[float], period: int = 14) -> List[float]:
+        """Calculate Average True Range"""
+        if len(highs) != len(lows) or len(lows) != len(closes):
+            return []
+
+        atr_values = []
+        for i in range(len(closes)):
+            if i < period - 1:
+                atr_values.append(0.0)
+                continue
+
+            # True Range calculation
+            tr1 = highs[i] - lows[i]
+            tr2 = abs(highs[i] - closes[i-1]) if i > 0 else tr1
+            tr3 = abs(lows[i] - closes[i-1]) if i > 0 else tr1
+
+            true_range = max(tr1, tr2, tr3)
+
+            if i == period - 1:
+                # First ATR is simple average
+                atr_values.append(sum([
+                    max(highs[j] - lows[j],
+                        abs(highs[j] - closes[j-1]) if j > 0 else highs[j] - lows[j],
+                        abs(lows[j] - closes[j-1]) if j > 0 else highs[j] - lows[j])
+                    for j in range(period)
+                ]) / period)
+            else:
+                # Smoothed ATR
+                prev_atr = atr_values[-1]
+                atr_values.append((prev_atr * (period - 1) + true_range) / period)
+
+        return atr_values
+
+    def analyze_market_volatility(self, symbol: str, strategy_instance) -> Dict[str, Any]:
+        """Analyze current market volatility conditions"""
+        try:
+            price_history = strategy_instance.price_history.get(symbol, [])
+            if len(price_history) < self.config["volatility_lookback"] + 10:
+                return {
+                    "volatility_level": "insufficient_data",
+                    "atr_value": 0.0,
+                    "volatility_percent": 0.0,
+                    "signal_multiplier": 1.0,
+                    "filter_passed": True
+                }
+
+            # Extract OHLC data
+            closes = [price for ts, price, vol in price_history]
+            highs = []
+            lows = []
+
+            # Estimate highs/lows from price history (simplified)
+            for i, (ts, price, vol) in enumerate(price_history):
+                # Use neighboring prices to estimate HL
+                if i > 0 and i < len(price_history) - 1:
+                    prev_price = price_history[i-1][1]
+                    next_price = price_history[i+1][1]
+                    high = max(price, prev_price, next_price) * 1.002  # Add small buffer
+                    low = min(price, prev_price, next_price) * 0.998
+                else:
+                    high = price * 1.002
+                    low = price * 0.998
+
+                highs.append(high)
+                lows.append(low)
+
+            # Calculate ATR
+            atr_values = self.calculate_atr(highs, lows, closes, self.config["atr_period"])
+            current_atr = atr_values[-1] if atr_values else 0.0
+
+            # Calculate volatility as percentage
+            current_price = closes[-1]
+            volatility_percent = (current_atr / current_price) if current_price > 0 else 0.0
+
+            # Determine volatility level
+            if volatility_percent < self.config["min_volatility_threshold"]:
+                volatility_level = "low"
+                signal_multiplier = self.config["low_volatility_boost"]
+            elif volatility_percent > self.config["max_volatility_threshold"]:
+                volatility_level = "high"
+                signal_multiplier = self.config["high_volatility_penalty"]
+            else:
+                volatility_level = "normal"
+                signal_multiplier = 1.0
+
+            # Determine if signal should pass filter
+            filter_passed = (
+                self.config["min_volatility_threshold"] <= volatility_percent <= self.config["max_volatility_threshold"]
+            )
+
+            return {
+                "volatility_level": volatility_level,
+                "atr_value": current_atr,
+                "volatility_percent": volatility_percent,
+                "signal_multiplier": signal_multiplier,
+                "filter_passed": filter_passed
+            }
+
+        except Exception as e:
+            logger.warning(f"Volatility analysis error for {symbol}: {e}")
+            return {
+                "volatility_level": "error",
+                "atr_value": 0.0,
+                "volatility_percent": 0.0,
+                "signal_multiplier": 1.0,
+                "filter_passed": True  # Allow signals if analysis fails
+            }
+
+
 class ScalpingStrategy:
     """
-    Scalping strategy using EMA crossover and RSI confirmation
+    Enhanced Scalping Strategy with Multi-Timeframe Confirmation and Volatility Filtering
     ULTRA SFL implementation with enterprise-grade signal generation
     """
 
@@ -402,6 +596,24 @@ class ScalpingStrategy:
             "min_signal_strength": 0.6,
             "max_hold_time_minutes": 15,
             "profit_target_percent": 0.2,  # 0.2%
+            "stop_loss_percent": 0.1,      # 0.1%
+            "min_price_history": 100,
+            "enable_multi_timeframe": True,
+            "enable_volatility_filter": True,
+            "min_trend_alignment": 0.6,   # Minimum MTF alignment score
+            "volatility_filter_strict": False,  # If true, reject signals in bad volatility
+        }
+
+        self.risk_manager = risk_manager
+        self.price_history: Dict[str, List[Tuple[float, float, float]]] = {}  # symbol -> [(timestamp, price, volume), ...]
+        self.active_positions: Dict[str, Dict[str, Any]] = {}
+
+        # Enhanced components
+        self.mtf_confirmation = MultiTimeframeConfirmation()
+        self.volatility_filter = VolatilityFilter()
+
+        if config:
+            self.config.update(config)
             "stop_loss_percent": 0.5,  # 0.5%
             "trend_confirmation": True,
             "volume_confirmation": True,
@@ -909,7 +1121,7 @@ class ScalpingStrategy:
         self, symbol: str, market_data: MarketData
     ) -> Optional[TradingSignal]:
         """
-        Generate trading signal for a symbol based on market data
+        Enhanced signal generation with multi-timeframe confirmation and volatility filtering
         """
         start_time = time.time()
 
@@ -918,25 +1130,77 @@ class ScalpingStrategy:
             symbol, market_data.price, market_data.volume, market_data.timestamp
         )
 
-        # Calculate indicators
+        # Calculate base indicators
         indicators = self._calculate_indicators(symbol)
         if not indicators:
             return None
 
+        # Apply multi-timeframe confirmation if enabled
+        trend_alignment_score = 1.0
+        if self.config.get("enable_multi_timeframe", True):
+            trend_alignment_score = self.mtf_confirmation.analyze_trend_alignment(symbol, self)
+            if trend_alignment_score < self.config.get("min_trend_alignment", 0.6):
+                logger.debug(f"MTF alignment too low for {symbol}: {trend_alignment_score:.2f}")
+                STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+                return None
+
+        # Apply volatility filtering if enabled
+        volatility_analysis = {"filter_passed": True, "signal_multiplier": 1.0}
+        if self.config.get("enable_volatility_filter", True):
+            volatility_analysis = self.volatility_filter.analyze_market_volatility(symbol, self)
+
+            # Check if signal should be filtered out
+            if self.config.get("volatility_filter_strict", False) and not volatility_analysis["filter_passed"]:
+                logger.debug(f"Volatility filter rejected signal for {symbol}: {volatility_analysis}")
+                STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+                return None
+
         # Check for exit signals first (if we have a position)
         exit_signal = self._generate_exit_signal(symbol, indicators)
         if exit_signal:
+            # Apply volatility multiplier to exit signal confidence
+            exit_signal.confidence *= volatility_analysis["signal_multiplier"]
             SIGNALS_GENERATED.labels(
                 strategy=self.name, signal_type=exit_signal.signal_type.value
             ).inc()
             SIGNAL_CONFIDENCE.labels(strategy=self.name).observe(exit_signal.confidence)
+
+            # Add enhanced metadata
+            exit_signal.metadata = {
+                "trend_alignment": trend_alignment_score,
+                "volatility_level": volatility_analysis.get("volatility_level", "unknown"),
+                "volatility_multiplier": volatility_analysis["signal_multiplier"],
+                "mtf_enabled": self.config.get("enable_multi_timeframe", True),
+                "volatility_filter_enabled": self.config.get("enable_volatility_filter", True),
+            }
             return exit_signal
 
         # Check for entry signals
         buy_signal = self._generate_buy_signal(symbol, indicators)
         sell_signal = self._generate_sell_signal(symbol, indicators)
 
-        # Choose the stronger signal
+        # Apply trend alignment and volatility filtering to entry signals
+        if buy_signal:
+            buy_signal.confidence *= trend_alignment_score * volatility_analysis["signal_multiplier"]
+            buy_signal.metadata = {
+                "trend_alignment": trend_alignment_score,
+                "volatility_level": volatility_analysis.get("volatility_level", "unknown"),
+                "volatility_multiplier": volatility_analysis["signal_multiplier"],
+                "mtf_enabled": self.config.get("enable_multi_timeframe", True),
+                "volatility_filter_enabled": self.config.get("enable_volatility_filter", True),
+            }
+
+        if sell_signal:
+            sell_signal.confidence *= trend_alignment_score * volatility_analysis["signal_multiplier"]
+            sell_signal.metadata = {
+                "trend_alignment": trend_alignment_score,
+                "volatility_level": volatility_analysis.get("volatility_level", "unknown"),
+                "volatility_multiplier": volatility_analysis["signal_multiplier"],
+                "mtf_enabled": self.config.get("enable_multi_timeframe", True),
+                "volatility_filter_enabled": self.config.get("enable_volatility_filter", True),
+            }
+
+        # Choose the stronger signal after filtering
         if buy_signal and sell_signal:
             if buy_signal.confidence > sell_signal.confidence:
                 signal = buy_signal
@@ -950,6 +1214,12 @@ class ScalpingStrategy:
             signal = None
 
         if signal:
+            # Final confidence check
+            if signal.confidence < self.config.get("min_signal_strength", 0.6):
+                logger.debug(f"Signal confidence too low for {symbol}: {signal.confidence:.2f}")
+                STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+                return None
+
             SIGNALS_GENERATED.labels(
                 strategy=self.name, signal_type=signal.signal_type.value
             ).inc()
@@ -965,6 +1235,8 @@ class ScalpingStrategy:
                     "quantity": signal.quantity,
                     "timestamp": signal.timestamp,
                     "indicators": signal.indicators,
+                    "trend_alignment": trend_alignment_score,
+                    "volatility_analysis": volatility_analysis,
                 }
 
         STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)

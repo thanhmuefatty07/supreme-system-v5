@@ -1,26 +1,32 @@
-# Supreme System V5 - Docker Compose Stack
-# Production-ready orchestration with 4 core services
+# Supreme System V5 - Consolidated Docker Compose
+# ULTRA SFL production-ready orchestration with environment profiles
+# Supports: development, i3-optimized, production configurations
 
 version: '3.8'
 
+# ================================
+# DEVELOPMENT PROFILE (default)
+# ================================
 services:
-  # Main Supreme System V5 application
+  # Main Supreme System V5 application - Development
   supreme-system-v5:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: supreme-system-v5
+    container_name: supreme-system-v5-dev
     ports:
       - "8000:8000"     # API server
       - "9090:9090"     # Prometheus metrics
     environment:
-      - ENVIRONMENT=production
+      - ENVIRONMENT=development
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - PROMETHEUS_PORT=9090
       - REDIS_URL=redis://redis:6379
       - LOG_LEVEL=info
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supreme-jwt-secret-key-2025}
+      - HARDWARE_PROFILE=development
+      - MEMORY_PROFILE=unlimited
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
@@ -40,16 +46,165 @@ services:
     deploy:
       resources:
         limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
           memory: 2G
           cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
+    profiles: ["development"]
 
-  # Redis for caching and session storage
+  # ================================
+  # I3 OPTIMIZED PROFILE
+  # ================================
+  # Main application with i3 optimizations
+  supreme-system-v5-i3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: supreme-system-v5-i3
+    ports:
+      - "8000:8000"     # API server
+      - "9090:9090"     # Prometheus metrics (reduced frequency)
+    environment:
+      - ENVIRONMENT=production
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - PROMETHEUS_PORT=9090
+      - LOG_LEVEL=warning  # Reduced logging for i3
+      - HARDWARE_PROFILE=i3_8th_gen
+      - MEMORY_PROFILE=4gb
+
+      # i3-specific optimizations
+      - SINGLE_THREAD_MODE=true
+      - MAX_SYMBOLS=5
+      - UPDATE_FREQUENCY_MS=2000
+      - AGGRESSIVE_GC=true
+      - COMPRESS_DATA=true
+      - REDUCED_HISTORY=true
+      - MAX_HISTORY_DAYS=15
+      - WEBSOCKET_BUFFER_SIZE=500
+      - METRICS_RETENTION_HOURS=12
+
+      # Performance limits
+      - MAX_CPU_USAGE=88
+      - MAX_MEMORY_GB=3.86
+      - TARGET_LATENCY_MS=100
+
+      - REDIS_URL=redis://redis-i3:6379
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config
+    networks:
+      - supreme-network
+    restart: unless-stopped
+
+    # Aggressive resource limits for i3
+    deploy:
+      resources:
+        limits:
+          memory: 3G        # Conservative memory limit
+          cpus: '3.5'       # Leave 0.5 cores for system
+        reservations:
+          memory: 2G
+          cpus: '2.0'
+
+    # Health check with relaxed timing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 60s       # Less frequent checks
+      timeout: 15s        # Longer timeout
+      retries: 2          # Fewer retries
+      start_period: 60s   # Longer startup period
+    profiles: ["i3"]
+
+  # ================================
+  # PRODUCTION PROFILE
+  # ================================
+  # Supreme Trading System - Production
+  supreme-trading:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        - RUST_VERSION=1.75.0
+        - PYTHON_VERSION=3.11
+    container_name: supreme-trading-prod
+    restart: unless-stopped
+
+    # Resource limits for i3-4GB systems
+    mem_limit: 3500m
+    mem_reservation: 2000m
+    cpus: '2.0'
+
+    environment:
+      # Trading configuration
+      - TRADING_MODE=live  # Set to 'sandbox' for testing
+      - MAX_POSITION_SIZE=0.01
+      - STOP_LOSS_PERCENT=0.005
+      - TAKE_PROFIT_PERCENT=0.002
+      - TRADING_SYMBOLS=BTC-USDT,ETH-USDT,BNB-USDT
+
+      # System limits
+      - MAX_MEMORY_MB=3200
+      - MAX_CPU_PERCENT=80
+      - UPDATE_INTERVAL_MS=100
+
+      # Exchange API keys (load from .env file)
+      - OKX_API_KEY=${OKX_API_KEY}
+      - OKX_SECRET_KEY=${OKX_SECRET_KEY}
+      - OKX_PASSPHRASE=${OKX_PASSPHRASE}
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_SECRET_KEY=${BINANCE_SECRET_KEY}
+
+      # Monitoring
+      - METRICS_PORT=8000
+      - LOG_LEVEL=INFO
+      - PROMETHEUS_ENABLED=true
+
+      # Database
+      - REDIS_URL=redis://redis-prod:6379/0
+      - DATABASE_URL=postgresql://postgres:supreme_password@postgres:5432/supreme_trading
+
+    ports:
+      - "8000:8000"  # Metrics endpoint
+      - "8080:8080"  # Web interface
+
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
+    networks:
+      - supreme-network
+
+    depends_on:
+      - redis-prod
+      - postgres
+      - prometheus-prod
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    profiles: ["production"]
+
+  # ================================
+  # SHARED INFRASTRUCTURE
+  # ================================
+
+  # Redis - Development
   redis:
     image: redis:7.2-alpine
-    container_name: supreme-redis
+    container_name: supreme-redis-dev
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
@@ -68,11 +223,100 @@ services:
         limits:
           memory: 512M
           cpus: '0.5'
+    profiles: ["development", "i3"]
 
-  # Prometheus monitoring
+  # Redis - i3 Optimized
+  redis-i3:
+    image: redis:7-alpine
+    container_name: supreme-redis-i3
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --tcp-keepalive 60
+      --timeout 300
+      --databases 4
+    volumes:
+      - redis_data_i3:/data
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: '0.3'
+        reservations:
+          memory: 200M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+    profiles: ["i3"]
+
+  # Redis - Production
+  redis-prod:
+    image: redis:7-alpine
+    container_name: supreme-redis-prod
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - supreme-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["production"]
+
+  # PostgreSQL - Production
+  postgres:
+    image: postgres:15-alpine
+    container_name: supreme-postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=supreme_trading
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=supreme_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    networks:
+      - supreme-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d supreme_trading"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["production"]
+
+  # Prometheus - Development
   prometheus:
     image: prom/prometheus:v2.47.2
-    container_name: supreme-prometheus
+    container_name: supreme-prometheus-dev
     ports:
       - "9091:9090"  # Use 9091 to avoid conflicts
     command:
@@ -99,11 +343,81 @@ services:
         limits:
           memory: 1G
           cpus: '0.5'
+    profiles: ["development"]
 
-  # Grafana dashboard
+  # Prometheus - i3 Optimized
+  prometheus-i3:
+    image: prom/prometheus:v2.47.2
+    container_name: supreme-prometheus-i3
+    ports:
+      - "9091:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=12h'    # Only 12 hours retention
+      - '--storage.tsdb.retention.size=1GB'    # Max 1GB storage
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.min-block-duration=30m' # Larger blocks
+      - '--storage.tsdb.max-block-duration=2h'  # Fewer files
+      - '--query.max-samples=10000'            # Limit query samples
+      - '--log.level=warn'                     # Less logging
+    volumes:
+      - ./monitoring/prometheus.i3.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_i3:/prometheus
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 500M      # Much less memory
+          cpus: '0.4'
+        reservations:
+          memory: 300M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 60s
+      timeout: 10s
+      retries: 2
+    profiles: ["i3"]
+
+  # Prometheus - Production
+  prometheus-prod:
+    image: prom/prometheus:v2.47.2
+    container_name: supreme-prometheus-prod
+    restart: unless-stopped
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+
+    networks:
+      - supreme-network
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["production"]
+
+  # Grafana - Development
   grafana:
     image: grafana/grafana:10.1.5
-    container_name: supreme-grafana
+    container_name: supreme-grafana-dev
     ports:
       - "3000:3000"
     environment:
@@ -130,21 +444,143 @@ services:
         limits:
           memory: 512M
           cpus: '0.3'
+    profiles: ["development"]
 
-# Persistent volumes
+  # Grafana - i3 Optimized
+  grafana-i3:
+    image: grafana/grafana:10.1.5
+    container_name: supreme-grafana-i3
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-Supreme@i3!}
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_NEWS_NEWS_FEED_ENABLED=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/i3-optimized.json
+    volumes:
+      - grafana_data_i3:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus-i3
+    networks:
+      - supreme-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 200M      # Very limited memory
+          cpus: '0.2'
+        reservations:
+          memory: 100M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 2
+    profiles: ["i3"]
+
+  # Grafana - Production
+  grafana-prod:
+    image: grafana/grafana:10.2.0
+    container_name: supreme-grafana-prod
+    restart: unless-stopped
+
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=supreme_admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+
+    networks:
+      - supreme-network
+
+    depends_on:
+      - prometheus-prod
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["production"]
+
+  # Nginx - Production Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: supreme-nginx
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+
+    networks:
+      - supreme-network
+
+    depends_on:
+      - supreme-trading
+      - grafana-prod
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["production"]
+
+# ================================
+# VOLUMES
+# ================================
 volumes:
+  # Development volumes
   redis_data:
     driver: local
   prometheus_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/prometheus
   grafana_data:
     driver: local
 
-# Network configuration
+  # i3 optimized volumes
+  redis_data_i3:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=256m,uid=999,gid=999  # Use tmpfs for speed
+  prometheus_data_i3:
+    driver: local
+  grafana_data_i3:
+    driver: local
+
+  # Production volumes
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+# ================================
+# NETWORKS
+# ================================
 networks:
   supreme-network:
     driver: bridge
@@ -152,8 +588,23 @@ networks:
       config:
         - subnet: 172.20.0.0/16
 
-# Environment variables template
-# Create .env file with:
-# JWT_SECRET_KEY=your-jwt-secret-key-here
-# GRAFANA_PASSWORD=your-grafana-password-here
-# REDIS_PASSWORD=your-redis-password-here (optional)
+# ================================
+# USAGE EXAMPLES
+# ================================
+#
+# Development (default):
+# docker-compose up -d
+#
+# i3 Optimized:
+# docker-compose --profile i3 up -d
+#
+# Production:
+# docker-compose --profile production up -d
+#
+# Combined (development + monitoring):
+# docker-compose --profile development up -d supreme-system-v5 redis prometheus grafana
+#
+# Environment variables needed for production:
+# OKX_API_KEY, OKX_SECRET_KEY, OKX_PASSPHRASE
+# BINANCE_API_KEY, BINANCE_SECRET_KEY
+# JWT_SECRET_KEY, GRAFANA_PASSWORD
