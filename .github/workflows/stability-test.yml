@@ -1,0 +1,276 @@
+name: Data Fabric Stability Test
+
+# Run stability tests on schedule and on demand
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: 'Test duration in minutes'
+        required: false
+        default: '10'
+        type: string
+      test_symbols:
+        description: 'Symbols to test (comma-separated)'
+        required: false
+        default: 'BTC-USDT,ETH-USDT'
+        type: string
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  # Allow manual trigger from other workflows
+  workflow_call:
+    inputs:
+      duration_minutes:
+        description: 'Test duration in minutes'
+        required: false
+        default: '10'
+        type: string
+
+jobs:
+  stability-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      TEST_DURATION: ${{ github.event.inputs.duration_minutes || inputs.duration_minutes || 10 }}
+      TEST_SYMBOLS: ${{ github.event.inputs.test_symbols || 'BTC-USDT,ETH-USDT' }}
+      PYTHONPATH: /home/runner/work/supreme-system-v5/supreme-system-v5/python
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev,test]
+
+      - name: Build Rust extensions
+        run: |
+          pip install maturin
+          maturin develop --release
+
+      - name: Verify Rust extensions
+        run: |
+          python -c "from supreme_engine_rs import fast_ema; print('✅ Rust extensions loaded')"
+
+      - name: Start test infrastructure
+        run: |
+          # Start minimal test infrastructure
+          docker run -d --name redis-test -p 6379:6379 redis:7-alpine redis-server --maxmemory 128mb
+          sleep 5
+
+      - name: Run stability test
+        id: stability-test
+        run: |
+          echo "🚀 Running Data Fabric Stability Test"
+          echo "Duration: ${{ env.TEST_DURATION }} minutes"
+          echo "Symbols: ${{ env.TEST_SYMBOLS }}"
+          echo "========================================"
+
+          # Run the stability test
+          python -m pytest tests/test_data_fabric_stability.py::test_data_fabric_10min_stability \
+            -v \
+            -s \
+            --tb=short \
+            --log-cli-level=INFO \
+            --durations=10
+
+      - name: Generate test report
+        if: always()
+        run: |
+          # Create test results summary
+          echo "# Data Fabric Stability Test Report" > stability-report.md
+          echo "" >> stability-report.md
+          echo "**Test Run:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> stability-report.md
+          echo "**Duration:** ${{ env.TEST_DURATION }} minutes" >> stability-report.md
+          echo "**Symbols:** ${{ env.TEST_SYMBOLS }}" >> stability-report.md
+          echo "**Git Commit:** $(git rev-parse HEAD)" >> stability-report.md
+          echo "" >> stability-report.md
+
+          # Add test status
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ **Status:** PASSED - All QoS requirements met" >> stability-report.md
+          else
+            echo "❌ **Status:** FAILED - QoS requirements not met" >> stability-report.md
+          fi
+
+          echo "" >> stability-report.md
+          echo "## QoS Requirements" >> stability-report.md
+          echo "- Quality Score ≥ 0.8: Required" >> stability-report.md
+          echo "- Error Rate ≤ 10%: Required" >> stability-report.md
+          echo "- Success Rate ≥ 90%: Required" >> stability-report.md
+          echo "" >> stability-report.md
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stability-test-results-${{ github.run_id }}
+          path: |
+            stability-report.md
+            test-results-*.json
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Data Fabric Stability Test Failed',
+              body: `
+            ## Data Fabric Stability Test Failed
+
+            **Scheduled Test Run:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+            **Test Duration:** ${{ env.TEST_DURATION }} minutes
+            **Symbols Tested:** ${{ env.TEST_SYMBOLS }}
+            **Git Commit:** ${context.sha}
+
+            ### Action Required
+            The Data Fabric QoS requirements were not met during the scheduled stability test. This indicates potential issues with:
+
+            - Data quality degradation
+            - Increased error rates from data sources
+            - Performance degradation
+
+            ### Next Steps
+            1. Review the detailed test logs
+            2. Check data source health status
+            3. Investigate any recent changes that may affect data quality
+            4. Run manual stability test for deeper analysis
+
+            [View Test Results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `,
+              labels: ['bug', 'data-quality', 'stability-test']
+            })
+
+      - name: Clean up test infrastructure
+        if: always()
+        run: |
+          docker stop redis-test || true
+          docker rm redis-test || true
+
+  performance-regression-check:
+    runs-on: ubuntu-latest
+    needs: stability-test
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .[dev,test]
+          pip install pytest-benchmark
+
+      - name: Build Rust extensions
+        run: |
+          pip install maturin
+          maturin develop --release
+
+      - name: Run performance benchmarks
+        run: |
+          echo "🏃 Running performance regression tests..."
+          python -m pytest tests/test_benchmarks.py \
+            -v \
+            --benchmark-only \
+            --benchmark-group-by=group \
+            --benchmark-json=benchmark-results.json
+
+      - name: Check for performance regressions
+        run: |
+          # Simple regression check - compare against baseline
+          # In production, you'd store historical benchmarks and compare
+          python -c "
+          import json
+          with open('benchmark-results.json') as f:
+              results = json.load(f)
+
+          regressions = []
+          for benchmark in results['benchmarks']:
+              name = benchmark['name']
+              time = benchmark['stats']['mean']
+
+              # Simple threshold check (would be more sophisticated in production)
+              if 'ema' in name.lower() and time > 0.001:  # 1ms threshold
+                  regressions.append(f'{name}: {time*1000:.2f}ms')
+              elif 'rsi' in name.lower() and time > 0.005:  # 5ms threshold
+                  regressions.append(f'{name}: {time*1000:.2f}ms')
+
+          if regressions:
+              print('⚠️ Potential performance regressions detected:')
+              for reg in regressions:
+                  print(f'  - {reg}')
+              exit(1)
+          else:
+              print('✅ No performance regressions detected')
+          "
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: |
+            benchmark-results.json
+          retention-days: 30
+
+  quality-monitoring:
+    runs-on: ubuntu-latest
+    needs: [stability-test, performance-regression-check]
+    if: always()
+
+    steps:
+      - name: Generate quality metrics report
+        run: |
+          echo "# Quality Monitoring Report" > quality-report.md
+          echo "" >> quality-report.md
+          echo "**Generated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> quality-report.md
+          echo "" >> quality-report.md
+
+          # Overall status
+          if [[ "${{ needs.stability-test.result }}" == "success" && "${{ needs.performance-regression-check.result }}" == "success" ]]; then
+            echo "✅ **Overall Status:** All quality checks passed" >> quality-report.md
+          else
+            echo "❌ **Overall Status:** Quality issues detected" >> quality-report.md
+          fi
+
+          echo "" >> quality-report.md
+          echo "## Test Results" >> quality-report.md
+          echo "- Stability Test: ${{ needs.stability-test.result }}" >> quality-report.md
+          echo "- Performance Test: ${{ needs.performance-regression-check.result }}" >> quality-report.md
+          echo "" >> quality-report.md
+
+      - name: Upload quality report
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report-${{ github.run_id }}
+          path: quality-report.md
+          retention-days: 30
