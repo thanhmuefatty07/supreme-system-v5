@@ -169,7 +169,7 @@ class RealTimeBacktestEngine:
                 self.metrics.data_points += 1
 
                 event_bus = get_event_bus()
-                await event_bus.publish(create_market_data_event(symbol, md.price, md.volume_24h, "backtest", md.bid, md.ask, md.timestamp))
+                await event_bus.publish(create_market_data_event(symbol, md.price, md.volume_24h, "backtest", bid=md.bid, ask=md.ask, timestamp=md.timestamp))
             except Exception as e:
                 logger.warning(f"⚠️ Data fetch error {symbol}: {e}")
                 self.metrics.data_failures += 1

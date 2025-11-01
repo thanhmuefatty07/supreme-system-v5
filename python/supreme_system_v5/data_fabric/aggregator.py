@@ -149,7 +149,7 @@ class DataAggregator:
                 return cached_data
         elif self.cache_manager:
             # Using raw CacheManager interface
-            cached_data = await self.cache_manager.get(f"market:{symbol}")
+            cached_data = await self.cache_manager.cache.get(symbol, max_age_seconds)
             if (
                 cached_data
                 and isinstance(cached_data, MarketDataPoint)
@@ -218,7 +218,7 @@ class DataAggregator:
                 await self.cache_manager.set_market_data(symbol, aggregated_data)
             else:
                 # Using raw CacheManager interface
-                await self.cache_manager.set(f"market:{symbol}", aggregated_data)
+                await self.cache_manager.cache.set(symbol, aggregated_data)
 
         # Update last data
         self.last_data[symbol] = aggregated_data
@@ -246,7 +246,7 @@ class DataAggregator:
         for data_point, quality, source_weight in data_points:
             weight = quality.overall_score * source_weight
             prices.append(data_point.price * weight)
-            volumes.append(data_point.volume * weight)
+            volumes.append(data_point.volume_24h * weight)
             weights.append(weight)
 
         total_weight = sum(weights)
@@ -265,7 +265,7 @@ class DataAggregator:
             symbol=symbol,
             timestamp=time.time(),
             price=aggregated_price,
-            volume=aggregated_volume,
+            volume_24h=aggregated_volume,
             bid=best_data.bid,
             ask=best_data.ask,
             high_24h=best_data.high_24h,
