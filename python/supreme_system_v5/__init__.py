@@ -11,7 +11,7 @@ __author__ = "Supreme System Team"
 RUST_AVAILABLE = False
 RustEngine = None
 
-from .core import SupremeCore, SupremeSystem, SystemConfig
+from .core import SupremeCore, SupremeSystem, SystemConfig, MarketData
 from .event_bus import (
     Event,
     EventBus,
@@ -26,6 +26,9 @@ from .event_bus import (
 from .risk import RiskManager
 from .strategies import ScalpingStrategy
 
+# Import backtest components
+from .backtest import run_realtime_backtest, BacktestConfig, BacktestMetrics
+
 # Import Python components
 from .utils import get_logger
 
@@ -34,6 +37,7 @@ __all__ = [
     "SupremeCore",
     "SupremeSystem",
     "SystemConfig",
+    "MarketData",
     "ScalpingStrategy",
     "RiskManager",
     "EventBus",
@@ -45,6 +49,9 @@ __all__ = [
     "create_signal_event",
     "create_risk_event",
     "create_execution_event",
+    "run_realtime_backtest",
+    "BacktestConfig",
+    "BacktestMetrics",
     "RUST_AVAILABLE",
     "__version__",
     "__author__",
