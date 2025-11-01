@@ -8,10 +8,13 @@ Memory-optimized for i3-4GB systems
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional, Any
 
 # Add python directory to path
 sys.path.insert(0, str(Path(__file__).parent / "python"))
@@ -28,6 +31,24 @@ except ImportError as e:
     print("💡 Make sure you're in the supreme-system-v5 directory")
     print("🔧 Run: pip install -r requirements.txt")
     sys.exit(1)
+
+# Optional imports for enhanced features
+PSUTIL_AVAILABLE = False
+PROMETHEUS_AVAILABLE = False
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+    print("✅ System monitoring available")
+except ImportError:
+    print("⚠️ Install psutil for system monitoring: pip install psutil")
+
+try:
+    from prometheus_client import start_http_server, Gauge, Counter
+    PROMETHEUS_AVAILABLE = True
+    print("✅ Prometheus metrics available")
+except ImportError:
+    print("⚠️ Install prometheus_client for metrics: pip install prometheus_client")
 
 print("=" * 50)
 
@@ -372,74 +393,15 @@ def create_production_config(args) -> BacktestConfig:
 
 
 async def enhanced_backtest_wrapper(config: BacktestConfig, args):
-    """Enhanced wrapper around core backtest engine"""
-    # Initialize production components
-    recorder = ProductionBacktestRecorder(
-        out_dir=args.output_dir,
-        record_raw=args.record_raw
-    )
-    
-    metrics_server = ProductionMetricsServer(args.metrics_port)
-    
-    # Save configuration
-    config_dict = {
-        'symbols': config.symbols,
-        'initial_balance': config.initial_balance,
-        'data_sources': config.data_sources,
-        'realtime_interval': config.realtime_interval,
-        'max_position_size': config.max_position_size,
-        'enable_risk_management': config.enable_risk_management,
-        'historical_days': config.historical_days,
-        'record_raw': args.record_raw,
-        'metrics_port': args.metrics_port,
-        'start_time': datetime.now().isoformat(),
-        'python_version': sys.version,
-        'command_line': ' '.join(sys.argv)
-    }
-    recorder.save_config(config_dict)
-    
-    print(f"🎯 Production backtest starting...")
-    print(f"📊 Features: Recording={True}, Raw={args.record_raw}, Metrics={args.metrics_port > 0}")
-    
-    # Start performance monitoring in background
-    async def performance_monitor():
-        while True:
-            try:
-                await asyncio.sleep(30)  # Monitor every 30 seconds
-                
-                # Mock performance metrics (replace with actual engine metrics)
-                current_time = time.time()
-                mock_metrics = {
-                    'balance': config.initial_balance * (1 + (current_time % 3600) / 3600 * 0.01),
-                    'pnl': (current_time % 3600) / 3600 * 100,
-                    'pnl_percent': (current_time % 3600) / 3600,
-                    'max_drawdown_pct': -2.5,
-                    'total_trades': int((current_time % 3600) / 60),
-                    'exposure': config.initial_balance * 0.15
-                }
-                
-                recorder.record_performance(mock_metrics)
-                metrics_server.update_metrics(mock_metrics)
-                
-            except Exception as e:
-                print(f"⚠️ Performance monitoring error: {e}")
-    
-    # Start monitoring task
-    monitor_task = asyncio.create_task(performance_monitor())
-    
-    try:
-        # Run the actual backtest engine
-        await run_realtime_backtest(config)
-    except Exception as e:
-        print(f"❌ Backtest error: {e}")
-        raise
-    finally:
-        monitor_task.cancel()
-        print(f"📁 Results saved to: {recorder.run_dir}")
-        print(f"📊 Analysis files:")
-        print(f"   • {recorder.trades_file}")
-        print(f"   • {recorder.performance_file}")
-        print(f"   • {recorder.config_file}")
+    """Simple wrapper around core backtest engine"""
+    print(f"🎯 Starting backtest with {len(config.symbols)} symbols...")
+    print(f"💰 Initial balance: ${config.initial_balance:.2f}")
+    print(f"⏱️ Update interval: {config.realtime_interval}s")
+    print(f"🎛️ Risk management: {'Enabled' if config.enable_risk_management else 'Disabled'}")
+    print()
+
+    # Run the core backtest
+    await run_realtime_backtest(config)
 
 
 async def main():
