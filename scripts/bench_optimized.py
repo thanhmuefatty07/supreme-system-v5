@@ -199,8 +199,8 @@ def benchmark_indicator(name: str, optimized_func, reference_func, test_data: Li
 
 def benchmark_circular_buffer(size: int = 1000, operations: int = 100000) -> Dict[str, Any]:
     """Benchmark CircularBuffer performance."""
-    print("
-🔬 Benchmarking CircularBuffer..."    from supreme_system_v5.optimized import CircularBuffer
+    print("\n🔬 Benchmarking CircularBuffer...")
+    from supreme_system_v5.optimized import CircularBuffer
 
     buffer = CircularBuffer(size)
 
@@ -229,8 +229,8 @@ def benchmark_circular_buffer(size: int = 1000, operations: int = 100000) -> Dic
 
 def benchmark_event_processor(test_data: List[Tuple[float, float]], num_runs: int = 10) -> Dict[str, Any]:
     """Benchmark SmartEventProcessor."""
-    print("
-🔬 Benchmarking SmartEventProcessor..."    from supreme_system_v5.optimized import SmartEventProcessor
+    print("\n🔬 Benchmarking SmartEventProcessor...")
+    from supreme_system_v5.optimized import SmartEventProcessor
 
     config = {
         'min_price_change_pct': 0.0005,
@@ -283,8 +283,8 @@ def run_full_benchmark_suite():
     results = []
 
     # Benchmark individual indicators
-    print("
-🔬 INDICATOR BENCHMARKS"    print("-" * 50)
+    print("\n🔬 INDICATOR BENCHMARKS")
+    print("-" * 50)
 
     # EMA Benchmark
     ema_optimized = UltraOptimizedEMA(14)
@@ -312,18 +312,18 @@ def run_full_benchmark_suite():
     results.append(ep_result)
 
     # Summary report
-    print("
-📊 BENCHMARK RESULTS SUMMARY"    print("=" * 70)
+    print("\n📊 BENCHMARK RESULTS SUMMARY")
+    print("=" * 70)
 
-    print("
-🔬 INDICATOR PERFORMANCE"    print("-" * 50)
+    print("\n🔬 INDICATOR PERFORMANCE")
+    print("-" * 50)
     for result in results[:3]:  # EMA, RSI, MACD
         status = "✅" if result['parity_valid'] else "❌"
         print(f"{status} {result['indicator']}:")
         print(".2f"        print(".1f"        print(f"   Parity Valid: {result['parity_valid']}")
 
-    print("
-🔧 COMPONENT PERFORMANCE"    print("-" * 50)
+    print("\n🔧 COMPONENT PERFORMANCE")
+    print("-" * 50)
 
     # CircularBuffer results
     cb = next(r for r in results if r.get('component') == 'CircularBuffer')

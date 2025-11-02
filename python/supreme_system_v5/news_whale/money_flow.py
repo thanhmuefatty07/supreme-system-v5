@@ -237,13 +237,13 @@ def demo_money_flow():
     large_flows = flow_aggregator.get_large_flows()
     arbitrage_ops = flow_aggregator.analyze_arbitrage_opportunities()
 
-    print("
-💹 FLOW SUMMARY (24h):"    print(f"   Total Flows: {summary['total_flows']}")
+    print("\n💹 FLOW SUMMARY (24h):")
+    print(f"   Total Flows: {summary['total_flows']}")
     print(".2f")
     print(".2f")
 
-    print("
-🏦 EXCHANGE NET POSITIONS:"    for exchange, position in summary['net_positions'].items():
+    print("\n🏦 EXCHANGE NET POSITIONS:")
+    for exchange, position in summary['net_positions'].items():
         direction = "📈 INFLOW" if position > 0 else "📉 OUTFLOW" if position < 0 else "➡️ BALANCED"
         print(".2f")
 

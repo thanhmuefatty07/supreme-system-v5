@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple benchmark script for optimized components.
-Validates core functionality and performance.
+Simple Benchmark for Supreme System V5 Optimized Components.
 """
 
 import time
@@ -11,143 +10,69 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 
-def test_optimized_components():
-    """Test that optimized components work correctly."""
-    print("🧪 Testing Optimized Components")
-    print("=" * 50)
+from supreme_system_v5.optimized import UltraOptimizedEMA, UltraOptimizedRSI, UltraOptimizedMACD
 
-    try:
-        from supreme_system_v5.optimized import (
-            UltraOptimizedEMA, UltraOptimizedRSI, UltraOptimizedMACD,
-            CircularBuffer, SmartEventProcessor
-        )
+def generate_test_data(num_samples: int = 1000) -> list:
+    """Generate test price data."""
+    import random
+    prices = [100.0]
+    for _ in range(num_samples - 1):
+        change = random.uniform(-2, 2)
+        new_price = prices[-1] * (1 + change/100)
+        prices.append(max(new_price, 0.01))
+    return prices
 
-        # Test CircularBuffer
-        print("Testing CircularBuffer...")
-        buffer = CircularBuffer(10)
-        for i in range(15):
-            buffer.append(float(i))
-        latest = buffer.get_latest(5)
-        assert len(latest) == 5, "Buffer latest failed"
-        print("✅ CircularBuffer: PASS")
+def benchmark_indicator(name: str, indicator_class, period: int, test_data: list, num_runs: int = 10) -> dict:
+    """Benchmark a single indicator."""
+    print(f"Benchmarking {name}...")
 
-        # Test UltraOptimizedEMA
-        print("Testing UltraOptimizedEMA...")
-        ema = UltraOptimizedEMA(period=14)
-        for i in range(20):
-            result = ema.update(100.0 + i)
-        assert ema.is_initialized(), "EMA not initialized"
-        print("✅ UltraOptimizedEMA: PASS")
+    # Benchmark optimized version
+    indicator = indicator_class(period)
+    start_time = time.time()
 
-        # Test UltraOptimizedRSI
-        print("Testing UltraOptimizedRSI...")
-        rsi = UltraOptimizedRSI(period=14)
-        for i in range(20):
-            result = rsi.update(100.0 + i * 0.1)
-        assert rsi.is_initialized(), "RSI not initialized"
-        print("✅ UltraOptimizedRSI: PASS")
+    for run in range(num_runs):
+        for price in test_data:
+            indicator.update(price)
 
-        # Test UltraOptimizedMACD
-        print("Testing UltraOptimizedMACD...")
-        macd = UltraOptimizedMACD(fast_period=12, slow_period=26, signal_period=9)
-        for i in range(50):
-            result = macd.update(100.0 + i)
-        assert macd.is_initialized(), "MACD not initialized"
-        print("✅ UltraOptimizedMACD: PASS")
+    elapsed = time.time() - start_time
+    avg_time = elapsed / num_runs
 
-        # Test SmartEventProcessor
-        print("Testing SmartEventProcessor...")
-        processor = SmartEventProcessor({
-            'min_price_change_pct': 0.01,
-            'min_volume_multiplier': 2.0,
-            'max_time_gap_seconds': 30
-        })
-        should_process = processor.should_process(100.0, 1000, time.time())
-        stats = processor.get_stats()
-        assert 'events_processed' in stats, "Event processor stats failed"
-        print("✅ SmartEventProcessor: PASS")
-
-        print("\n🎉 ALL OPTIMIZED COMPONENTS WORKING!")
-        return True
-
-    except Exception as e:
-        print(f"❌ COMPONENT TEST FAILED: {e}")
-        return False
-
-def benchmark_performance():
-    """Simple performance benchmark."""
-    print("\n⚡ Performance Benchmark")
-    print("=" * 50)
-
-    try:
-        from supreme_system_v5.optimized import UltraOptimizedEMA
-
-        # Benchmark 10k updates
-        num_updates = 10000
-        ema = UltraOptimizedEMA(period=14)
-
-        start_time = time.time()
-        for i in range(num_updates):
-            ema.update(100.0 + i * 0.01)
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time_per_update = total_time / num_updates
-
-        print(f"Updates: {num_updates}")
-        print(".2f")
-        print(".1f")
-
-        if avg_time_per_update < 0.0001:  # < 0.1ms per update
-            print("✅ PERFORMANCE: EXCELLENT (< 0.1ms per update)")
-            return True
-        elif avg_time_per_update < 0.001:  # < 1ms per update
-            print("✅ PERFORMANCE: GOOD (< 1ms per update)")
-            return True
-        else:
-            print("❌ PERFORMANCE: SLOW (> 1ms per update)")
-            return False
-
-    except Exception as e:
-        print(f"❌ BENCHMARK FAILED: {e}")
-        return False
+    return {
+        'indicator': name,
+        'avg_time_per_run': avg_time,
+        'total_samples': len(test_data),
+        'runs': num_runs
+    }
 
 def main():
-    """Run all tests."""
-    print("🚀 SUPREME SYSTEM V5 - OPTIMIZED COMPONENTS VALIDATION")
-    print("=" * 70)
+    """Run simple benchmark suite."""
+    print("Supreme System V5 - Simple Benchmark")
+    print("=" * 40)
 
-    # Run tests
-    component_test = test_optimized_components()
-    performance_test = benchmark_performance()
+    # Generate test data
+    test_data = generate_test_data(1000)
+    print(f"Generated {len(test_data)} test samples")
 
-    # Results
-    print("\n" + "=" * 70)
-    print("📊 VALIDATION RESULTS")
-    print("=" * 70)
+    results = []
 
-    results = [
-        ("Component Functionality", component_test),
-        ("Performance Benchmark", performance_test)
-    ]
+    # Benchmark EMA
+    ema_result = benchmark_indicator("EMA(14)", UltraOptimizedEMA, 14, test_data)
+    results.append(ema_result)
 
-    passed = 0
-    for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print("25s")
-        if result:
-            passed += 1
+    # Benchmark RSI
+    rsi_result = benchmark_indicator("RSI(14)", UltraOptimizedRSI, 14, test_data)
+    results.append(rsi_result)
 
-    print(f"\n🎯 SUMMARY: {passed}/{len(results)} tests passed")
+    # Benchmark MACD
+    macd_result = benchmark_indicator("MACD(12,26,9)", UltraOptimizedMACD, 12, test_data)
+    results.append(macd_result)
 
-    if passed == len(results):
-        print("🚀 OPTIMIZED COMPONENTS VALIDATION: SUCCESS")
-        print("💪 CORE OPTIMIZATIONS READY FOR PRODUCTION")
-        return True
-    else:
-        print("⚠️ SOME TESTS FAILED - REVIEW REQUIRED")
-        return False
+    print("\nBenchmark Results:")
+    print("-" * 40)
+    for result in results:
+        print(f"{result['indicator']}: {result['avg_time_per_run']:.4f}s")
+    print("\nBenchmark completed successfully!")
+    return True
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()

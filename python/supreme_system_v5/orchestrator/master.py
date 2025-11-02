@@ -716,15 +716,15 @@ def demo_master_orchestrator():
         print(".2f")
         print(".2f")
 
-        print("
-🎯 SYSTEM CAPABILITIES:"        print("   • Intelligent component scheduling (30s-10m intervals)")
+        print("\n🎯 SYSTEM CAPABILITIES:")
+        print("   • Intelligent component scheduling (30s-10m intervals)")
         print("   • Multi-component signal aggregation")
         print("   • Risk-adjusted decision making")
         print("   • Real-time system health monitoring")
         print("   • Portfolio exposure management")
 
-        print("
-✅ Master Orchestrator Demo Complete"        print("   Supreme System V5 orchestration ready for production!")
+        print("\n✅ Master Orchestrator Demo Complete")
+        print("   Supreme System V5 orchestration ready for production!")
 
     # Run the async demo
     asyncio.run(run_demo())
