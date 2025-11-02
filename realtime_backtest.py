@@ -138,6 +138,32 @@ async def enhanced_backtest_wrapper(config: BacktestConfig, args):
     await run_realtime_backtest(config)
 
 
+def validate_args(args):
+    """Validate command line arguments"""
+    errors = []
+
+    if not args.symbols:
+        errors.append("At least one symbol is required")
+
+    if args.balance <= 0:
+        errors.append("Initial balance must be > 0")
+
+    if args.interval <= 0:
+        errors.append("Update interval must be > 0")
+
+    if not (0 <= args.max_position <= 1):
+        errors.append("Max position size must be between 0 and 1")
+
+    if args.historical_days <= 0:
+        errors.append("Historical days must be > 0")
+
+    if errors:
+        print("❌ Configuration errors:")
+        for error in errors:
+            print(f"   • {error}")
+        sys.exit(2)
+
+
 async def main():
     """Main entry point"""
     print("🚀 Supreme System V5 - Production Realtime Backtest")
