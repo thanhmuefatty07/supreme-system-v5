@@ -1,129 +1,140 @@
-# 🚀 SUPREME TRADING SYSTEM - ULTIMATE OPTIMIZATION ROADMAP
-
-... (existing content above) ...
 
 ---
 
-# 🔎 Deep Diagnostic Report (v1)
+# 🛠️ Remaining Work Items (v2) — Professional Implementation Plan
 
-## A. Repository Health Check
-- Structure integrity: OK (python/, src/, docs/, tests/, Dockerfiles present)
-- Missing implementation modules referenced by roadmap:
-  - python/supreme_system_v5/optimized/{circular_buffer.py, ema.py, rsi.py, macd.py, smart_events.py}
-  - python/supreme_system_v5/news_whale/{news_classifier.py, whale_tracking.py, money_flow.py}
-  - python/supreme_system_v5/risk/dynamic_risk.py
-  - python/supreme_system_v5/mtf/engine.py
-  - python/supreme_system_v5/orchestrator/master.py
-  - python/supreme_system_v5/monitoring/resource_monitor.py
-- README: lacks link to this roadmap and single-symbol ops guide.
-- Tests: no unit tests for optimized classes; CI status badge in README suggests green but no workflows/* found.
+This section enumerates the exact engineering tasks required to fully activate and validate the optimized architecture in production. Each task includes scope, acceptance criteria, owner hint, and estimated effort.
 
-## B. Runtime Risks (i3-4GB)
-- Memory spikes from price-history arrays in strategies.py: limit not enforced consistently.
-- Indicator recomputation per tick -> CPU amplification.
-- Multi-symbol default in .env example may exceed target. Set SINGLE_SYMBOL.
-- Logging at INFO across modules can add overhead; rotate & sample.
+## 1) Strategy Integration with Optimized Engine
+- Scope:
+  - Replace TechnicalIndicators usage with OptimizedTechnicalAnalyzer facade.
+  - Wire SmartEventProcessor gating where market significance determines compute.
+  - Limit in-memory series via CircularBuffer or capped deque.
+- Files:
+  - python/supreme_system_v5/strategies.py
+  - python/supreme_system_v5/optimized/analyzer.py
+- Acceptance:
+  - CPU median reduced ≥ 35% on single-symbol 1m feed over 60 minutes.
+  - No regression in signal parity for EMA/RSI/MACD vs reference within tolerance 1e-6.
+  - Event skip ratio between 0.2–0.8 depending on volatility regime.
+- Effort: 0.5–1 day
 
-## C. Action Items (Must Do)
-1) Code scaffolding (Day 1):
-   - Create package `python/supreme_system_v5/optimized/` with:
-     - circular_buffer.py (CircularBuffer, RollingAverage)
-     - ema.py (UltraOptimizedEMA)
-     - rsi.py (UltraOptimizedRSI)
-     - macd.py (UltraOptimizedMACD)
-     - smart_events.py (SmartEventProcessor)
-2) Refactor strategies.py to import from optimized facade `OptimizedTechnicalAnalyzer` and apply event-driven gating.
-3) Add `news_whale/` with `AdvancedNewsClassifier`, `WhaleTrackingSystem`, `money_flow.py` (exchange flows aggregator placeholder).
-4) Implement `risk/dynamic_risk.py` with confidence-based position sizing + volatility scaler.
-5) Implement `mtf/engine.py` consensus; cache indicators per TF using CircularBuffer.
-6) Implement `orchestrator/master.py` with schedule: tech=30s, news=10m, whale=10m, mtf=2m, patterns=1m.
-7) Implement `monitoring/resource_monitor.py` with Prometheus metrics:
-   - optimized_indicator_latency_seconds
-   - event_skip_ratio
-   - memory_in_use_bytes
-   - cpu_percent_gauge
-8) Config defaults (.env.example additions):
-   - SINGLE_SYMBOL=BTC-USDT
-   - PROCESS_INTERVAL_SECONDS=30
-   - NEWS_INTERVAL_MIN=10
-   - WHALE_INTERVAL_MIN=10
-   - MAX_RAM_GB=3.86
-   - MAX_CPU_PERCENT=88
-9) README updates: link roadmap + quick enable optimized mode.
+## 2) Configuration Flags & Defaults
+- Scope:
+  - Add .env.example keys to toggle optimized mode and intervals.
+  - Document single-symbol futures scalping (BTC-USDT) with 30–60s compute cadence.
+- Files:
+  - .env.example, README.md
+- Keys:
+  - OPTIMIZED_MODE=true
+  - EVENT_DRIVEN_PROCESSING=true
+  - SINGLE_SYMBOL=BTC-USDT
+  - PROCESS_INTERVAL_SECONDS=30
+  - NEWS_INTERVAL_MIN=10
+  - WHALE_INTERVAL_MIN=10
+  - MAX_RAM_GB=3.86
+  - MAX_CPU_PERCENT=88
+- Acceptance:
+  - System boots with optimized defaults on fresh clone, no manual edits required beyond .env.
+- Effort: 0.25 day
 
-## D. Professional Technics (How-To)
-- Sliding-window data: store at most 50 prices per indicator; use deque(maxlen=50) or our CircularBuffer for cache locality.
-- Incremental math:
-  - EMA: `ema += α*(p-ema)`; RSI: Wilder smoothing with running averages; MACD reuses EMAs.
-- Event gating: process if `|Δp|>0.1%` or `volume>2×avg20` or `now-last>=60s`.
-- Async scheduling: use `asyncio.create_task` per domain; protect state by `asyncio.Lock`.
-- Backpressure: if CPU>88% over 60s window -> double all intervals (tech 30→60s, patterns 60→120s) until stable.
-- Logging: structured JSON; sample DEBUG; rotate at 10MB×3; do not log every tick.
-- Memory guard: periodically shrink lists via slicing `lst[:] = lst[-N:]`; prefer arrays from `array('d')` or numpy where needed.
-- Prometheus: export gauges for CPU/RAM; histograms for latency; counters for processed/skipped.
+## 3) Benchmark & Load Test Suite
+- Scope:
+  - Micro-bench for indicators (EMA/RSI/MACD) against reference implementations.
+  - End-to-end load test for single-symbol stream at 20 ticks/sec for 60 minutes.
+- Files:
+  - scripts/bench_optimized.py
+  - scripts/load_single_symbol.py
+- Metrics:
+  - indicator_update_latency_seconds (histogram)
+  - event_skip_ratio (gauge)
+  - cpu_percent_gauge, memory_in_use_bytes
+- Acceptance:
+  - Median indicator update < 0.2 ms; 95th < 0.5 ms.
+  - CPU avg < 88%; RAM peak < 3.86 GB; no GC stalls > 50 ms.
+- Effort: 0.75 day
 
-## E. Acceptance Tests (Scripts)
-- Benchmark script `scripts/bench_optimized.py`:
-  - Generate synthetic 1m ticks (10k points), run indicators 10k updates.
-  - Assert latency median < 0.2ms/indicator update; RSS < 120MB.
-- Load test `scripts/load_single_symbol.py`:
-  - WebSocket mock at 20 ticks/sec for 1 hour.
-  - Assert CPU avg < 88%, RAM peak < 3.86GB; event_skip_ratio within 0.2–0.8 depending on volatility.
+## 4) News/Whale Signal Fusion into Risk Manager
+- Scope:
+  - Combine news_confidence, whale_confidence, technical_confidence → composite.
+  - Map composite to leverage/position size with volatility adjustment.
+- Files:
+  - python/supreme_system_v5/dynamic_risk_manager.py
+  - python/supreme_system_v5/news_classifier.py, whale_tracking.py
+- Acceptance:
+  - Confidence to position curve documented and unit-tested.
+  - Leverage bounds enforced (base≤max; 5–50x) and logged per decision.
+- Effort: 0.5 day
 
-## F. Rollout Plan
-- Feature flag `OPTIMIZED_MODE=true` in env; dual-run A/B for 24h.
-- If metrics stable and PnL not worse: switch default to optimized, keep fallback.
+## 5) Orchestrator Scheduling Policies
+- Scope:
+  - Adaptive backpressure: double intervals when cpu>88% for 60s.
+  - Priority ordering: risk>whale>news>technical>patterns; preemption safe.
+- Files:
+  - python/supreme_system_v5/master_orchestrator.py
+  - python/supreme_system_v5/resource_monitor.py
+- Acceptance:
+  - Under synthetic stress, scheduler widens intervals and recovers to target.
+  - No task starvation; fairness evidenced in metrics.
+- Effort: 0.75 day
 
-## G. Task Tracker (Remaining)
-- [ ] Implement optimized package modules
-- [ ] Wire strategies.py to OptimizedTechnicalAnalyzer
-- [ ] Implement news_whale & risk modules
-- [ ] Orchestrator + ResourceMonitor
-- [ ] Add tests + scripts + README links
-- [ ] Run 24h A/B in sandbox
+## 6) Observability & SLOs
+- Scope:
+  - Add Prometheus metrics and Grafana dashboards for optimization KPIs.
+  - Define SLOs: CPU<88%, RAM<3.86GB, p95 cycle < 500ms, uptime 99.9%.
+- Files:
+  - python/supreme_system_v5/resource_monitor.py
+  - dashboard provisioning JSON (docs/dashboard/*.json)
+- Acceptance:
+  - Dashboards render all KPIs; alert rules firing on breaches.
+- Effort: 0.5 day
+
+## 7) Production Dry-Run & A/B
+- Scope:
+  - 24h sandbox A/B: OPTIMIZED_MODE=true vs false on same symbol feed.
+  - Compare PnL, drawdown, win rate, latency, CPU/RAM.
+- Files:
+  - scripts/ab_test_run.sh, scripts/report_ab.py
+- Acceptance:
+  - Report generated in docs/reports/ with recommendations.
+- Effort: 1.0 day
 
 ---
 
-# 🔧 Quick Code Stubs (to copy into repo)
+# 📐 Engineering Guidelines (Do/Dont)
+- Do
+  - Use __slots__ for hot-path classes.
+  - Prefer array('d') over list for numeric buffers.
+  - Bound histories (N<=1000) and use CircularBuffer for O(1) rotation.
+  - Cache constants and avoid dynamic attribute creation.
+  - Batch logging; structured JSON; rotate at 10MB×3.
+- Don’t
+  - Don’t recompute indicators from scratch per tick.
+  - Don’t grow lists unbounded; no append-only histories.
+  - Don’t log every tick or per-indicator calculation.
 
-```python
-# python/supreme_system_v5/optimized/circular_buffer.py
-from collections import deque
-class CircularBuffer:
-    __slots__ = ('_dq','size')
-    def __init__(self, size:int):
-        self._dq = deque(maxlen=size)
-        self.size = size
-    def append(self, v): self._dq.append(v)
-    def latest(self,n=1):
-        if n>=len(self._dq): return list(self._dq)
-        return list(list(self._dq)[-n:])
-class RollingAverage:
-    __slots__ = ('n','_dq','_sum')
-    def __init__(self,n=20):
-        self.n=n; self._dq=deque(maxlen=n); self._sum=0.0
-    def add(self,x):
-        if len(self._dq)==self.n: self._sum-=self._dq[0]
-        self._dq.append(x); self._sum+=x
-    def get_average(self):
-        return self._sum/len(self._dq) if self._dq else 0.0
+---
+
+# ✅ Acceptance Gates (Go/No-Go)
+- Gate-1: Unit + microbench pass; parity vs reference within 1e-6.
+- Gate-2: 60-min load test CPU<88%, RAM<3.86GB, p95<500ms.
+- Gate-3: 24h A/B—optimized not worse PnL or substantially better risk-adjusted metrics.
+- Gate-4: Runbook updated; oncall can remediate with feature flags.
+
+---
+
+# ▶️ Quick Start for Devs
+```bash
+# Enable optimized mode
+export OPTIMIZED_MODE=true
+export EVENT_DRIVEN_PROCESSING=true
+export SINGLE_SYMBOL=BTC-USDT
+export PROCESS_INTERVAL_SECONDS=30
+
+# Run
+python -m supreme_system_v5.core
+
+# Benchmarks
+python scripts/bench_optimized.py
+python scripts/load_single_symbol.py --symbol BTC-USDT --rate 20 --duration-min 60
 ```
-
-```python
-# python/supreme_system_v5/optimized/ema.py
-class UltraOptimizedEMA:
-    __slots__=('a','v','init')
-    def __init__(self, period:int):
-        self.a = 2.0/(period+1); self.v=None; self.init=False
-    def update(self,p:float):
-        if not self.init: self.v=p; self.init=True
-        else: self.v += self.a*(p-self.v)
-        return self.v
-```
-
-> Sao chép các stubs này theo đúng đường dẫn để bắt đầu nhanh, sau đó mở rộng theo roadmap.
-
----
-
-# 📌 Notes
-- File này là nguồn dẫn đường chính cho Phase Optimize. Mọi cập nhật task/tiêu chí cần add trực tiếp dưới các mục D–G.
