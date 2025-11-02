@@ -32,33 +32,63 @@ class LeverageLevel(Enum):
     ULTRA_AGGRESSIVE = "ultra_aggressive"
 
 class SignalConfidence:
-    """Signal confidence structure."""
+    """Signal confidence structure with configurable weights."""
 
     def __init__(self, technical_confidence: float, news_confidence: float = 0.0,
-                 whale_confidence: float = 0.0, pattern_confidence: float = 0.0):
+                 whale_confidence: float = 0.0, pattern_confidence: float = 0.0,
+                 weights: Dict[str, float] = None):
         self.technical_confidence = technical_confidence
         self.news_confidence = news_confidence
         self.whale_confidence = whale_confidence
         self.pattern_confidence = pattern_confidence
 
-    def get_overall_confidence(self) -> float:
-        """Calculate overall confidence score."""
-        # Weighted average of all confidence sources
-        weights = {
-            'technical': 0.5,
-            'news': 0.2,
-            'whale': 0.15,
-            'pattern': 0.15
+        # Configurable weights for signal fusion
+        self.weights = weights or {
+            'technical': 0.5,   # Technical analysis (primary)
+            'news': 0.25,       # News sentiment (secondary)
+            'whale': 0.20,      # Whale activity (supporting)
+            'pattern': 0.05     # Pattern recognition (minor)
         }
 
+        # Normalize weights to ensure they sum to 1.0
+        total_weight = sum(self.weights.values())
+        if total_weight != 1.0:
+            self.weights = {k: v / total_weight for k, v in self.weights.items()}
+
+    def get_overall_confidence(self) -> float:
+        """Calculate overall confidence score with signal fusion."""
+        # Weighted average of all confidence sources
         overall = (
-            self.technical_confidence * weights['technical'] +
-            self.news_confidence * weights['news'] +
-            self.whale_confidence * weights['whale'] +
-            self.pattern_confidence * weights['pattern']
+            self.technical_confidence * self.weights['technical'] +
+            self.news_confidence * self.weights['news'] +
+            self.whale_confidence * self.weights['whale'] +
+            self.pattern_confidence * self.weights['pattern']
         )
 
+        # Apply diminishing returns for very high confidence (prevents overconfidence)
+        if overall > 0.9:
+            overall = 0.9 + (overall - 0.9) * 0.5
+
         return min(overall, 1.0)
+
+    def get_signal_breakdown(self) -> Dict[str, Any]:
+        """Get detailed breakdown of signal contributions."""
+        contributions = {
+            'technical': self.technical_confidence * self.weights['technical'],
+            'news': self.news_confidence * self.weights['news'],
+            'whale': self.whale_confidence * self.weights['whale'],
+            'pattern': self.pattern_confidence * self.weights['pattern']
+        }
+
+        overall = self.get_overall_confidence()
+
+        return {
+            'overall_confidence': overall,
+            'contributions': contributions,
+            'weights': self.weights,
+            'dominant_signal': max(contributions, key=contributions.get),
+            'signal_diversity': len([v for v in contributions.values() if v > 0.01])  # Count significant signals
+        }
 
 class PortfolioState:
     """Current portfolio state for risk calculations."""
