@@ -1,30 +1,31 @@
+# 🔄 SUPREME OPTIMIZATION ROADMAP — LIVE STATUS (v3)
+
+This file reflects the current plan and only the REMAINING work items. Completed tasks have been removed for clarity. All items are aligned to i3/4GB constraints (CPU ≤ 88%, RAM ≤ 3.86GB) and focus on maximizing algorithm density with minimal overhead.
 
 ---
 
-# 🛠️ Remaining Work Items (v2) — Professional Implementation Plan
+## ✅ Completed (Removed From Active List)
+- UltraOptimized indicators (EMA/RSI/MACD) with O(1) updates
+- CircularBuffer + SmartEventProcessor foundations
+- News/Whale/Money Flow modules with confidence outputs
+- Master Orchestrator, Resource Monitor scaffolding
+- Deep Diagnostic Report, Engineering Guidelines, Acceptance Gates v1/v2
 
-This section enumerates the exact engineering tasks required to fully activate and validate the optimized architecture in production. Each task includes scope, acceptance criteria, owner hint, and estimated effort.
+---
 
-## 1) Strategy Integration with Optimized Engine
-- Scope:
-  - Replace TechnicalIndicators usage with OptimizedTechnicalAnalyzer facade.
-  - Wire SmartEventProcessor gating where market significance determines compute.
-  - Limit in-memory series via CircularBuffer or capped deque.
-- Files:
-  - python/supreme_system_v5/strategies.py
-  - python/supreme_system_v5/optimized/analyzer.py
-- Acceptance:
-  - CPU median reduced ≥ 35% on single-symbol 1m feed over 60 minutes.
-  - No regression in signal parity for EMA/RSI/MACD vs reference within tolerance 1e-6.
-  - Event skip ratio between 0.2–0.8 depending on volatility regime.
-- Effort: 0.5–1 day
+## 🟡 Remaining Work (Actionable Now)
 
-## 2) Configuration Flags & Defaults
-- Scope:
-  - Add .env.example keys to toggle optimized mode and intervals.
-  - Document single-symbol futures scalping (BTC-USDT) with 30–60s compute cadence.
-- Files:
-  - .env.example, README.md
+### 1) Strategy Integration → OptimizedTechnicalAnalyzer
+- Scope: Replace TechnicalIndicators in strategies.py with optimized facade and event-gating; cap history via CircularBuffer or deque(maxlen).
+- Success:
+  - CPU median ↓ ≥ 35% in 60-min single-symbol 1m stream
+  - Signal parity vs reference within 1e-6 (EMA/RSI/MACD)
+  - Event skip ratio 0.2–0.8 (market-dependent)
+- Owners: Core Strategy, Optimized Engine
+- ETA: 0.5–1 day
+
+### 2) Config & Defaults (Plug & Play Optimized Mode)
+- Changes: .env.example, README.md
 - Keys:
   - OPTIMIZED_MODE=true
   - EVENT_DRIVEN_PROCESSING=true
@@ -34,107 +35,88 @@ This section enumerates the exact engineering tasks required to fully activate a
   - WHALE_INTERVAL_MIN=10
   - MAX_RAM_GB=3.86
   - MAX_CPU_PERCENT=88
-- Acceptance:
-  - System boots with optimized defaults on fresh clone, no manual edits required beyond .env.
-- Effort: 0.25 day
+- Success: Fresh clone can run optimized flow with only .env creation
+- ETA: 0.25 day
 
-## 3) Benchmark & Load Test Suite
-- Scope:
-  - Micro-bench for indicators (EMA/RSI/MACD) against reference implementations.
-  - End-to-end load test for single-symbol stream at 20 ticks/sec for 60 minutes.
-- Files:
-  - scripts/bench_optimized.py
-  - scripts/load_single_symbol.py
-- Metrics:
-  - indicator_update_latency_seconds (histogram)
-  - event_skip_ratio (gauge)
-  - cpu_percent_gauge, memory_in_use_bytes
-- Acceptance:
-  - Median indicator update < 0.2 ms; 95th < 0.5 ms.
-  - CPU avg < 88%; RAM peak < 3.86 GB; no GC stalls > 50 ms.
-- Effort: 0.75 day
+### 3) Benchmark + Load Tests
+- New scripts:
+  - scripts/bench_optimized.py (microbench EMA/RSI/MACD vs reference)
+  - scripts/load_single_symbol.py (20 ticks/sec, 60-min)
+- Metrics: indicator_update_latency_seconds, event_skip_ratio, cpu_percent_gauge, memory_in_use_bytes
+- Success:
+  - Median update < 0.2ms; p95 < 0.5ms
+  - CPU avg < 88%; RAM peak < 3.86GB; no GC stalls > 50ms
+- ETA: 0.75 day
 
-## 4) News/Whale Signal Fusion into Risk Manager
-- Scope:
-  - Combine news_confidence, whale_confidence, technical_confidence → composite.
-  - Map composite to leverage/position size with volatility adjustment.
-- Files:
-  - python/supreme_system_v5/dynamic_risk_manager.py
-  - python/supreme_system_v5/news_classifier.py, whale_tracking.py
-- Acceptance:
-  - Confidence to position curve documented and unit-tested.
-  - Leverage bounds enforced (base≤max; 5–50x) and logged per decision.
-- Effort: 0.5 day
+### 4) Confidence Fusion → Dynamic Risk Manager
+- Scope: Combine technical/news/whale confidence → composite; map to leverage/size with volatility adjustment
+- Success:
+  - Unit-tested confidence→size/leverage curve, bounds enforced (5–50x)
+  - Decision logs include confidence breakdown
+- ETA: 0.5 day
 
-## 5) Orchestrator Scheduling Policies
-- Scope:
-  - Adaptive backpressure: double intervals when cpu>88% for 60s.
-  - Priority ordering: risk>whale>news>technical>patterns; preemption safe.
-- Files:
-  - python/supreme_system_v5/master_orchestrator.py
-  - python/supreme_system_v5/resource_monitor.py
-- Acceptance:
-  - Under synthetic stress, scheduler widens intervals and recovers to target.
-  - No task starvation; fairness evidenced in metrics.
-- Effort: 0.75 day
+### 5) Adaptive Orchestrator Policies
+- Scope: Backpressure (double intervals if CPU>88% for 60s), priority: risk>whale>news>technical>patterns; preemption-safe
+- Success:
+  - Stress test: intervals widen then recover; no starvation; fairness visible in metrics
+- ETA: 0.75 day
 
-## 6) Observability & SLOs
-- Scope:
-  - Add Prometheus metrics and Grafana dashboards for optimization KPIs.
-  - Define SLOs: CPU<88%, RAM<3.86GB, p95 cycle < 500ms, uptime 99.9%.
-- Files:
-  - python/supreme_system_v5/resource_monitor.py
-  - dashboard provisioning JSON (docs/dashboard/*.json)
-- Acceptance:
-  - Dashboards render all KPIs; alert rules firing on breaches.
-- Effort: 0.5 day
+### 6) Observability & SLOs
+- Scope: Add Prometheus metrics + Grafana dashboards for optimization KPIs; define SLOs CPU<88%, RAM<3.86GB, p95 cycle < 500ms, uptime 99.9%
+- Success: Dashboards render all KPIs; alert rules verified
+- ETA: 0.5 day
 
-## 7) Production Dry-Run & A/B
-- Scope:
-  - 24h sandbox A/B: OPTIMIZED_MODE=true vs false on same symbol feed.
-  - Compare PnL, drawdown, win rate, latency, CPU/RAM.
-- Files:
-  - scripts/ab_test_run.sh, scripts/report_ab.py
-- Acceptance:
-  - Report generated in docs/reports/ with recommendations.
-- Effort: 1.0 day
+### 7) 24h Sandbox A/B (Optimized vs Baseline)
+- Scope: Run both modes on same symbol feed; compare PnL, DD, WinRate, Latency, CPU/RAM
+- Artifacts: docs/reports/ab_test_{date}.md with recommendations
+- Success: Report published; go/no-go decision
+- ETA: 1.0 day
 
 ---
 
-# 📐 Engineering Guidelines (Do/Dont)
-- Do
-  - Use __slots__ for hot-path classes.
-  - Prefer array('d') over list for numeric buffers.
-  - Bound histories (N<=1000) and use CircularBuffer for O(1) rotation.
-  - Cache constants and avoid dynamic attribute creation.
-  - Batch logging; structured JSON; rotate at 10MB×3.
-- Don’t
-  - Don’t recompute indicators from scratch per tick.
-  - Don’t grow lists unbounded; no append-only histories.
-  - Don’t log every tick or per-indicator calculation.
+## 🧠 Macro/Micro News + Money Flow + Whale — Runtime Profile
+- Execution cadence (default):
+  - News: 10–15 min poll; burst on high-impact events
+  - Whale: 5–10 min; real-time alert pass-through
+  - Money Flow: 1–5 min batch (VWAP/MFI/CMF variants)
+- Integration: Risk manager uses confidence weights (Tech 40%, News 35%, Whale 25%) adjustable by volatility regime
+- Resource model (single symbol): CPU ~15–25%, RAM ~0.6–0.9GB total when active, near-zero when idle between polls
 
 ---
 
-# ✅ Acceptance Gates (Go/No-Go)
-- Gate-1: Unit + microbench pass; parity vs reference within 1e-6.
-- Gate-2: 60-min load test CPU<88%, RAM<3.86GB, p95<500ms.
-- Gate-3: 24h A/B—optimized not worse PnL or substantially better risk-adjusted metrics.
-- Gate-4: Runbook updated; oncall can remediate with feature flags.
+## ⚙️ Extreme Optimization Roadmap (Optional, i3/4GB Only)
+- SIMD/Vectorization (Rust hot-path) for batch EMA/RSI/MACD (AVX2/AVX512 when available)
+- Approximate math mode (≤5% accuracy trade-off) for RSI/ATR in high-load
+- Cache-oblivious layouts for indicator stores; branchless thresholds
+- SmartScalpingScheduler: Adaptive intervals 15s→5m theo volatility & volume spike
+
+Success (optional tier):
+- 15–18 algorithms under 88% CPU; latency per algorithm < 5ms; RAM per algorithm ~200MB
 
 ---
 
-# ▶️ Quick Start for Devs
+## ▶️ Quick Start (Optimized Flow)
 ```bash
-# Enable optimized mode
+# Environment
 export OPTIMIZED_MODE=true
 export EVENT_DRIVEN_PROCESSING=true
 export SINGLE_SYMBOL=BTC-USDT
 export PROCESS_INTERVAL_SECONDS=30
+export NEWS_INTERVAL_MIN=10
+export WHALE_INTERVAL_MIN=10
 
-# Run
+# Run optimized core
 python -m supreme_system_v5.core
 
 # Benchmarks
 python scripts/bench_optimized.py
 python scripts/load_single_symbol.py --symbol BTC-USDT --rate 20 --duration-min 60
 ```
+
+---
+
+## ✅ Acceptance Gates (Go/No-Go)
+1) Unit + microbench pass; parity vs reference within 1e-6
+2) 60-min load test: CPU<88%, RAM<3.86GB, p95<500ms
+3) 24h A/B: optimized ≥ baseline on risk-adjusted metrics or not worse with lower resource use
+4) Runbook updated; feature flags to rollback
