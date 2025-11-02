@@ -6,6 +6,15 @@ Confidence-based position sizing with volatility adjustment.
 from typing import Dict, List, Optional, Any, NamedTuple
 import time
 from enum import Enum
+from dataclasses import dataclass
+
+@dataclass
+class RiskLimits:
+    """Risk management limits for backward compatibility."""
+    max_drawdown_percent: float = 15.0
+    max_daily_loss_usd: float = 1000.0
+    max_position_size_usd: float = 10000.0
+    max_leverage: float = 2.0
 
 class RiskLevel(Enum):
     """Risk level classifications."""
@@ -469,8 +478,8 @@ def demo_dynamic_risk_management():
         print(f"\nReasoning:")
         print(f"   • {optimal_position.reasoning}")
 
-    print("
-📊 RISK METRICS OVERVIEW:"    print(f"   Total Trades: {risk_manager.total_trades}")
+    print("\n📊 RISK METRICS OVERVIEW:")
+    print(f"   Total Trades: {risk_manager.total_trades}")
     print(".3f")
     print(".4f")
 
@@ -481,9 +490,28 @@ def demo_dynamic_risk_management():
     print(f"   HIGH: 0 positions")
     print(f"   ULTRA_HIGH: 0 positions")
 
-    print("
-✅ Dynamic Risk Management Demo Complete"    print("   System adapts position sizing based on signal confidence!")
+    print("\n✅ Dynamic Risk Management Demo Complete")
+    print("   System adapts position sizing based on signal confidence!")
     print("   Target: 2-10% position sizes with leverage 5-50x")
+
+class RiskManager(DynamicRiskManager):
+    """Backward compatibility wrapper for old RiskManager interface."""
+
+    def __init__(self, limits=None, portfolio_state=None, **kwargs):
+        # Extract parameters from old interface
+        config = kwargs.get('config', {})
+
+        if limits:
+            total_value = portfolio_state.total_value if portfolio_state else 10000
+            config.update({
+                'base_position_size_pct': limits.max_position_size_usd / total_value * 0.1,
+                'max_position_size_pct': limits.max_position_size_usd / total_value,
+                'daily_loss_limit_pct': limits.max_daily_loss_usd / total_value,
+                'max_leverage': limits.max_leverage,
+            })
+
+        # Initialize with new interface
+        super().__init__(config)
 
 if __name__ == "__main__":
     demo_dynamic_risk_management()

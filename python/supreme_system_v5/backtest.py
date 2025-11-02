@@ -21,7 +21,7 @@ from loguru import logger
 from .data_fabric import DataAggregator
 from .data_fabric.cache import CacheManager
 from .event_bus import get_event_bus, create_market_data_event
-from .risk import RiskManager, RiskLimits, PortfolioState
+from .risk import DynamicRiskManager, PortfolioState
 from .strategies import ScalpingStrategy, SignalType, TradingSignal
 
 

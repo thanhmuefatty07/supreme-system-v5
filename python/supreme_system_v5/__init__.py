@@ -23,7 +23,7 @@ from .event_bus import (
     create_signal_event,
     get_event_bus,
 )
-from .risk import RiskManager
+from .risk import DynamicRiskManager
 from .strategies import ScalpingStrategy
 
 # Import backtest components
@@ -154,7 +154,7 @@ __all__ = [
     "SystemConfig",
     "MarketData",
     "ScalpingStrategy",
-    "RiskManager",
+    "DynamicRiskManager",
     "EventBus",
     "Event",
     "EventPriority",
