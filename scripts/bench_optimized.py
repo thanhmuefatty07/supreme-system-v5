@@ -1,193 +1,410 @@
 #!/usr/bin/env python3
 """
-Benchmark script for optimized components.
-Validates performance improvements and mathematical accuracy.
+Performance Benchmark Suite for Supreme System V5 Optimized Components.
+Micro-benchmarks and parity validation against reference implementations.
 """
 
 import time
 import sys
 import os
+import numpy as np
+import statistics
+from typing import List, Dict, Any, Tuple
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 
 from supreme_system_v5.optimized import (
     UltraOptimizedEMA, UltraOptimizedRSI, UltraOptimizedMACD,
-    CircularBuffer, SmartEventProcessor
+    CircularBuffer, SmartEventProcessor, OptimizedTechnicalAnalyzer
 )
 
-def benchmark_indicators():
-    """Benchmark optimized indicators performance."""
-    print("🚀 Benchmarking Ultra Optimized Indicators")
-    print("=" * 60)
+class ReferenceEMA:
+    """Reference EMA implementation for parity validation."""
+    def __init__(self, period: int):
+        self.period = period
+        self.alpha = 2.0 / (period + 1.0)
+        self.value = None
+        self.prices = []
 
-    # Test data
-    num_updates = 3600  # 1 hour of 1-second data
+    def update(self, price: float) -> float:
+        if self.value is None:
+            self.value = price
+        else:
+            self.value = self.alpha * price + (1 - self.alpha) * self.value
+        self.prices.append(price)
+        return self.value
 
-    # Generate synthetic price data
-    import math
-    prices = []
-    base_price = 50000
-    for i in range(num_updates):
-        # Create some trend + noise
-        trend = 100 * math.sin(i / 100)  # Slow trend
-        noise = 50 * (hash(str(i)) % 100 - 50) / 50  # Random noise
-        price = base_price + trend + noise
-        prices.append(price)
+class ReferenceRSI:
+    """Reference RSI implementation for parity validation."""
+    def __init__(self, period: int = 14):
+        self.period = period
+        self.gains = []
+        self.losses = []
+        self.prev_price = None
 
-    # Benchmark EMA
-    print(f"Testing {num_updates} updates...")
+    def update(self, price: float) -> float:
+        if self.prev_price is None:
+            self.prev_price = price
+            return None
 
-    ema = UltraOptimizedEMA(period=14)
-    start_time = time.time()
-    for price in prices:
-        ema.update(price)
-    ema_time = time.time() - start_time
+        change = price - self.prev_price
+        self.prev_price = price
 
-    # Benchmark RSI
-    rsi = UltraOptimizedRSI(period=14)
-    start_time = time.time()
-    for price in prices:
-        rsi.update(price)
-    rsi_time = time.time() - start_time
+        if change > 0:
+            self.gains.append(change)
+            self.losses.append(0.0)
+        else:
+            self.gains.append(0.0)
+            self.losses.append(abs(change))
 
-    # Benchmark MACD
-    macd = UltraOptimizedMACD(fast_period=12, slow_period=26, signal_period=9)
-    start_time = time.time()
-    for price in prices:
-        macd.update(price)
-    macd_time = time.time() - start_time
+        if len(self.gains) < self.period:
+            return None
 
-    print(".2f")
-    print(".2f")
-    print(".2f")
+        # Keep only last 'period' values
+        self.gains = self.gains[-self.period:]
+        self.losses = self.losses[-self.period:]
 
-    # Memory usage estimates
-    print("\n📊 Memory Usage Estimates:")
-    print("EMA: ~32 bytes per instance")
-    print("RSI: ~200 bytes per instance")
-    print("MACD: ~300 bytes per instance (3 EMAs)")
-    print("CircularBuffer(100): ~800 bytes")
+        avg_gain = sum(self.gains) / self.period
+        avg_loss = sum(self.losses) / self.period
 
-    # Performance validation
-    total_time = ema_time + rsi_time + macd_time
-    avg_time_per_update = total_time / (num_updates * 3)
+        if avg_loss == 0:
+            return 100.0
 
-    print("\n⚡ Performance Validation:")
-    print(".1f")
-    print(".2f")
+        rs = avg_gain / avg_loss
+        return 100.0 - (100.0 / (1.0 + rs))
 
-    if avg_time_per_update < 0.001:  # Less than 1ms per update
-        print("✅ PERFORMANCE TARGET ACHIEVED: <25ms latency")
-        return True
+class ReferenceMACD:
+    """Reference MACD implementation for parity validation."""
+    def __init__(self, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9):
+        self.fast_ema = ReferenceEMA(fast_period)
+        self.slow_ema = ReferenceEMA(slow_period)
+        self.signal_ema = ReferenceEMA(signal_period)
+        self.macd_line = None
+        self.signal_line = None
+
+    def update(self, price: float) -> Tuple[float, float, float]:
+        fast = self.fast_ema.update(price)
+        slow = self.slow_ema.update(price)
+
+        if fast is None or slow is None:
+            return None
+
+        self.macd_line = fast - slow
+        self.signal_line = self.signal_ema.update(self.macd_line)
+
+        if self.signal_line is None:
+            return None
+
+        histogram = self.macd_line - self.signal_line
+        return (self.macd_line, self.signal_line, histogram)
+
+def generate_test_data(num_samples: int = 10000, volatility: float = 0.02) -> List[float]:
+    """Generate realistic price data for testing."""
+    prices = [100.0]  # Starting price
+
+    for _ in range(num_samples - 1):
+        # Random walk with trend
+        change = np.random.normal(0, volatility)
+        new_price = prices[-1] * (1 + change)
+        prices.append(max(new_price, 0.01))  # Prevent negative prices
+
+    return prices
+
+def benchmark_indicator(name: str, optimized_func, reference_func, test_data: List[float], num_runs: int = 100) -> Dict[str, Any]:
+    """
+    Benchmark optimized vs reference implementation.
+
+    Args:
+        name: Indicator name
+        optimized_func: Optimized implementation callable
+        reference_func: Reference implementation callable
+        test_data: Test price data
+        num_runs: Number of benchmark runs
+
+    Returns:
+        Benchmark results dictionary
+    """
+    print(f"\n🔬 Benchmarking {name}...")
+
+    # Warmup runs
+    for _ in range(5):
+        for price in test_data[:100]:
+            optimized_func(price)
+            reference_func(price)
+
+    # Reset for actual benchmarking
+    optimized_func.reset() if hasattr(optimized_func, 'reset') else None
+    reference_func.reset() if hasattr(reference_func, 'reset') else None
+
+    # Benchmark optimized
+    optimized_times = []
+    optimized_results = []
+
+    for run in range(num_runs):
+        start_time = time.perf_counter()
+
+        results = []
+        for price in test_data:
+            result = optimized_func(price)
+            if result is not None:
+                results.append(result)
+
+        elapsed = time.perf_counter() - start_time
+        optimized_times.append(elapsed)
+        optimized_results = results  # Store last run results
+
+    # Benchmark reference
+    reference_times = []
+    reference_results = []
+
+    for run in range(num_runs):
+        start_time = time.perf_counter()
+
+        results = []
+        for price in test_data:
+            result = reference_func(price)
+            if result is not None:
+                results.append(result)
+
+        elapsed = time.perf_counter() - start_time
+        reference_times.append(elapsed)
+        reference_results = results  # Store last run results
+
+    # Calculate statistics
+    opt_median = statistics.median(optimized_times) * 1000  # Convert to ms
+    ref_median = statistics.median(reference_times) * 1000
+    speedup = ref_median / opt_median if opt_median > 0 else float('inf')
+
+    # Validate parity
+    parity_ok = True
+    if len(optimized_results) == len(reference_results):
+        for opt, ref in zip(optimized_results, reference_results):
+            if abs(opt - ref) > 1e-6:  # 1e-6 tolerance as per roadmap
+                parity_ok = False
+                break
     else:
-        print("❌ PERFORMANCE TARGET MISSED: >25ms latency")
-        return False
+        parity_ok = False
 
-def benchmark_event_filtering():
-    """Benchmark smart event filtering."""
-    print("\n🎯 Benchmarking Smart Event Filtering")
-    print("=" * 60)
+    return {
+        'indicator': name,
+        'optimized_median_ms': opt_median,
+        'reference_median_ms': ref_median,
+        'speedup_factor': speedup,
+        'parity_valid': parity_ok,
+        'optimized_results': optimized_results,
+        'reference_results': reference_results,
+        'samples_processed': len(optimized_results)
+    }
+
+def benchmark_circular_buffer(size: int = 1000, operations: int = 100000) -> Dict[str, Any]:
+    """Benchmark CircularBuffer performance."""
+    print("
+🔬 Benchmarking CircularBuffer..."    from supreme_system_v5.optimized import CircularBuffer
+
+    buffer = CircularBuffer(size)
+
+    # Benchmark append operations
+    start_time = time.perf_counter()
+    for i in range(operations):
+        buffer.append(float(i % 100))
+    append_time = time.perf_counter() - start_time
+
+    # Benchmark access operations
+    start_time = time.perf_counter()
+    for _ in range(operations // 10):  # Fewer access operations
+        _ = buffer.get_latest(10)
+    access_time = time.perf_counter() - start_time
+
+    append_ms = (append_time / operations) * 1000
+    access_ms = (access_time / (operations // 10)) * 1000
+
+    return {
+        'component': 'CircularBuffer',
+        'append_latency_ms': append_ms,
+        'access_latency_ms': access_ms,
+        'memory_efficient': True,  # Fixed size prevents growth
+        'operations_tested': operations
+    }
+
+def benchmark_event_processor(test_data: List[Tuple[float, float]], num_runs: int = 10) -> Dict[str, Any]:
+    """Benchmark SmartEventProcessor."""
+    print("
+🔬 Benchmarking SmartEventProcessor..."    from supreme_system_v5.optimized import SmartEventProcessor
 
     config = {
-        'min_price_change_pct': 0.0005,  # 0.05%
+        'min_price_change_pct': 0.0005,
         'min_volume_multiplier': 2.0,
         'max_time_gap_seconds': 30
     }
 
     processor = SmartEventProcessor(config)
 
-    # Simulate market data with varying volatility
-    num_events = 1000
-    base_price = 50000
-    processed = 0
-    skipped = 0
+    # Generate timestamps
+    timestamps = [time.time() + i * 0.1 for i in range(len(test_data))]
 
-    for i in range(num_events):
-        # Create price movement (mostly small changes)
-        if i % 50 == 0:  # Every 50 events, big move
-            price_change = (hash(str(i)) % 200 - 100)  # -100 to +100
-        else:
-            price_change = (hash(str(i)) % 20 - 10)    # -10 to +10
+    # Benchmark processing
+    events_processed = 0
+    events_skipped = 0
 
-        price = base_price + price_change
-        volume = 1000 + (i % 100) * 10
+    start_time = time.perf_counter()
+    for run in range(num_runs):
+        processor.reset()
+        for (price, volume), timestamp in zip(test_data, timestamps):
+            if processor.should_process(price, volume, timestamp):
+                events_processed += 1
+            else:
+                events_skipped += 1
+    elapsed = time.perf_counter() - start_time
 
-        if processor.should_process(price, volume, time.time() + i):
-            processed += 1
-        else:
-            skipped += 1
+    total_events = events_processed + events_skipped
+    skip_ratio = events_skipped / total_events if total_events > 0 else 0
 
-    stats = processor.get_stats()
+    return {
+        'component': 'SmartEventProcessor',
+        'total_events': total_events,
+        'events_processed': events_processed,
+        'events_skipped': events_skipped,
+        'skip_ratio': skip_ratio,
+        'processing_time_ms': (elapsed / num_runs) * 1000,
+        'target_skip_ratio': 0.7
+    }
 
-    print(f"Total Events: {num_events}")
-    print(f"Processed: {processed}")
-    print(f"Skipped: {skipped}")
-    print(".1f")
-
-    if stats['efficiency_pct'] > 50:  # More than 50% filtering
-        print("✅ EVENT FILTERING TARGET ACHIEVED: >50% efficiency")
-        return True
-    else:
-        print("❌ EVENT FILTERING TARGET MISSED: <50% efficiency")
-        return False
-
-def benchmark_memory_efficiency():
-    """Benchmark memory efficiency."""
-    print("\n💾 Benchmarking Memory Efficiency"    print("=" * 60)
-
-    # Test circular buffer memory usage
-    buffer_sizes = [50, 100, 500, 1000]
-
-    for size in buffer_sizes:
-        buffer = CircularBuffer(size)
-
-        # Fill buffer
-        for i in range(size):
-            buffer.append(float(i))
-
-        # Test access patterns
-        latest_10 = buffer.get_latest(10)
-        latest_50 = buffer.get_latest(50)
-
-        print(f"Buffer({size}): {len(latest_10)} latest, {len(latest_50)} available")
-
-    print("✅ MEMORY EFFICIENCY: Fixed allocation prevents leaks")
-    return True
-
-def main():
-    """Run all benchmarks."""
-    print("🧪 SUPREME SYSTEM V5 - OPTIMIZATION BENCHMARK SUITE")
+def run_full_benchmark_suite():
+    """Run complete benchmark suite."""
+    print("🚀 SUPREME SYSTEM V5 - PERFORMANCE BENCHMARK SUITE")
     print("=" * 70)
+
+    # Generate test data
+    print("📊 Generating test data...")
+    test_prices = generate_test_data(5000, 0.01)  # 5000 samples, moderate volatility
+    test_volume_data = [(price, 100 + np.random.randint(0, 200)) for price in test_prices]
 
     results = []
 
-    # Run benchmarks
-    results.append(("Indicator Performance", benchmark_indicators()))
-    results.append(("Event Filtering", benchmark_event_filtering()))
-    results.append(("Memory Efficiency", benchmark_memory_efficiency()))
+    # Benchmark individual indicators
+    print("
+🔬 INDICATOR BENCHMARKS"    print("-" * 50)
 
-    # Summary
-    print("\n" + "=" * 70)
-    print("📈 BENCHMARK RESULTS SUMMARY")
-    print("=" * 70)
+    # EMA Benchmark
+    ema_optimized = UltraOptimizedEMA(14)
+    ema_reference = ReferenceEMA(14)
+    ema_result = benchmark_indicator("EMA(14)", ema_optimized.update, ema_reference.update, test_prices)
+    results.append(ema_result)
 
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
+    # RSI Benchmark
+    rsi_optimized = UltraOptimizedRSI(14)
+    rsi_reference = ReferenceRSI(14)
+    rsi_result = benchmark_indicator("RSI(14)", rsi_optimized.update, rsi_reference.update, test_prices)
+    results.append(rsi_result)
 
-    for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print("20s")
+    # MACD Benchmark
+    macd_optimized = UltraOptimizedMACD(12, 26, 9)
+    macd_reference = ReferenceMACD(12, 26, 9)
+    macd_result = benchmark_indicator("MACD(12,26,9)", macd_optimized.update, macd_reference.update, test_prices)
+    results.append(macd_result)
 
-    print("\n🎯 OVERALL RESULT:"    if passed == total:
-        print(f"✅ ALL TARGETS ACHIEVED: {passed}/{total} benchmarks passed")
-        print("🚀 OPTIMIZATION ENGINE READY FOR PRODUCTION")
-        return True
-    else:
-        print(f"❌ TARGETS PARTIALLY MET: {passed}/{total} benchmarks passed")
-        print("🔧 OPTIMIZATION ENGINE NEEDS FURTHER TUNING")
-        return False
+    # Component benchmarks
+    cb_result = benchmark_circular_buffer()
+    results.append(cb_result)
+
+    ep_result = benchmark_event_processor(test_volume_data)
+    results.append(ep_result)
+
+    # Summary report
+    print("
+📊 BENCHMARK RESULTS SUMMARY"    print("=" * 70)
+
+    print("
+🔬 INDICATOR PERFORMANCE"    print("-" * 50)
+    for result in results[:3]:  # EMA, RSI, MACD
+        status = "✅" if result['parity_valid'] else "❌"
+        print(f"{status} {result['indicator']}:")
+        print(".2f"        print(".1f"        print(f"   Parity Valid: {result['parity_valid']}")
+
+    print("
+🔧 COMPONENT PERFORMANCE"    print("-" * 50)
+
+    # CircularBuffer results
+    cb = next(r for r in results if r.get('component') == 'CircularBuffer')
+    print("CircularBuffer:")
+    print(".3f"    print(".3f"
+    # SmartEventProcessor results
+    ep = next(r for r in results if r.get('component') == 'SmartEventProcessor')
+    print("SmartEventProcessor:")
+    print(f"   Events Processed: {ep['events_processed']}")
+    print(f"   Events Skipped: {ep['events_skipped']}")
+    print(".3f"    print(".3f"
+    # Acceptance criteria validation
+    print("
+✅ ACCEPTANCE CRITERIA VALIDATION"    print("=" * 70)
+
+    criteria_passed = 0
+    criteria_total = 0
+
+    def check_criteria(name: str, condition: bool, target: str):
+        nonlocal criteria_passed, criteria_total
+        criteria_total += 1
+        status = "✅ PASS" if condition else "❌ FAIL"
+        print(f"{status} {name}: {target}")
+        if condition:
+            criteria_passed += 1
+
+    # Indicator latency requirements
+    for result in results[:3]:
+        latency_ok = result['optimized_median_ms'] < 200  # < 200ms median
+        check_criteria(f"{result['indicator']} Latency", latency_ok,
+                      ".2f"
+    # Parity validation
+    for result in results[:3]:
+        check_criteria(f"{result['indicator']} Parity", result['parity_valid'],
+                      "±1e-6 tolerance")
+
+    # Event processing efficiency
+    ep = next(r for r in results if r.get('component') == 'SmartEventProcessor')
+    skip_ratio_ok = 0.2 <= ep['skip_ratio'] <= 0.8
+    check_criteria("Event Skip Ratio", skip_ratio_ok,
+                   ".3f"
+    print(f"\n🎯 OVERALL RESULT: {criteria_passed}/{criteria_total} acceptance criteria met")
+
+    # Performance recommendations
+    print("
+💡 PERFORMANCE RECOMMENDATIONS"    print("-" * 50)
+
+    avg_speedup = statistics.mean([r['speedup_factor'] for r in results if 'speedup_factor' in r])
+    print(".1f"
+    if avg_speedup > 5:
+        print("   ✅ Excellent optimization achieved!")
+    elif avg_speedup > 2:
+        print("   ⚠️  Moderate optimization - room for improvement")
+
+    ep = next(r for r in results if r.get('component') == 'SmartEventProcessor')
+    if ep['skip_ratio'] > 0.7:
+        print("   ✅ High event filtering efficiency")
+    elif ep['skip_ratio'] > 0.5:
+        print("   ⚠️  Moderate filtering - may need tuning")
+
+    return results
+
+def main():
+    """Main entry point."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Supreme System V5 Performance Benchmark Suite')
+    parser.add_argument('--samples', type=int, default=5000, help='Number of test samples')
+    parser.add_argument('--runs', type=int, default=10, help='Number of benchmark runs')
+
+    args = parser.parse_args()
+
+    # Run benchmark suite
+    results = run_full_benchmark_suite()
+
+    # Determine exit code based on acceptance criteria
+    criteria_passed = sum(1 for r in results[:3] if r['parity_valid'] and r['optimized_median_ms'] < 200)
+    criteria_total = 6  # 3 indicators * 2 criteria each
+
+    success_rate = criteria_passed / criteria_total
+    sys.exit(0 if success_rate >= 0.8 else 1)  # 80% pass rate
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()

@@ -75,14 +75,35 @@ class MasterTradingOrchestrator:
         # Component registry
         self.components: Dict[str, ComponentInfo] = {}
 
-        # Scheduling configuration (in seconds)
-        self.schedule_intervals = {
+        # Base scheduling configuration (in seconds) - minimum intervals
+        self.base_intervals = {
             'technical': config.get('technical_interval', 30),      # 30s
             'news': config.get('news_interval', 600),              # 10m
             'whale': config.get('whale_interval', 600),            # 10m
             'mtf': config.get('mtf_interval', 120),                # 2m
             'patterns': config.get('patterns_interval', 60),       # 1m
         }
+
+        # Adaptive intervals (dynamically adjusted)
+        self.schedule_intervals = self.base_intervals.copy()
+
+        # Resource limits for backpressure
+        self.cpu_high_threshold = config.get('cpu_high_threshold', 88.0)
+        self.cpu_low_threshold = config.get('cpu_low_threshold', 70.0)
+        self.memory_high_threshold = config.get('memory_high_threshold', 3.86)
+        self.latency_high_threshold = config.get('latency_high_threshold', 200)
+
+        # Backpressure state
+        self.backpressure_active = False
+        self.interval_multiplier = 1.0  # Multiplier for all intervals
+        self.last_resource_check = 0
+        self.resource_check_interval = config.get('resource_check_interval', 60)  # Check every 60s
+
+        # Performance history for trend analysis
+        self.cpu_history = []
+        self.memory_history = []
+        self.latency_history = []
+        self.history_max_size = 10
 
         # System state
         self.is_running = False
@@ -244,8 +265,93 @@ class MasterTradingOrchestrator:
             performance_metrics=performance_metrics
         )
 
+    def _check_and_adjust_backpressure(self):
+        """Check system resources and adjust scheduling intervals if needed."""
+        now = time.time()
+        if now - self.last_resource_check < self.resource_check_interval:
+            return
+
+        # Get current resource usage (mock for demo - in production use psutil)
+        current_cpu = self._get_current_cpu_usage()
+        current_memory = self._get_current_memory_usage()
+        current_latency = self._get_current_latency()
+
+        # Update history
+        self.cpu_history.append(current_cpu)
+        self.memory_history.append(current_memory)
+        self.latency_history.append(current_latency)
+
+        # Keep history size limited
+        self.cpu_history = self.cpu_history[-self.history_max_size:]
+        self.memory_history = self.memory_history[-self.history_max_size:]
+        self.latency_history = self.latency_history[-self.history_max_size:]
+
+        # Calculate trends (simple moving average)
+        avg_cpu = sum(self.cpu_history) / len(self.cpu_history) if self.cpu_history else 0
+        avg_memory = sum(self.memory_history) / len(self.memory_history) if self.memory_history else 0
+        avg_latency = sum(self.latency_history) / len(self.latency_history) if self.latency_history else 0
+
+        # Backpressure logic
+        high_resource_usage = (
+            avg_cpu > self.cpu_high_threshold or
+            avg_memory > self.memory_high_threshold or
+            avg_latency > self.latency_high_threshold
+        )
+
+        low_resource_usage = (
+            avg_cpu < self.cpu_low_threshold and
+            avg_memory < self.memory_high_threshold * 0.8 and
+            avg_latency < self.latency_high_threshold * 0.8
+        )
+
+        if high_resource_usage and not self.backpressure_active:
+            # Activate backpressure - increase intervals
+            self.interval_multiplier = min(self.interval_multiplier * 2.0, 4.0)  # Max 4x slowdown
+            self.backpressure_active = True
+            print(f"⚠️  Backpressure activated - CPU: {avg_cpu:.1f}%, Memory: {avg_memory:.2f}GB, Latency: {avg_latency:.1f}ms")
+            self._update_schedule_intervals()
+
+        elif low_resource_usage and self.backpressure_active:
+            # Deactivate backpressure - decrease intervals
+            self.interval_multiplier = max(self.interval_multiplier * 0.5, 1.0)  # Min 1x (normal)
+            if self.interval_multiplier <= 1.1:  # Close to normal
+                self.backpressure_active = False
+                self.interval_multiplier = 1.0
+                print("✅ Backpressure deactivated - system resources normal")
+            else:
+                print(f"🔄 Backpressure reducing - multiplier: {self.interval_multiplier:.1f}x")
+            self._update_schedule_intervals()
+
+        self.last_resource_check = now
+
+    def _update_schedule_intervals(self):
+        """Update all component schedule intervals based on backpressure multiplier."""
+        for comp_name, base_interval in self.base_intervals.items():
+            self.schedule_intervals[comp_name] = base_interval * self.interval_multiplier
+
+    def _get_current_cpu_usage(self) -> float:
+        """Get current CPU usage percentage."""
+        # Mock implementation - in production use psutil
+        import random
+        return 60.0 + random.uniform(-10, 30)  # Simulate 50-90% CPU
+
+    def _get_current_memory_usage(self) -> float:
+        """Get current memory usage in GB."""
+        # Mock implementation - in production use psutil
+        import random
+        return 2.5 + random.uniform(-0.5, 2.0)  # Simulate 2-4.5GB usage
+
+    def _get_current_latency(self) -> float:
+        """Get current system latency in ms."""
+        # Mock implementation - in production use system metrics
+        import random
+        return 150 + random.uniform(-50, 100)  # Simulate 100-250ms latency
+
     def _get_components_due_for_execution(self) -> List[str]:
-        """Get list of components due for execution this cycle."""
+        """Get list of components due for execution with adaptive scheduling."""
+        # Check and adjust backpressure
+        self._check_and_adjust_backpressure()
+
         now = time.time()
         due_components = []
 
@@ -253,19 +359,32 @@ class MasterTradingOrchestrator:
             if comp_info.status not in [ComponentStatus.READY, ComponentStatus.ACTIVE]:
                 continue
 
-            # Check if component is due for execution
+            # Check if component is due for execution (with adaptive intervals)
             if now >= comp_info.next_scheduled_run:
                 due_components.append(comp_name)
 
-        # Sort by priority (critical first)
-        priority_order = {
-            ComponentPriority.CRITICAL: 0,
-            ComponentPriority.HIGH: 1,
-            ComponentPriority.MEDIUM: 2,
-            ComponentPriority.LOW: 3
+        # Priority-based sorting with preemption safety
+        priority_weights = {
+            ComponentPriority.CRITICAL: 0,    # Always execute critical
+            ComponentPriority.HIGH: 1,        # High priority second
+            ComponentPriority.MEDIUM: 2,      # Medium priority third
+            ComponentPriority.LOW: 3         # Low priority last
         }
 
-        due_components.sort(key=lambda x: priority_order[self.components[x].priority])
+        # Sort by priority, then by how overdue they are
+        def sort_key(comp_name):
+            comp_info = self.components[comp_name]
+            priority_weight = priority_weights[comp_info.priority]
+            overdue_time = now - comp_info.next_scheduled_run
+            return (priority_weight, -overdue_time)  # Negative overdue = more urgent first
+
+        due_components.sort(key=sort_key)
+
+        # Under backpressure, limit concurrent executions to prevent resource exhaustion
+        if self.backpressure_active and len(due_components) > 2:
+            # Execute only top 2 most critical components during backpressure
+            due_components = due_components[:2]
+            print(f"🔄 Backpressure limiting: executing {len(due_components)} critical components only")
 
         return due_components
 

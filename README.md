@@ -46,9 +46,13 @@ python -m supreme_system_v5.core
 
 ### Configuration
 
-Create `.env` file with required settings:
+Create `.env` file with required settings or use `.env.optimized` for production-ready configuration:
 
 ```bash
+# Copy optimized configuration
+cp .env.optimized .env
+
+# Or create custom configuration
 # Data Fabric API Keys (optional, higher rate limits)
 COINGECKO_KEY=your_coingecko_api_key
 CMC_KEY=your_coinmarketcap_api_key
@@ -62,6 +66,35 @@ OKX_PASSPHRASE=your_okx_passphrase
 # Database Configuration
 REDIS_URL=redis://localhost:6379/0
 DATABASE_URL=postgresql://user:password@localhost:5432/database
+
+# Core Optimizations (Enable Ultra-Efficient Mode)
+OPTIMIZED_MODE=true
+EVENT_DRIVEN_PROCESSING=true
+INTELLIGENT_CACHING=true
+PERFORMANCE_PROFILE=normal  # minimal|conservative|normal|performance
+
+# Single Symbol Focus (Critical for i3-4GB optimization)
+SINGLE_SYMBOL=BTC-USDT
+
+# Scheduling Intervals
+PROCESS_INTERVAL_SECONDS=30
+TECHNICAL_INTERVAL=30
+NEWS_INTERVAL_MIN=10
+WHALE_INTERVAL_MIN=10
+MTF_INTERVAL=120
+
+# Resource Limits (i3-4GB Optimization)
+MAX_CPU_PERCENT=88.0
+MAX_RAM_GB=3.86
+TARGET_EVENT_SKIP_RATIO=0.7
+
+# Component Enables
+TECHNICAL_ANALYSIS_ENABLED=true
+NEWS_ANALYSIS_ENABLED=true
+WHALE_TRACKING_ENABLED=true
+MULTI_TIMEFRAME_ENABLED=true
+RISK_MANAGEMENT_ENABLED=true
+RESOURCE_MONITORING_ENABLED=true
 
 # System Configuration
 TRADING_MODE=sandbox  # or 'live'

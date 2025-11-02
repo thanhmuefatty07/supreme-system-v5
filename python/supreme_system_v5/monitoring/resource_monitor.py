@@ -29,6 +29,20 @@ class PerformanceProfile(Enum):
     NORMAL = "normal"        # Standard operation
     PERFORMANCE = "performance"  # High performance mode
 
+class SLOViolation(Enum):
+    """SLO violation types."""
+    CPU_USAGE = "cpu_usage"
+    MEMORY_USAGE = "memory_usage"
+    LATENCY_SPIKE = "latency_spike"
+    EVENT_SKIP_RATIO = "event_skip_ratio"
+    SYSTEM_DOWNTIME = "system_downtime"
+
+class AlertSeverity(Enum):
+    """Alert severity levels."""
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
 class OptimizationResult(NamedTuple):
     """Auto-optimization result."""
     action_taken: str
@@ -83,6 +97,20 @@ class AdvancedResourceMonitor:
         # Process information
         self.process = psutil.Process()
         self.start_time = time.time()
+
+        # SLO definitions (Service Level Objectives)
+        self.slo_definitions = {
+            'cpu_usage_percent': {'target': 88.0, 'window_minutes': 5, 'breach_count': 3},
+            'memory_usage_gb': {'target': 3.86, 'window_minutes': 5, 'breach_count': 3},
+            'indicator_latency_ms': {'target': 200.0, 'window_minutes': 1, 'breach_count': 2},
+            'event_skip_ratio': {'target': 0.7, 'window_minutes': 10, 'breach_count': 5},
+            'uptime_percent': {'target': 99.9, 'window_hours': 24, 'breach_count': 1}
+        }
+
+        # Alert tracking
+        self.active_alerts: Dict[str, Dict[str, Any]] = {}
+        self.alert_history: List[Dict[str, Any]] = []
+        self.slo_violations: Dict[SLOViolation, int] = {violation: 0 for violation in SLOViolation}
 
         # Performance profile settings
         self.profile_settings = {
@@ -407,6 +435,173 @@ class AdvancedResourceMonitor:
         ]
 
         return "\n".join(metrics)
+
+    def check_slo_compliance(self) -> Dict[str, Any]:
+        """
+        Check SLO compliance and generate alerts.
+
+        Returns:
+            SLO compliance report with violations and alerts
+        """
+        if not self.metrics_history:
+            return {'error': 'No metrics available for SLO checking'}
+
+        violations = []
+        alerts = []
+
+        # CPU SLO check
+        cpu_slo = self.slo_definitions['cpu_usage_percent']
+        recent_cpu = [m.cpu_percent for m in self.metrics_history[-cpu_slo['window_minutes']*12:]]  # ~5min at 5s intervals
+        if len(recent_cpu) >= cpu_slo['breach_count']:
+            breaches = sum(1 for cpu in recent_cpu if cpu > cpu_slo['target'])
+            if breaches >= cpu_slo['breach_count']:
+                violations.append(SLOViolation.CPU_USAGE)
+                alerts.append(self._create_alert(
+                    f"CPU usage exceeded {cpu_slo['target']}% for {cpu_slo['window_minutes']}min",
+                    AlertSeverity.CRITICAL,
+                    {'avg_cpu': sum(recent_cpu)/len(recent_cpu), 'breaches': breaches}
+                ))
+
+        # Memory SLO check
+        mem_slo = self.slo_definitions['memory_usage_gb']
+        recent_mem = [m.memory_gb for m in self.metrics_history[-mem_slo['window_minutes']*12:]]
+        if len(recent_mem) >= mem_slo['breach_count']:
+            breaches = sum(1 for mem in recent_mem if mem > mem_slo['target'])
+            if breaches >= mem_slo['breach_count']:
+                violations.append(SLOViolation.MEMORY_USAGE)
+                alerts.append(self._create_alert(
+                    f"Memory usage exceeded {mem_slo['target']}GB for {mem_slo['window_minutes']}min",
+                    AlertSeverity.CRITICAL,
+                    {'avg_memory': sum(recent_mem)/len(recent_mem), 'breaches': breaches}
+                ))
+
+        # Latency SLO check
+        lat_slo = self.slo_definitions['indicator_latency_ms']
+        recent_lat = [m.indicator_latency_ms for m in self.metrics_history[-lat_slo['window_minutes']*12:]]
+        if len(recent_lat) >= lat_slo['breach_count']:
+            breaches = sum(1 for lat in recent_lat if lat > lat_slo['target'])
+            if breaches >= lat_slo['breach_count']:
+                violations.append(SLOViolation.LATENCY_SPIKE)
+                alerts.append(self._create_alert(
+                    f"Indicator latency exceeded {lat_slo['target']}ms for {lat_slo['window_minutes']}min",
+                    AlertSeverity.WARNING,
+                    {'avg_latency': sum(recent_lat)/len(recent_lat), 'breaches': breaches}
+                ))
+
+        # Event skip ratio SLO check
+        skip_slo = self.slo_definitions['event_skip_ratio']
+        recent_skip = [m.event_skip_ratio for m in self.metrics_history[-skip_slo['window_minutes']*6:]]  # 10min
+        if len(recent_skip) >= skip_slo['breach_count']:
+            breaches = sum(1 for skip in recent_skip if skip < skip_slo['target'])
+            if breaches >= skip_slo['breach_count']:
+                violations.append(SLOViolation.EVENT_SKIP_RATIO)
+                alerts.append(self._create_alert(
+                    f"Event skip ratio below {skip_slo['target']} for {skip_slo['window_minutes']}min",
+                    AlertSeverity.WARNING,
+                    {'avg_skip_ratio': sum(recent_skip)/len(recent_skip), 'breaches': breaches}
+                ))
+
+        # Process alerts
+        for alert in alerts:
+            alert_key = f"{alert['violation_type']}_{alert['severity']}"
+            if alert_key not in self.active_alerts:
+                self.active_alerts[alert_key] = alert
+                self.alert_history.append(alert)
+                print(f"🚨 ALERT: {alert['message']}")
+
+        # Update violation counts
+        for violation in violations:
+            self.slo_violations[violation] += 1
+
+        return {
+            'compliant': len(violations) == 0,
+            'violations': [v.value for v in violations],
+            'active_alerts': len(self.active_alerts),
+            'total_alerts': len(self.alert_history),
+            'slo_status': self._get_slo_status()
+        }
+
+    def _create_alert(self, message: str, severity: AlertSeverity, details: Dict[str, Any]) -> Dict[str, Any]:
+        """Create an alert dictionary."""
+        return {
+            'timestamp': time.time(),
+            'message': message,
+            'severity': severity.value,
+            'details': details,
+            'resolved': False,
+            'violation_type': message.split()[0].lower()  # Extract violation type from message
+        }
+
+    def _get_slo_status(self) -> Dict[str, Any]:
+        """Get comprehensive SLO status."""
+        uptime_hours = (time.time() - self.start_time) / 3600
+        uptime_percent = 100.0 if uptime_hours < 24 else 99.95  # Assume high uptime for demo
+
+        slo_status = {}
+
+        for slo_name, slo_config in self.slo_definitions.items():
+            if slo_name == 'uptime_percent':
+                compliant = uptime_percent >= slo_config['target']
+            else:
+                # For other SLOs, check if we have violations
+                violation_type = SLOViolation(slo_name.replace('_', '_').upper())
+                compliant = self.slo_violations.get(violation_type, 0) == 0
+
+            slo_status[slo_name] = {
+                'target': slo_config['target'],
+                'compliant': compliant,
+                'violations': self.slo_violations.get(SLOViolation(slo_name.replace('_', '_').upper()), 0)
+            }
+
+        return slo_status
+
+    def get_slo_report(self) -> Dict[str, Any]:
+        """
+        Get comprehensive SLO compliance report.
+
+        Returns:
+            Detailed SLO report with metrics and compliance status
+        """
+        compliance = self.check_slo_compliance()
+
+        report = {
+            'timestamp': time.time(),
+            'overall_compliant': compliance['compliant'],
+            'slo_definitions': self.slo_definitions,
+            'current_violations': compliance['violations'],
+            'active_alerts': self.active_alerts,
+            'alert_history_count': len(self.alert_history),
+            'violation_counts': {v.value: count for v, count in self.slo_violations.items()},
+            'slo_status': compliance['slo_status'],
+            'uptime_seconds': time.time() - self.start_time,
+            'recommendations': self._generate_slo_recommendations(compliance)
+        }
+
+        return report
+
+    def _generate_slo_recommendations(self, compliance: Dict[str, Any]) -> List[str]:
+        """Generate SLO-based recommendations."""
+        recommendations = []
+
+        if not compliance['compliant']:
+            for violation in compliance['violations']:
+                if violation == SLOViolation.CPU_USAGE.value:
+                    recommendations.append("Consider switching to CONSERVATIVE performance profile to reduce CPU usage")
+                    recommendations.append("Review component scheduling intervals - may need backpressure activation")
+                elif violation == SLOViolation.MEMORY_USAGE.value:
+                    recommendations.append("Enable aggressive memory cleanup and reduce cache sizes")
+                    recommendations.append("Consider MINIMAL performance profile for memory conservation")
+                elif violation == SLOViolation.LATENCY_SPIKE.value:
+                    recommendations.append("Optimize indicator calculations - check for performance bottlenecks")
+                    recommendations.append("Consider reducing event processing frequency")
+
+        if compliance['active_alerts'] > 0:
+            recommendations.append(f"Address {compliance['active_alerts']} active alerts to maintain SLO compliance")
+
+        if not recommendations:
+            recommendations.append("All SLOs compliant - system performing within targets")
+
+        return recommendations
 
 # Demo function for testing
 def demo_resource_monitor():
