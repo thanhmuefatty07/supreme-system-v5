@@ -18,7 +18,7 @@ class SmartEventProcessor:
     """
 
     __slots__ = ('_config', '_last_price', '_last_volume', '_last_timestamp',
-                 '_event_count', '_skip_count')
+                 '_event_count', '_skip_count', '_volume_avg')
 
     def __init__(self, config: Dict[str, Any]):
         """

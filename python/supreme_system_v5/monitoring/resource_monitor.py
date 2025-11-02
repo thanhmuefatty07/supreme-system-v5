@@ -647,8 +647,8 @@ def demo_resource_monitor():
 
     monitor.stop_monitoring()
 
-    print("
-🏥 SYSTEM HEALTH REPORT:"    print(f"   Overall Health: {health_report['overall_health']:.1f}/100 ({health_report['health_status']})")
+    print("\n🏥 SYSTEM HEALTH REPORT:")
+    print(f"   Overall Health: {health_report['overall_health']:.1f}/100 ({health_report['health_status']})")
     print(f"   CPU Usage: {health_report['current_metrics']['cpu_percent']:.1f}%")
     print(".2f")
     print(".1f")
