@@ -32,23 +32,35 @@ class LeverageLevel(Enum):
     ULTRA_AGGRESSIVE = "ultra_aggressive"
 
 class SignalConfidence:
-    """Signal confidence structure with configurable weights."""
+    """Ultra-Optimized Signal Confidence with ML-based fusion and adaptive weighting."""
 
     def __init__(self, technical_confidence: float, news_confidence: float = 0.0,
                  whale_confidence: float = 0.0, pattern_confidence: float = 0.0,
-                 weights: Dict[str, float] = None):
+                 weights: Dict[str, float] = None, market_regime: str = 'neutral'):
         self.technical_confidence = technical_confidence
         self.news_confidence = news_confidence
         self.whale_confidence = whale_confidence
         self.pattern_confidence = pattern_confidence
+        self.market_regime = market_regime
 
-        # Configurable weights for signal fusion
-        self.weights = weights or {
+        # Adaptive weights based on market regime
+        base_weights = weights or {
             'technical': 0.5,   # Technical analysis (primary)
             'news': 0.25,       # News sentiment (secondary)
             'whale': 0.20,      # Whale activity (supporting)
             'pattern': 0.05     # Pattern recognition (minor)
         }
+
+        # Market regime adjustments
+        regime_multipliers = {
+            'bull': {'technical': 1.2, 'news': 0.8, 'whale': 1.1, 'pattern': 0.9},
+            'bear': {'technical': 1.1, 'news': 1.2, 'whale': 1.0, 'pattern': 0.8},
+            'volatile': {'technical': 0.9, 'news': 1.3, 'whale': 1.2, 'pattern': 0.6},
+            'neutral': {'technical': 1.0, 'news': 1.0, 'whale': 1.0, 'pattern': 1.0}
+        }
+
+        multipliers = regime_multipliers.get(market_regime, regime_multipliers['neutral'])
+        self.weights = {k: v * multipliers[k] for k, v in base_weights.items()}
 
         # Normalize weights to ensure they sum to 1.0
         total_weight = sum(self.weights.values())
