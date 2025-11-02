@@ -607,19 +607,21 @@ class ScalpingStrategy:
         self.rsi_oversold = config.get('rsi_oversold', 30)
         self.macd_threshold = config.get('macd_threshold', 0.0)
 
-        # OPTIMIZED: Use OptimizedTechnicalAnalyzer instead of manual calculations
+        # ULTRA-OPTIMIZED: Use OptimizedTechnicalAnalyzer with maximum performance
         analyzer_config = {
             'ema_period': config.get('ema_period', 14),
             'rsi_period': config.get('rsi_period', 14),
             'macd_fast': config.get('macd_fast', 12),
             'macd_slow': config.get('macd_slow', 26),
             'macd_signal': config.get('macd_signal', 9),
-            'price_history_size': config.get('price_history_size', 100),
-            'event_config': config.get('event_config', {
-                'min_price_change_pct': 0.0005,  # 0.05%
-                'min_volume_multiplier': 2.0,     # 2x average
-                'max_time_gap_seconds': 30        # Process every 30s max
-            })
+            'price_history_size': min(config.get('price_history_size', 100), 200),  # Memory optimized
+            'cache_enabled': config.get('cache_enabled', True),
+            'cache_ttl_seconds': config.get('cache_ttl_seconds', 1.0),
+            'event_config': {
+                'min_price_change_pct': config.get('min_price_change_pct', 0.001),   # 0.1% - more aggressive
+                'min_volume_multiplier': config.get('min_volume_multiplier', 3.0),   # 3x average - more aggressive
+                'max_time_gap_seconds': config.get('max_time_gap_seconds', 60)       # Process every 60s max
+            }
         }
 
         self.analyzer = OptimizedTechnicalAnalyzer(analyzer_config)
