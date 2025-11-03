@@ -121,13 +121,14 @@ class PortfolioState:
 
 class OptimalPosition(NamedTuple):
     """Optimal position sizing result."""
-    position_size_percent: float  # Position size as % of portfolio
-    leverage_ratio: float         # Leverage ratio (1.0 = no leverage)
-    stop_loss_price: float       # Stop loss price level
-    take_profit_price: float     # Take profit price level
-    risk_level: RiskLevel        # Risk classification
-    leverage_level: LeverageLevel # Leverage classification
-    reasoning: str              # Explanation for position sizing
+    position_size_pct: float     # Position size as % of portfolio
+    leverage_ratio: float        # Leverage ratio (1.0 = no leverage)
+    stop_loss_price: float      # Stop loss price level
+    take_profit_price: float    # Take profit price level
+    risk_level: str            # Risk classification
+    leverage_level: str        # Leverage classification
+    reasoning: str             # Explanation for position sizing
+    confidence_score: float    # Overall confidence score (0-1)
 
 class DynamicRiskManager:
     """
@@ -229,13 +230,14 @@ class DynamicRiskManager:
         )
 
         return OptimalPosition(
-            position_size_percent=position_size_pct,
+            position_size_pct=position_size_pct,
             leverage_ratio=leverage_ratio,
             stop_loss_price=stop_loss_price,
             take_profit_price=take_profit_price,
             risk_level=risk_level,
             leverage_level=leverage_level,
-            reasoning=reasoning
+            reasoning=reasoning,
+            confidence_score=overall_confidence
         )
 
     def _extract_signal_confidence(self, signals: Dict[str, Any]) -> SignalConfidence:
@@ -408,13 +410,14 @@ class DynamicRiskManager:
     def _create_minimal_position(self, reason: str, current_price: float) -> OptimalPosition:
         """Create minimal position when constraints prevent normal sizing."""
         return OptimalPosition(
-            position_size_percent=0.0,
+            position_size_pct=0.0,
             leverage_ratio=1.0,
             stop_loss_price=current_price * 0.99,  # 1% stop loss
             take_profit_price=current_price * 1.01, # 1% take profit
-            risk_level=RiskLevel.ULTRA_LOW,
-            leverage_level=LeverageLevel.CONSERVATIVE,
-            reasoning=f"Position rejected: {reason}"
+            risk_level='ultra_low',
+            leverage_level='conservative',
+            reasoning=f"Position rejected: {reason}",
+            confidence_score=0.0
         )
 
     def update_performance(self, pnl: float, risk_taken: float):

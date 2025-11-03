@@ -9,9 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import time
 from enum import Enum
 from dataclasses import dataclass, field
-from collections import deque
 from .optimized.analyzer import OptimizedTechnicalAnalyzer
-from .optimized.smart_events import SmartEventProcessor
 from .risk import SignalConfidence
 
 from loguru import logger
@@ -81,309 +79,48 @@ class MarketData:
     low_24h: Optional[float] = None
 
 
-class TechnicalIndicators:
-    """Technical indicator calculations with Rust acceleration"""
+# TechnicalIndicators removed - replaced with OptimizedTechnicalAnalyzer for maximum performance
+
+
+class OptimizedIndicatorCalculator:
+    """Utility class to calculate indicators from historical data using optimized components"""
 
     @staticmethod
-    def calculate_ema(prices: List[float], period: int) -> List[float]:
-        """
-        Calculate Exponential Moving Average
-        Uses Rust implementation for maximum performance
-        """
+    def calculate_ema_from_history(prices: List[float], period: int) -> Optional[float]:
+        """Calculate EMA from historical prices using optimized EMA"""
         if len(prices) < period:
-            return []
+            return None
 
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
+        from .optimized.ema import UltraOptimizedEMA
+        ema = UltraOptimizedEMA(period)
 
-            price_array = np.array(prices, dtype=np.float64)
-            result = supreme_engine_rs.fast_ema(price_array, period)
-            return result.tolist()
+        # Feed historical data
+        for price in prices:
+            result = ema.update(price)
 
-        except (ImportError, Exception) as e:
-            logger.debug(f"Rust EMA not available, using Python fallback: {e}")
-            return TechnicalIndicators._calculate_ema_python(prices, period)
+        return result
 
     @staticmethod
-    def _calculate_ema_python(prices: List[float], period: int) -> List[float]:
-        """Python fallback for EMA calculation"""
-        if len(prices) < period:
-            return []
-
-        multiplier = 2.0 / (period + 1)
-        ema_values = []
-
-        # First EMA is SMA
-        sma = sum(prices[:period]) / period
-        ema_values.append(sma)
-
-        # Calculate subsequent EMAs
-        for price in prices[period:]:
-            ema = (price * multiplier) + (ema_values[-1] * (1 - multiplier))
-            ema_values.append(ema)
-
-        return ema_values
-
-    @staticmethod
-    def calculate_rsi(prices: List[float], period: int = 14) -> List[float]:
-        """
-        Calculate Relative Strength Index
-        Uses Rust implementation for maximum performance
-        """
+    def calculate_rsi_from_history(prices: List[float], period: int = 14) -> Optional[float]:
+        """Calculate RSI from historical prices using optimized RSI"""
         if len(prices) < period + 1:
-            return []
+            return None
 
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
+        from .optimized.rsi import UltraOptimizedRSI
+        rsi = UltraOptimizedRSI(period)
 
-            price_array = np.array(prices, dtype=np.float64)
-            result = supreme_engine_rs.fast_rsi(price_array, period)
-            return result.tolist()
+        # Feed historical data
+        for price in prices:
+            result = rsi.update(price)
 
-        except (ImportError, Exception) as e:
-            logger.debug(f"Rust RSI not available, using Python fallback: {e}")
-            return TechnicalIndicators._calculate_rsi_python(prices, period)
+        return result
 
     @staticmethod
-    def _calculate_rsi_python(prices: List[float], period: int = 14) -> List[float]:
-        """Python fallback for RSI calculation"""
-        if len(prices) < period + 1:
-            return []
-
-        rsi_values = []
-        gains = []
-        losses = []
-
-        # Calculate price changes
-        for i in range(1, len(prices)):
-            change = prices[i] - prices[i - 1]
-            gains.append(max(change, 0))
-            losses.append(max(-change, 0))
-
-        # Calculate initial averages
-        avg_gain = sum(gains[:period]) / period
-        avg_loss = sum(losses[:period]) / period
-
-        # Calculate first RSI
-        if avg_loss == 0:
-            rsi = 100.0
-        else:
-            rs = avg_gain / avg_loss
-            rsi = 100 - (100 / (1 + rs))
-        rsi_values.append(rsi)
-
-        # Calculate subsequent RSIs using Wilder's smoothing
-        for i in range(period, len(gains)):
-            gain = gains[i]
-            loss = losses[i]
-
-            avg_gain = ((avg_gain * (period - 1)) + gain) / period
-            avg_loss = ((avg_loss * (period - 1)) + loss) / period
-
-            if avg_loss == 0:
-                rsi = 100.0
-            else:
-                rs = avg_gain / avg_loss
-                rsi = 100 - (100 / (1 + rs))
-
-            rsi_values.append(rsi)
-
-        return rsi_values
-
-    @staticmethod
-    def calculate_sma(prices: List[float], period: int) -> List[float]:
-        """Calculate Simple Moving Average"""
+    def calculate_sma_from_history(prices: List[float], period: int) -> Optional[float]:
+        """Calculate SMA from historical prices"""
         if len(prices) < period:
-            return []
-
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
-
-            price_array = np.array(prices, dtype=np.float64)
-            result = supreme_engine_rs.fast_sma(price_array, period)
-            return result.tolist()
-
-        except (ImportError, Exception) as e:
-            logger.debug(f"Rust SMA not available, using Python fallback: {e}")
-            return TechnicalIndicators._calculate_sma_python(prices, period)
-
-    @staticmethod
-    def _calculate_sma_python(prices: List[float], period: int) -> List[float]:
-        """Python fallback for SMA calculation"""
-        if len(prices) < period:
-            return []
-
-        sma_values = []
-        for i in range(period - 1, len(prices)):
-            sma = sum(prices[i - period + 1 : i + 1]) / period
-            sma_values.append(sma)
-
-        return sma_values
-
-    @staticmethod
-    def calculate_macd(
-        prices: List[float],
-        fast_period: int = 12,
-        slow_period: int = 26,
-        signal_period: int = 9,
-    ) -> Tuple[List[float], List[float], List[float]]:
-        """Calculate MACD with signal line and histogram"""
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
-
-            price_array = np.array(prices, dtype=np.float64)
-            macd_line, signal_line, histogram = supreme_engine_rs.fast_macd(
-                price_array, fast_period, slow_period, signal_period
-            )
-            return macd_line.tolist(), signal_line.tolist(), histogram.tolist()
-
-        except (ImportError, Exception) as e:
-            logger.debug(f"Rust MACD not available, using Python fallback: {e}")
-            return TechnicalIndicators._calculate_macd_python(
-                prices, fast_period, slow_period, signal_period
-            )
-
-    @staticmethod
-    def _calculate_macd_python(
-        prices: List[float],
-        fast_period: int = 12,
-        slow_period: int = 26,
-        signal_period: int = 9,
-    ) -> Tuple[List[float], List[float], List[float]]:
-        """Python fallback for MACD calculation"""
-        if len(prices) < slow_period:
-            return [], [], []
-
-        # Calculate EMAs
-        fast_ema = TechnicalIndicators.calculate_ema(prices, fast_period)
-        slow_ema = TechnicalIndicators.calculate_ema(prices, slow_period)
-
-        # Calculate MACD line
-        macd_line = []
-        for i in range(len(slow_ema)):
-            fast_idx = i + (slow_period - fast_period)
-            if fast_idx < len(fast_ema):
-                macd_line.append(fast_ema[fast_idx] - slow_ema[i])
-
-        # Calculate signal line
-        signal_line = TechnicalIndicators.calculate_ema(macd_line, signal_period)
-
-        # Calculate histogram
-        histogram = []
-        for i in range(len(signal_line)):
-            macd_idx = i + (signal_period - 1)
-            if macd_idx < len(macd_line):
-                histogram.append(macd_line[macd_idx] - signal_line[i])
-
-        return macd_line, signal_line, histogram
-
-    @staticmethod
-    def calculate_bollinger_bands(
-        prices: List[float], period: int = 20, std_dev: float = 2.0
-    ) -> Tuple[List[float], List[float], List[float]]:
-        """Calculate Bollinger Bands"""
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
-
-            price_array = np.array(prices, dtype=np.float64)
-            upper_band, middle_band, lower_band = supreme_engine_rs.bollinger_bands(
-                price_array, period, std_dev
-            )
-            return upper_band.tolist(), middle_band.tolist(), lower_band.tolist()
-
-        except (ImportError, Exception) as e:
-            logger.debug(
-                f"Rust Bollinger Bands not available, using Python fallback: {e}"
-            )
-            return TechnicalIndicators._calculate_bollinger_bands_python(
-                prices, period, std_dev
-            )
-
-    @staticmethod
-    def _calculate_bollinger_bands_python(
-        prices: List[float], period: int = 20, std_dev: float = 2.0
-    ) -> Tuple[List[float], List[float], List[float]]:
-        """Python fallback for Bollinger Bands calculation"""
-        if len(prices) < period:
-            return [], [], []
-
-        sma_values = TechnicalIndicators.calculate_sma(prices, period)
-        upper_band = []
-        lower_band = []
-
-        for i, sma in enumerate(sma_values):
-            start_idx = i
-            end_idx = i + period
-
-            # Calculate standard deviation
-            values = prices[start_idx:end_idx]
-            variance = sum((x - sma) ** 2 for x in values) / period
-            std = variance**0.5
-
-            upper_band.append(sma + std_dev * std)
-            lower_band.append(sma - std_dev * std)
-
-        return upper_band, sma_values, lower_band
-
-    @staticmethod
-    def calculate_vwap(
-        high: List[float], low: List[float], close: List[float], volume: List[float]
-    ) -> List[float]:
-        """Calculate Volume Weighted Average Price"""
-        try:
-            # Try Rust implementation first
-            import numpy as np
-            import supreme_engine_rs
-
-            high_array = np.array(high, dtype=np.float64)
-            low_array = np.array(low, dtype=np.float64)
-            close_array = np.array(close, dtype=np.float64)
-            volume_array = np.array(volume, dtype=np.float64)
-
-            result = supreme_engine_rs.volume_weighted_average_price(
-                high_array, low_array, close_array, volume_array
-            )
-            return result.tolist()
-
-        except (ImportError, Exception) as e:
-            logger.debug(f"Rust VWAP not available, using Python fallback: {e}")
-            return TechnicalIndicators._calculate_vwap_python(high, low, close, volume)
-
-    @staticmethod
-    def _calculate_vwap_python(
-        high: List[float], low: List[float], close: List[float], volume: List[float]
-    ) -> List[float]:
-        """Python fallback for VWAP calculation"""
-        if len(high) != len(low) or len(low) != len(close) or len(close) != len(volume):
-            return []
-
-        vwap_values = []
-        cumulative_volume = 0.0
-        cumulative_volume_price = 0.0
-
-        for i in range(len(close)):
-            typical_price = (high[i] + low[i] + close[i]) / 3.0
-            volume_price = typical_price * volume[i]
-
-            cumulative_volume += volume[i]
-            cumulative_volume_price += volume_price
-
-            if cumulative_volume > 0.0:
-                vwap_values.append(cumulative_volume_price / cumulative_volume)
-            else:
-                vwap_values.append(typical_price)
-
-        return vwap_values
+            return None
+        return sum(prices[-period:]) / period
 
 
 class MultiTimeframeConfirmation:
@@ -417,20 +154,21 @@ class MultiTimeframeConfirmation:
 
             higher_tf_prices = higher_tf_prices[-50:]  # Last 50 points for higher TF
 
-            # Calculate EMAs for both timeframes
-            lower_tf_ema = TechnicalIndicators.calculate_ema(
-                [p for ts, p, vol in price_history[-50:]], self.config["lower_tf_ema_period"]
+            # Calculate EMAs for both timeframes using optimized components
+            lower_tf_prices = [p for ts, p, vol in price_history[-50:]]
+            lower_tf_ema = OptimizedIndicatorCalculator.calculate_ema_from_history(
+                lower_tf_prices, self.config["lower_tf_ema_period"]
             )
-            higher_tf_ema = TechnicalIndicators.calculate_ema(
+            higher_tf_ema = OptimizedIndicatorCalculator.calculate_ema_from_history(
                 higher_tf_prices, self.config["higher_tf_ema_period"]
             )
 
-            if not lower_tf_ema or not higher_tf_ema:
+            if lower_tf_ema is None or higher_tf_ema is None:
                 return 0.5
 
-            # Get latest EMA values
-            latest_lower_ema = lower_tf_ema[-1] if lower_tf_ema else 0
-            latest_higher_ema = higher_tf_ema[-1] if higher_tf_ema else 0
+            # Use the calculated EMA values directly
+            latest_lower_ema = lower_tf_ema
+            latest_higher_ema = higher_tf_ema
 
             # Get current price
             current_price = price_history[-1][1] if price_history else 0
@@ -616,7 +354,7 @@ class ScalpingStrategy:
             'macd_fast': config.get('macd_fast', 12),
             'macd_slow': config.get('macd_slow', 26),
             'macd_signal': config.get('macd_signal', 9),
-            'price_history_size': min(config.get('price_history_size', 1000), 1000),  # Cap at 1000 as per roadmap
+            'price_history_size': min(config.get('price_history_size', 100), 200),  # Memory optimized
             'cache_enabled': config.get('cache_enabled', True),
             'cache_ttl_seconds': config.get('cache_ttl_seconds', 1.0),
             'event_config': {
@@ -627,14 +365,6 @@ class ScalpingStrategy:
         }
 
         self.analyzer = OptimizedTechnicalAnalyzer(analyzer_config)
-
-        # ROADMAP REQUIREMENT: Enable SmartEventProcessor gating (price/volume/time significance)
-        self.event_processor = SmartEventProcessor(analyzer_config['event_config'])
-
-        # ROADMAP REQUIREMENT: Cap histories using CircularBuffer or deque(maxlen) with N≤1000
-        self.price_history: deque = deque(maxlen=1000)  # Use deque with maxlen for memory efficiency
-        self.volume_history: deque = deque(maxlen=1000)
-        self.timestamp_history: deque = deque(maxlen=1000)
 
         # Trading state
         self.current_position = 0  # 0: no position, 1: long, -1: short
@@ -654,11 +384,7 @@ class ScalpingStrategy:
 
     def add_price_data(self, price: float, volume: float = 0, timestamp: Optional[float] = None) -> Optional[Dict[str, Any]]:
         """
-        Process price update with ROADMAP-COMPLIANT SmartEventProcessor gating.
-
-        ROADMAP REQUIREMENTS IMPLEMENTED:
-        - Enable SmartEventProcessor gating (price/volume/time significance)
-        - Cap histories using deque(maxlen) with N≤1000
+        Process price update with intelligent event filtering.
 
         OPTIMIZATION: Event-driven processing reduces CPU by 70-90%
 
@@ -671,28 +397,14 @@ class ScalpingStrategy:
             Trading signal dict or None if no action needed
         """
         start_time = time.time()
-        if timestamp is None:
-            timestamp = start_time
 
-        # ROADMAP REQUIREMENT: Enable SmartEventProcessor gating BEFORE analyzer
-        should_process = self.event_processor.should_process(price, volume, timestamp)
-
-        # ROADMAP REQUIREMENT: Cap histories using deque(maxlen) with N≤1000
-        self.price_history.append(price)
-        self.volume_history.append(volume)
-        self.timestamp_history.append(timestamp)
-
-        if not should_process:
-            # Event filtered by SmartEventProcessor - no processing needed
-            STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
-            return None
-
-        # Only process significant events with analyzer
+        # OPTIMIZED: Analyzer handles event filtering internally
         processed = self.analyzer.add_price_data(price, volume, timestamp)
 
+        STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+
         if not processed:
-            # Additional filtering by analyzer - even more CPU reduction
-            STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+            # Event filtered - no processing needed (70-90% reduction)
             return None
 
         # Generate trading signals using optimized indicators
@@ -701,8 +413,6 @@ class ScalpingStrategy:
 
         # Check for entry/exit conditions
         action = self._evaluate_trading_logic(signals, price)
-
-        STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
 
         if action:
             return self._create_trade_signal(action, signals, price)
@@ -817,9 +527,41 @@ class ScalpingStrategy:
         return signal
 
     def _calculate_position_details(self, action: str, price: float) -> Dict[str, Any]:
-        """Calculate position size, stop loss, and take profit."""
-        # Position size based on percentage of portfolio
-        position_size = self.position_size_pct  # This would be calculated based on actual portfolio value
+        """Calculate position size, stop loss, and take profit using risk manager if available."""
+        # Use risk manager for advanced position sizing if available
+        if self.risk_manager:
+            # Get current signals for confidence calculation
+            signals = self.last_signals or {}
+
+            # Create mock portfolio state (would be passed from orchestrator in real system)
+            from typing import NamedTuple
+            class PortfolioState(NamedTuple):
+                total_value: float = 10000.0
+                available_cash: float = 9000.0
+                current_exposure: float = 0.0
+                daily_pnl: float = 0.0
+
+            portfolio = PortfolioState()
+
+            # Estimate volatility factor from recent price action
+            volatility_factor = 1.0  # Would be calculated from actual price history
+
+            # Get optimal position from risk manager
+            optimal_position = self.risk_manager.calculate_optimal_position(
+                signals, portfolio, price, volatility_factor
+            )
+
+            return {
+                'position_size': optimal_position.position_size_pct,
+                'stop_loss': optimal_position.stop_loss_price,
+                'take_profit': optimal_position.take_profit_price,
+                'leverage': optimal_position.leverage_ratio,
+                'confidence': optimal_position.confidence_score,
+                'risk_level': optimal_position.risk_level
+            }
+
+        # Fallback to simple calculation
+        position_size = self.position_size_pct
 
         # Stop loss and take profit levels
         if action == 'BUY':
@@ -833,7 +575,9 @@ class ScalpingStrategy:
             'position_size': position_size,
             'stop_loss': stop_loss,
             'take_profit': take_profit,
-            'leverage': 1.0  # No leverage for scalping
+            'leverage': 1.0,  # No leverage for scalping
+            'confidence': 0.5,  # Neutral confidence
+            'risk_level': 'moderate'
         }
 
     def _update_position_state(self, action: str, price: float) -> None:
@@ -875,34 +619,17 @@ class ScalpingStrategy:
             return (self.entry_price - exit_price) / self.entry_price
 
     def get_performance_stats(self) -> Dict[str, Any]:
-        """Get strategy performance statistics with ROADMAP compliance metrics."""
+        """Get strategy performance statistics."""
         analyzer_stats = self.analyzer.get_performance_stats()
 
         win_rate = (self.winning_trades / self.trades_executed * 100) if self.trades_executed > 0 else 0
 
-        # ROADMAP COMPLIANCE: Event skip ratio metrics
-        total_events = analyzer_stats.get('total_events', 0)
-        skip_ratio = analyzer_stats.get('skip_ratio', 0)
-
         return {
-            # Trading performance
             'trades_executed': self.trades_executed,
             'winning_trades': self.winning_trades,
             'win_rate_pct': win_rate,
             'total_pnl': self.total_pnl,
             'current_position': self.current_position,
-
-            # ROADMAP COMPLIANCE: Event filtering effectiveness
-            'event_skip_ratio': skip_ratio,
-            'total_events_processed': total_events,
-            'smart_event_processor_enabled': True,
-            'history_capped_at_1000': len(self.price_history) <= 1000,
-
-            # CPU reduction metrics (ROADMAP target: ≥35% reduction)
-            'cpu_reduction_estimate': skip_ratio * 0.8 if skip_ratio > 0 else 0,
-            'target_cpu_reduction_achieved': skip_ratio >= 0.2,  # ROADMAP target: 0.2-0.8 range
-
-            # Analyzer stats
             'analyzer_stats': analyzer_stats
         }
 

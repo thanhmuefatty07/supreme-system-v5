@@ -326,3 +326,85 @@ groups:
         annotations:
           summary: "High network error rate"
           description: "Network error rate exceeds 5%"
+
+  - name: supreme_system_optimization_slos
+    rules:
+      # CPU SLO Violation
+      - alert: CPUSLOViolation
+        expr: cpu_percent_gauge{phase="final"} >= 88
+        for: 5m
+        labels:
+          severity: critical
+          category: optimization
+          slo: cpu_usage
+        annotations:
+          summary: "CPU SLO Violation: Usage >= 88%"
+          description: "CPU usage has exceeded 88% target for 5 minutes"
+
+      # Memory SLO Violation
+      - alert: MemorySLOViolation
+        expr: (memory_in_use_bytes{phase="final"} / (1024*1024*1024)) >= 3.86
+        for: 5m
+        labels:
+          severity: critical
+          category: optimization
+          slo: memory_usage
+        annotations:
+          summary: "Memory SLO Violation: Usage >= 3.86GB"
+          description: "Memory usage has exceeded 3.86GB target for 5 minutes"
+
+      # Latency SLO Violation
+      - alert: LatencySLOViolation
+        expr: histogram_quantile(0.95, rate(strategy_latency_seconds_bucket[5m])) >= 0.5
+        for: 2m
+        labels:
+          severity: critical
+          category: optimization
+          slo: latency
+        annotations:
+          summary: "Latency SLO Violation: P95 >= 500ms"
+          description: "95th percentile strategy latency has exceeded 500ms target for 2 minutes"
+
+      # Event Processing Efficiency Alert
+      - alert: EventSkipRatioTooLow
+        expr: event_skip_ratio < 0.2
+        for: 10m
+        labels:
+          severity: warning
+          category: optimization
+        annotations:
+          summary: "Event Skip Ratio Too Low"
+          description: "Event processing efficiency below 20% - may indicate over-processing"
+
+      - alert: EventSkipRatioTooHigh
+        expr: event_skip_ratio > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: optimization
+        annotations:
+          summary: "Event Skip Ratio Too High"
+          description: "Event processing efficiency above 80% - may indicate missed opportunities"
+
+      # Indicator Performance Alert
+      - alert: IndicatorLatencyHigh
+        expr: histogram_quantile(0.95, rate(indicator_update_latency_seconds_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          category: optimization
+        annotations:
+          summary: "High Indicator Latency"
+          description: "95th percentile indicator update latency exceeds 200ms"
+
+      # Uptime SLO Alert
+      - alert: UptimeSLOViolation
+        expr: (1 - (rate(up[7d]) - 1)) * 100 < 99.9
+        for: 1m
+        labels:
+          severity: critical
+          category: optimization
+          slo: uptime
+        annotations:
+          summary: "Uptime SLO Violation: <99.9%"
+          description: "System uptime has fallen below 99.9% target"

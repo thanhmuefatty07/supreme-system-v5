@@ -30,6 +30,23 @@ Supreme System V5 implements the **ULTRA SFL (Strict Free Mode)** methodology wi
 
 ## 🏃 Run
 
+### Quick Start (Ultra Optimized Mode - RECOMMENDED)
+
+```bash
+# Clone repository
+git clone https://github.com/thanhmuefatty07/supreme-system-v5.git
+cd supreme-system-v5
+
+# Install dependencies
+pip install -e .
+
+# Copy ultra-optimized configuration (CPU ≤88%, RAM ≤3.86GB)
+cp .env.optimized .env
+
+# Run optimized system
+python -m supreme_system_v5.core
+```
+
 ### Quick Start (Development)
 
 ```bash
@@ -49,10 +66,60 @@ python -m supreme_system_v5.core
 Create `.env` file with required settings or use `.env.optimized` for production-ready configuration:
 
 ```bash
-# Copy optimized configuration
+# Copy optimized configuration (RECOMMENDED for i3-4GB systems)
 cp .env.optimized .env
 
 # Or create custom configuration
+```
+
+#### Ultra Optimized Configuration Keys
+
+The `.env.optimized` file contains all optimized settings for maximum efficiency on i3-4GB systems:
+
+```bash
+# Core Optimizations (Enable Ultra-Efficient Mode)
+OPTIMIZED_MODE=true
+EVENT_DRIVEN_PROCESSING=true
+INTELLIGENT_CACHING=true
+PERFORMANCE_PROFILE=performance  # minimal|conservative|normal|performance
+
+# Single Symbol Focus (Critical for i3-4GB optimization)
+SINGLE_SYMBOL=BTC-USDT
+
+# Scheduling Intervals (Optimized for resource efficiency)
+PROCESS_INTERVAL_SECONDS=30
+TECHNICAL_INTERVAL=30
+NEWS_INTERVAL_MIN=10
+WHALE_INTERVAL_MIN=10
+MTF_INTERVAL=120
+
+# Resource Limits (i3-4GB Optimization Targets)
+MAX_CPU_PERCENT=88.0
+MAX_RAM_GB=3.86
+TARGET_EVENT_SKIP_RATIO=0.7
+
+# Component Enables (Modular Architecture)
+TECHNICAL_ANALYSIS_ENABLED=true
+NEWS_ANALYSIS_ENABLED=true
+WHALE_TRACKING_ENABLED=true
+MULTI_TIMEFRAME_ENABLED=true
+RISK_MANAGEMENT_ENABLED=true
+RESOURCE_MONITORING_ENABLED=true
+
+# Event Processing Thresholds (Aggressive Filtering)
+MIN_PRICE_CHANGE_PCT=0.001    # 0.1% - more aggressive than default 0.05%
+MIN_VOLUME_MULTIPLIER=3.0     # 3x average volume spike
+MAX_TIME_GAP_SECONDS=60       # Process every 60s maximum
+
+# Indicator Parameters (Memory Optimized)
+PRICE_HISTORY_SIZE=200        # Memory capped for i3 constraints
+CACHE_ENABLED=true
+CACHE_TTL_SECONDS=1.0
+```
+
+#### API Configuration
+
+```bash
 # Data Fabric API Keys (optional, higher rate limits)
 COINGECKO_KEY=your_coingecko_api_key
 CMC_KEY=your_coinmarketcap_api_key
@@ -66,42 +133,15 @@ OKX_PASSPHRASE=your_okx_passphrase
 # Database Configuration
 REDIS_URL=redis://localhost:6379/0
 DATABASE_URL=postgresql://user:password@localhost:5432/database
+```
 
-# Core Optimizations (Enable Ultra-Efficient Mode)
-OPTIMIZED_MODE=true
-EVENT_DRIVEN_PROCESSING=true
-INTELLIGENT_CACHING=true
-PERFORMANCE_PROFILE=normal  # minimal|conservative|normal|performance
+#### System Configuration
 
-# Single Symbol Focus (Critical for i3-4GB optimization)
-SINGLE_SYMBOL=BTC-USDT
-
-# Scheduling Intervals
-PROCESS_INTERVAL_SECONDS=30
-TECHNICAL_INTERVAL=30
-NEWS_INTERVAL_MIN=10
-WHALE_INTERVAL_MIN=10
-MTF_INTERVAL=120
-
-# Resource Limits (i3-4GB Optimization)
-MAX_CPU_PERCENT=88.0
-MAX_RAM_GB=3.86
-TARGET_EVENT_SKIP_RATIO=0.7
-
-# Component Enables
-TECHNICAL_ANALYSIS_ENABLED=true
-NEWS_ANALYSIS_ENABLED=true
-WHALE_TRACKING_ENABLED=true
-MULTI_TIMEFRAME_ENABLED=true
-RISK_MANAGEMENT_ENABLED=true
-RESOURCE_MONITORING_ENABLED=true
-
-# System Configuration
-TRADING_MODE=sandbox  # or 'live'
-TRADING_SYMBOLS=BTC-USDT,ETH-USDT
-MAX_POSITION_SIZE=0.01
-STOP_LOSS_PERCENT=0.005
-TAKE_PROFIT_PERCENT=0.002
+```bash
+TRADING_MODE=sandbox  # sandbox|live
+LOG_LEVEL=INFO
+METRICS_ENABLED=true
+PROMETHEUS_PORT=9090
 ```
 
 ### Testing

@@ -423,16 +423,16 @@ def demo_multi_timeframe_engine():
             print(f"   Dominant TF: {consensus.dominant_timeframe.value}")
             print(".1f")
 
-    print("
-📈 CONSENSUS EVOLUTION:"    # Show final consensus for demo
+    print("\n📈 CONSENSUS EVOLUTION:")
+    # Show final consensus for demo
     final_consensus = mtf_engine.get_timeframe_consensus()
     print(f"   🔴 Minute  15: {final_consensus.overall_direction} ({final_consensus.confidence_score:.2f})")
     print(f"   🔴 Minute  30: {final_consensus.overall_direction} ({final_consensus.confidence_score:.2f})")
     print(f"   🔴 Minute  45: {final_consensus.overall_direction} ({final_consensus.confidence_score:.2f})")
     print(f"   🔴 Minute  60: {final_consensus.overall_direction} ({final_consensus.confidence_score:.2f})")
 
-    print("
-📊 PERFORMANCE STATISTICS:"    stats = mtf_engine.get_performance_stats()
+    print("\n📊 PERFORMANCE STATISTICS:")
+    stats = mtf_engine.get_performance_stats()
     print(".1f")
     print(f"   Cache Hit Ratio: {stats['cache_hit_ratio']:.1f}%")
     print(f"   Total Updates: {stats['total_updates']}")
