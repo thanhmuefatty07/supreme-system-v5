@@ -96,7 +96,13 @@ Examples:
                        help='Output directory for reports (default: run_artifacts)')
     parser.add_argument('--max-memory', type=int, default=2800,
                        help='Maximum memory usage in MB (default: 2800)')
-                       
+
+    # Circuit breaker settings
+    parser.add_argument('--circuit-breaker-threshold', type=int, default=5,
+                       help='Circuit breaker failure threshold (default: 5)')
+    parser.add_argument('--data-quality-threshold', type=float, default=0.7,
+                       help='Data quality threshold for quorum (default: 0.7)')
+
     # Data sources
     parser.add_argument('--data-sources', nargs='+', default=['binance', 'coingecko', 'okx'],
                        help='Data sources (default: binance coingecko okx)')
