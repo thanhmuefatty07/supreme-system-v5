@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Supreme System V5 - Production Error Diagnosis & Recovery
-Comprehensive error handling for all entry points with fast triage capabilities.
+Error Diagnosis and Resilience Script for Supreme System V5
+Comprehensive error handling with auto-diagnosis and recovery suggestions
 """
 
 import sys
@@ -9,306 +9,366 @@ import os
 import traceback
 import platform
 import subprocess
+import json
+import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
-
-@dataclass
-class ErrorContext:
-    """Comprehensive error context for diagnosis."""
-    error_type: str
-    error_message: str
-    traceback: str
-    system_info: Dict[str, Any]
-    environment_info: Dict[str, Any]
-    dependency_status: Dict[str, Any]
-    recommendations: List[str]
-
-class SupremeErrorHandler:
-    """Production-grade error handler for Supreme System V5."""
-
+class ErrorDiagnosticSystem:
+    """Comprehensive error diagnosis and recovery system"""
+    
+    EXIT_CODES = {
+        0: "SUCCESS",
+        1: "VALIDATION_FAILED",
+        2: "CONFIG_ERROR", 
+        3: "DEPENDENCY_ERROR",
+        4: "RUNTIME_ERROR",
+        5: "IMPORT_ERROR",
+        6: "PERMISSION_ERROR",
+        7: "RESOURCE_ERROR"
+    }
+    
     def __init__(self):
-        self.error_contexts: List[ErrorContext] = []
-
-    def capture_system_info(self) -> Dict[str, Any]:
-        """Capture comprehensive system information."""
+        self.system_info = self._collect_system_info()
+        self.diagnosis_results = []
+        self.recovery_suggestions = []
+        
+    def _collect_system_info(self) -> Dict[str, Any]:
+        """Collect comprehensive system information"""
         info = {
+            'timestamp': time.time(),
             'platform': platform.platform(),
             'python_version': sys.version,
             'python_executable': sys.executable,
             'working_directory': os.getcwd(),
-            'environment_variables': {k: v for k, v in os.environ.items() if not k.startswith('_')},
+            'environment_variables': dict(os.environ),
+            'path': sys.path
         }
-
-        # Try to get additional system info
+        
+        # Add memory info if available
         try:
             import psutil
-            info['cpu_count'] = psutil.cpu_count()
-            info['memory_total_gb'] = psutil.virtual_memory().total / (1024**3)
-            info['disk_free_gb'] = psutil.disk_usage('/').free / (1024**3)
+            memory = psutil.virtual_memory()
+            info.update({
+                'cpu_count': psutil.cpu_count(),
+                'memory_total_gb': round(memory.total / (1024**3), 2),
+                'memory_available_gb': round(memory.available / (1024**3), 2),
+                'memory_percent': memory.percent
+            })
         except ImportError:
-            info['system_monitoring'] = 'psutil not available'
-
+            info['psutil_available'] = False
+            
         return info
-
-    def check_dependencies(self) -> Dict[str, Any]:
-        """Check critical dependencies and their status."""
-        dependencies = {
-            'core': [
-                'fastapi', 'uvicorn', 'pydantic', 'aiohttp', 'numpy', 'pandas',
-                'psutil', 'prometheus_client', 'loguru', 'python_dotenv'
-            ],
-            'technical_analysis': ['ta', 'finta'],
-            'optional': ['matplotlib', 'plotly', 'scikit-learn']
+    
+    def diagnose_import_error(self, error: ImportError, module_name: str) -> Dict[str, Any]:
+        """Diagnose import errors with specific solutions"""
+        diagnosis = {
+            'error_type': 'ImportError',
+            'module': module_name,
+            'error_message': str(error),
+            'likely_causes': [],
+            'solutions': []
         }
-
-        status = {}
-
-        for category, deps in dependencies.items():
-            status[category] = {}
-            for dep in deps:
-                try:
-                    __import__(dep.replace('-', '_'))
-                    status[category][dep] = 'available'
-                except ImportError:
-                    status[category][dep] = 'missing'
-
-        return status
-
-    def diagnose_import_error(self, error: ImportError) -> List[str]:
-        """Diagnose import errors and provide solutions."""
-        recommendations = []
-        error_msg = str(error).lower()
-
-        if 'supreme_system_v5' in error_msg:
-            recommendations.extend([
-                "Ensure you're running from the supreme-system-v5 project root",
-                "Check that python/ directory exists and contains supreme_system_v5/",
-                "Run: pip install -e . to install the package in development mode"
-            ])
-
-        if 'rust' in error_msg or 'supreme_engine_rs' in error_msg:
-            recommendations.extend([
-                "Rust engine is optional - system will use Python fallbacks",
-                "To build Rust engine: pip install maturin && maturin develop",
-                "This is not a blocking error for basic functionality"
-            ])
-
-        missing_modules = ['fastapi', 'uvicorn', 'pydantic', 'aiohttp', 'psutil']
-        for module in missing_modules:
-            if module in error_msg:
-                recommendations.append(f"Install missing dependency: pip install {module}")
-
-        if not recommendations:
-            recommendations.append("Check requirements.txt and run: pip install -r requirements.txt")
-
-        return recommendations
-
-    def diagnose_config_error(self, error: Exception) -> List[str]:
-        """Diagnose configuration-related errors."""
-        recommendations = []
-        error_msg = str(error).lower()
-
-        if 'config' in error_msg or 'env' in error_msg:
-            recommendations.extend([
-                "Create .env file from template: cp env_optimized.template .env",
-                "Check that all required environment variables are set",
-                "Validate .env file syntax and paths",
-                "Run: python scripts/validate_environment.py to check setup"
-            ])
-
-        if 'file not found' in error_msg or 'no such file' in error_msg:
-            recommendations.extend([
-                "Ensure all required configuration files exist",
-                "Check file paths in .env configuration",
-                "Verify working directory is the project root"
-            ])
-
-        return recommendations
-
-    def diagnose_connection_error(self, error: Exception) -> List[str]:
-        """Diagnose network and connection errors."""
-        recommendations = []
-        error_msg = str(error).lower()
-
-        if 'connection' in error_msg or 'network' in error_msg:
-            recommendations.extend([
-                "Check internet connectivity",
-                "Verify firewall settings allow outbound connections",
-                "Test DNS resolution: ping google.com",
-                "Check proxy settings if behind corporate firewall"
-            ])
-
-        if 'api' in error_msg or 'key' in error_msg:
-            recommendations.extend([
-                "Verify API keys are correctly set in .env file",
-                "Check API key permissions and validity",
-                "Test API endpoints manually with curl",
-                "Review API documentation for authentication requirements"
-            ])
-
-        return recommendations
-
-    def diagnose_general_error(self, error: Exception) -> List[str]:
-        """Provide general error diagnosis."""
-        recommendations = [
-            "Check system logs for more detailed error information",
-            "Run diagnostics: python scripts/validate_environment.py",
-            "Check available disk space and memory",
-            "Try restarting the application",
-            "Review recent system changes or updates"
-        ]
-
-        # Add OS-specific advice
-        if platform.system() == 'Windows':
-            recommendations.append("On Windows: Ensure antivirus is not blocking the application")
-        elif platform.system() == 'Linux':
-            recommendations.append("On Linux: Check SELinux/AppArmor policies if applicable")
-
-        return recommendations
-
-    def handle_error(self, error: Exception, context: str = "general") -> ErrorContext:
-        """Handle and diagnose an error comprehensively."""
-        error_type = type(error).__name__
-        error_message = str(error)
-        error_traceback = traceback.format_exc()
-
-        # Gather diagnostic information
-        system_info = self.capture_system_info()
-        dependency_status = self.check_dependencies()
-
-        # Generate recommendations based on error type
-        recommendations = []
-
-        if isinstance(error, ImportError):
-            recommendations.extend(self.diagnose_import_error(error))
-        elif isinstance(error, (FileNotFoundError, OSError)) and 'config' in error_message.lower():
-            recommendations.extend(self.diagnose_config_error(error))
-        elif isinstance(error, (ConnectionError, TimeoutError)):
-            recommendations.extend(self.diagnose_connection_error(error))
-        else:
-            recommendations.extend(self.diagnose_general_error(error))
-
-        # Create error context
-        error_context = ErrorContext(
-            error_type=error_type,
-            error_message=error_message,
-            traceback=error_traceback,
-            system_info=system_info,
-            environment_info={'context': context, 'python_path': sys.path},
-            dependency_status=dependency_status,
-            recommendations=recommendations
-        )
-
-        self.error_contexts.append(error_context)
-        return error_context
-
-    def print_error_report(self, error_context: ErrorContext):
-        """Print a comprehensive error report."""
-        print("\n" + "="*80)
-        print("🚨 SUPREME SYSTEM V5 - ERROR DIAGNOSIS REPORT")
-        print("="*80)
-        print(f"Error Type: {error_context.error_type}")
-        print(f"Error Message: {error_context.error_message}")
-        print(f"Context: {error_context.environment_info.get('context', 'unknown')}")
-        print()
-
-        print("🔍 SYSTEM INFORMATION:")
-        print(f"  Platform: {error_context.system_info.get('platform', 'unknown')}")
-        print(f"  Python: {error_context.system_info.get('python_version', 'unknown')}")
-        print(f"  Working Directory: {error_context.system_info.get('working_directory', 'unknown')}")
-        print()
-
-        print("📦 DEPENDENCY STATUS:")
-        for category, deps in error_context.dependency_status.items():
-            print(f"  {category.title()}:")
-            for dep, status in deps.items():
-                status_icon = "✅" if status == 'available' else "❌"
-                print(f"    {status_icon} {dep}: {status}")
-        print()
-
-        print("💡 RECOMMENDED SOLUTIONS:")
-        for i, rec in enumerate(error_context.recommendations, 1):
-            print(f"  {i}. {rec}")
-        print()
-
-        print("📋 FULL TRACEBACK:")
-        print(error_context.traceback)
-        print("="*80)
-
-    def save_error_report(self, error_context: ErrorContext, filename: Optional[str] = None):
-        """Save error report to file."""
-        if filename is None:
-            timestamp = error_context.system_info.get('timestamp', 'unknown')
-            filename = f"error_report_{timestamp}.json"
-
-        # Create logs directory
-        Path("logs").mkdir(exist_ok=True)
-        filepath = Path("logs") / filename
-
-        report_data = {
-            'error_context': {
-                'type': error_context.error_type,
-                'message': error_context.error_message,
-                'traceback': error_context.traceback,
-                'context': error_context.environment_info.get('context')
-            },
-            'system_info': error_context.system_info,
-            'environment_info': error_context.environment_info,
-            'dependency_status': error_context.dependency_status,
-            'recommendations': error_context.recommendations
-        }
-
-        import json
-        with open(filepath, 'w') as f:
-            json.dump(report_data, f, indent=2, default=str)
-
-        print(f"📊 Error report saved to: {filepath}")
-
-# Global error handler instance
-error_handler = SupremeErrorHandler()
-
-def robust_main_wrapper(main_function, context: str = "application"):
-    """
-    Wrap main functions with comprehensive error handling.
-
-    Args:
-        main_function: The main function to wrap
-        context: Context description for error reporting
-    """
-    def wrapped_main():
+        
+        # Check if module is in standard library
         try:
-            return main_function()
-        except KeyboardInterrupt:
-            print("\n⚠️ Application interrupted by user")
-            sys.exit(130)
-        except Exception as e:
-            error_context = error_handler.handle_error(e, context)
-            error_handler.print_error_report(error_context)
-            error_handler.save_error_report(error_context)
-            print(f"\n❌ Application failed with exit code 1")
-            print("📞 Check logs/ directory for detailed error report")
-            sys.exit(1)
+            import importlib.util
+            spec = importlib.util.find_spec(module_name)
+            if spec is None:
+                diagnosis['likely_causes'].append("Module not installed")
+                diagnosis['solutions'].extend([
+                    f"pip install {module_name}",
+                    f"pip install -r requirements.txt"
+                ])
+            else:
+                diagnosis['likely_causes'].append("Module installed but import failed")
+                diagnosis['solutions'].extend([
+                    "Check for circular imports",
+                    "Verify module integrity: pip install --force-reinstall {module_name}"
+                ])
+        except Exception:
+            diagnosis['likely_causes'].append("Unable to check module status")
+        
+        # Check common Supreme System V5 import issues
+        if 'supreme_system_v5' in module_name:
+            diagnosis['likely_causes'].append("Supreme System V5 module path issue")
+            diagnosis['solutions'].extend([
+                "Ensure you're in the project root directory",
+                "Check PYTHONPATH includes python/ directory",
+                "Run from project root: python -m supreme_system_v5.core"
+            ])
+        
+        return diagnosis
+    
+    def diagnose_config_error(self, error: Exception) -> Dict[str, Any]:
+        """Diagnose configuration-related errors"""
+        diagnosis = {
+            'error_type': 'ConfigError',
+            'error_message': str(error),
+            'likely_causes': [
+                "Missing .env file",
+                "Invalid .env format", 
+                "Missing required configuration keys"
+            ],
+            'solutions': [
+                "Copy .env.optimized to .env",
+                "Run: python scripts/validate_environment.py",
+                "Check .env file format (KEY=value, no spaces around =)"
+            ]
+        }
+        
+        # Check for specific config files
+        project_root = Path.cwd()
+        env_files = ['.env', '.env.optimized', '.env.example']
+        existing_files = [f for f in env_files if (project_root / f).exists()]
+        
+        diagnosis['config_files_found'] = existing_files
+        
+        if not existing_files:
+            diagnosis['solutions'].insert(0, "Create .env file with required keys")
+        
+        return diagnosis
+    
+    def diagnose_runtime_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
+        """Diagnose runtime errors"""
+        diagnosis = {
+            'error_type': type(error).__name__,
+            'error_message': str(error),
+            'context': context,
+            'traceback': traceback.format_exc(),
+            'likely_causes': [],
+            'solutions': []
+        }
+        
+        error_msg = str(error).lower()
+        
+        # Memory-related errors
+        if 'memory' in error_msg or 'memoryerror' in error_msg:
+            diagnosis['likely_causes'].extend([
+                "Insufficient RAM",
+                "Memory leak in algorithm",
+                "Large price history buffer"
+            ])
+            diagnosis['solutions'].extend([
+                "Reduce PRICE_HISTORY_SIZE in config",
+                "Enable CircularBuffer with smaller size",
+                "Increase system swap space"
+            ])
+        
+        # CPU-related errors
+        elif 'timeout' in error_msg or 'performance' in error_msg:
+            diagnosis['likely_causes'].extend([
+                "CPU overload",
+                "Inefficient algorithm",
+                "Too many concurrent processes"
+            ])
+            diagnosis['solutions'].extend([
+                "Reduce PROCESS_INTERVAL_SECONDS",
+                "Enable SmartEventProcessor filtering",
+                "Lower tick processing rate"
+            ])
+        
+        # Network-related errors
+        elif 'connection' in error_msg or 'network' in error_msg:
+            diagnosis['likely_causes'].extend([
+                "Network connectivity issues",
+                "API rate limiting",
+                "Firewall blocking connections"
+            ])
+            diagnosis['solutions'].extend([
+                "Check internet connection",
+                "Verify API credentials",
+                "Check firewall settings"
+            ])
+        
+        # Permission errors
+        elif 'permission' in error_msg or 'access' in error_msg:
+            diagnosis['likely_causes'].extend([
+                "Insufficient file permissions",
+                "Read-only filesystem",
+                "User access restrictions"
+            ])
+            diagnosis['solutions'].extend([
+                "Run with appropriate permissions",
+                "Check file ownership: ls -la",
+                "Ensure write access to project directory"
+            ])
+        
+        return diagnosis
+    
+    def diagnose_exit_code(self, exit_code: int) -> Dict[str, Any]:
+        """Diagnose system exit codes"""
+        diagnosis = {
+            'exit_code': exit_code,
+            'exit_meaning': self.EXIT_CODES.get(exit_code, "UNKNOWN_ERROR"),
+            'likely_causes': [],
+            'solutions': []
+        }
+        
+        if exit_code == 1:
+            diagnosis['likely_causes'] = ["Environment validation failed"]
+            diagnosis['solutions'] = ["Run: python scripts/validate_environment.py"]
+        elif exit_code == 2:
+            diagnosis['likely_causes'] = ["Configuration error"]
+            diagnosis['solutions'] = ["Check .env file", "Validate config keys"]
+        elif exit_code == 3:
+            diagnosis['likely_causes'] = ["Missing dependencies"]
+            diagnosis['solutions'] = ["Run: pip install -r requirements.txt"]
+        elif exit_code == 4:
+            diagnosis['likely_causes'] = ["Runtime error during execution"]
+            diagnosis['solutions'] = ["Check logs for specific error", "Run with debug mode"]
+        elif exit_code == 5:
+            diagnosis['likely_causes'] = ["Import error"]
+            diagnosis['solutions'] = ["Check Python path", "Verify module installation"]
+        elif exit_code == -1:
+            diagnosis['likely_causes'] = ["PowerShell/Terminal process terminated"]
+            diagnosis['solutions'] = [
+                "Check for syntax errors in Python code",
+                "Run from command line instead of IDE terminal",
+                "Check system resources (RAM/CPU)"
+            ]
+        
+        return diagnosis
+    
+    def run_comprehensive_diagnosis(self, 
+                                  error: Optional[Exception] = None, 
+                                  exit_code: Optional[int] = None,
+                                  context: str = "") -> Dict[str, Any]:
+        """Run complete diagnostic analysis"""
+        
+        print("🔍 Supreme System V5 - Error Diagnosis")
+        print("=" * 50)
+        
+        report = {
+            'timestamp': time.time(),
+            'system_info': self.system_info,
+            'diagnostics': [],
+            'recovery_plan': []
+        }
+        
+        # Diagnose specific error if provided
+        if error:
+            if isinstance(error, ImportError):
+                module_name = str(error).split("'")[1] if "'" in str(error) else "unknown"
+                diagnosis = self.diagnose_import_error(error, module_name)
+            elif 'config' in str(error).lower():
+                diagnosis = self.diagnose_config_error(error)
+            else:
+                diagnosis = self.diagnose_runtime_error(error, context)
+            
+            report['diagnostics'].append(diagnosis)
+            self._print_diagnosis(diagnosis)
+        
+        # Diagnose exit code if provided
+        if exit_code is not None:
+            exit_diagnosis = self.diagnose_exit_code(exit_code)
+            report['diagnostics'].append(exit_diagnosis)
+            self._print_diagnosis(exit_diagnosis)
+        
+        # Generate comprehensive recovery plan
+        recovery_plan = self._generate_recovery_plan(report['diagnostics'])
+        report['recovery_plan'] = recovery_plan
+        
+        print("\n🎥 RECOVERY PLAN")
+        print("=" * 50)
+        for i, step in enumerate(recovery_plan, 1):
+            print(f"{i}. {step}")
+        
+        return report
+    
+    def _print_diagnosis(self, diagnosis: Dict[str, Any]):
+        """Print formatted diagnosis"""
+        print(f"\n🐛 {diagnosis['error_type']}: {diagnosis.get('error_message', '')[:100]}")
+        
+        if diagnosis.get('likely_causes'):
+            print("\n🔍 Likely Causes:")
+            for cause in diagnosis['likely_causes']:
+                print(f"   • {cause}")
+        
+        if diagnosis.get('solutions'):
+            print("\n🛠️ Solutions:")
+            for solution in diagnosis['solutions']:
+                print(f"   • {solution}")
+    
+    def _generate_recovery_plan(self, diagnostics: List[Dict[str, Any]]) -> List[str]:
+        """Generate prioritized recovery plan"""
+        plan = []
+        
+        # Basic system checks (always first)
+        plan.extend([
+            "Run environment validation: python scripts/validate_environment.py",
+            "Check Python version >= 3.10",
+            "Verify you're in project root directory"
+        ])
+        
+        # Add specific solutions from diagnostics
+        for diagnosis in diagnostics:
+            if diagnosis.get('solutions'):
+                for solution in diagnosis['solutions'][:2]:  # Top 2 solutions
+                    if solution not in plan:
+                        plan.append(solution)
+        
+        # Common recovery steps
+        plan.extend([
+            "Install/update dependencies: pip install -r requirements.txt",
+            "Copy .env.optimized to .env if missing",
+            "Run simple test: python -c 'import sys; print(sys.version)'",
+            "If all else fails: restart terminal/IDE and try again"
+        ])
+        
+        return plan
+    
+    def save_diagnosis_report(self, report: Dict[str, Any], output_path: Optional[str] = None) -> str:
+        """Save diagnosis report to JSON file"""
+        if output_path is None:
+            timestamp = int(time.time())
+            output_path = f"error_diagnosis_{timestamp}.json"
+        
+        with open(output_path, 'w') as f:
+            json.dump(report, f, indent=2, default=str)
+        
+        print(f"\n📄 Diagnosis report saved to: {output_path}")
+        return output_path
 
-    return wrapped_main
 
-# Convenience functions for common entry points
-def create_robust_entry_point(main_function, context: str = "application"):
-    """Create a robust entry point with error handling."""
-    return robust_main_wrapper(main_function, context)
+def diagnose_error(error: Exception = None, exit_code: int = None, context: str = ""):
+    """Main error diagnosis function"""
+    diagnostic_system = ErrorDiagnosticSystem()
+    report = diagnostic_system.run_comprehensive_diagnosis(error, exit_code, context)
+    diagnostic_system.save_diagnosis_report(report)
+    return report
 
-# Test the error handler
+
+def main():
+    """CLI entry point for error diagnosis"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Supreme System V5 Error Diagnosis")
+    parser.add_argument('--exit-code', type=int, help="Exit code to diagnose")
+    parser.add_argument('--context', default="", help="Additional context")
+    
+    args = parser.parse_args()
+    
+    diagnostic_system = ErrorDiagnosticSystem()
+    
+    if args.exit_code:
+        report = diagnostic_system.run_comprehensive_diagnosis(exit_code=args.exit_code, context=args.context)
+    else:
+        # Interactive mode
+        print("Interactive Error Diagnosis Mode")
+        print("Enter error details (or press Enter to skip):")
+        error_msg = input("Error message: ").strip()
+        
+        if error_msg:
+            # Create mock exception for diagnosis
+            error = Exception(error_msg)
+            report = diagnostic_system.run_comprehensive_diagnosis(error=error, context=args.context)
+        else:
+            report = diagnostic_system.run_comprehensive_diagnosis(context=args.context)
+    
+    diagnostic_system.save_diagnosis_report(report)
+    print("\n🏁 Diagnosis completed successfully!")
+
+
 if __name__ == "__main__":
-    print("🧪 Testing Supreme System V5 Error Diagnosis...")
-
-    # Test import error
-    try:
-        import nonexistent_module
-    except ImportError as e:
-        error_context = error_handler.handle_error(e, "test_import")
-        error_handler.print_error_report(error_context)
-
-    print("✅ Error diagnosis system operational")
+    main()
