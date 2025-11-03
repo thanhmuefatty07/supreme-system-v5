@@ -466,6 +466,7 @@ def main():
     parser.add_argument('--samples', type=int, default=5000, help='Number of test samples')
     parser.add_argument('--runs', type=int, default=10, help='Number of benchmark runs')
     parser.add_argument('--prometheus-port', type=int, default=9091, help='Prometheus metrics port')
+    parser.add_argument('--output-json', type=str, help='Output results to JSON file')
 
     args = parser.parse_args()
 
@@ -505,6 +506,33 @@ def main():
 
     success_rate = criteria_passed / criteria_total
     print(f"   Success Rate: {success_rate:.1f}")
+
+    # Save results to JSON if requested
+    if args.output_json:
+        import json
+        output_data = {
+            'timestamp': time.time(),
+            'samples': args.samples,
+            'runs': args.runs,
+            'results': results,
+            'acceptance_criteria': {
+                'criteria_passed': criteria_passed,
+                'criteria_total': criteria_total,
+                'success_rate': success_rate,
+                'parity_passed': success_rate >= 0.8
+            },
+            'system_resources': {
+                'initial_cpu': initial_cpu,
+                'final_cpu': final_cpu,
+                'initial_memory_mb': initial_memory / (1024**2),
+                'final_memory_mb': final_memory / (1024**2)
+            }
+        }
+
+        with open(args.output_json, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        print(f"📊 Results saved to {args.output_json}")
+
     sys.exit(0 if success_rate >= 0.8 else 1)  # 80% pass rate
 
 if __name__ == "__main__":

@@ -134,6 +134,114 @@ validate: build-rust-dev ## Validate system functionality
 	$(PYTHON) scripts/validate_system.py
 	@echo "✅ System validation completed"
 
+validate-env: ## Validate Python environment and dependencies
+	@echo "🔍 Validating Python environment..."
+	$(PYTHON) scripts/validate_environment.py
+	@echo "✅ Environment validation completed"
+
+validate-commit: ## Validate commit quality standards
+	@echo "📋 Validating commit quality..."
+	$(PYTHON) scripts/validate_commit.py --strict
+	@echo "✅ Commit validation completed"
+
+test-bench: ## Run comprehensive benchmark pipeline with performance report
+	@echo "🏁 Running comprehensive benchmark pipeline..."
+	@echo "Hardware: $(HARDWARE) - $(CPU_COUNT) cores"
+	@echo "Results will be saved to run_artifacts/benchmark_report_$(shell date +%Y%m%d_%H%M%S).json"
+	@echo ""
+
+	# Create artifacts directory
+	mkdir -p run_artifacts
+
+	# Run micro-benchmarks
+	@echo "1️⃣ Running micro-benchmarks (EMA/RSI/MACD parity)..."
+	$(PYTHON) scripts/bench_optimized.py --samples 5000 --runs 10 --prometheus-port 9091 --output-json run_artifacts/micro_benchmark_$(shell date +%Y%m%d_%H%M%S).json
+
+	# Run load test
+	@echo ""
+	@echo "2️⃣ Running load test (60-min simulation)..."
+	$(PYTHON) scripts/load_single_symbol.py --symbol BTC-USDT --rate 10 --duration-min 60 --prometheus-port 9092 --output-json run_artifacts/load_test_$(shell date +%Y%m%d_%H%M%S).json
+
+	# Generate comprehensive report
+	@echo ""
+	@echo "3️⃣ Generating performance report..."
+	$(PYTHON) -c "
+import json
+import glob
+from pathlib import Path
+
+# Find latest benchmark files
+benchmark_files = sorted(glob.glob('run_artifacts/micro_benchmark_*.json'), reverse=True)
+load_files = sorted(glob.glob('run_artifacts/load_test_*.json'), reverse=True)
+
+report = {
+    'timestamp': '$(shell date)',
+    'hardware_profile': '$(HARDWARE)',
+    'cpu_cores': $(CPU_COUNT),
+    'benchmark_results': {},
+    'load_test_results': {},
+    'performance_summary': {},
+    'recommendations': []
+}
+
+# Load benchmark results
+if benchmark_files:
+    with open(benchmark_files[0], 'r') as f:
+        report['benchmark_results'] = json.load(f)
+
+# Load load test results
+if load_files:
+    with open(load_files[0], 'r') as f:
+        report['load_test_results'] = json.load(f)
+
+# Generate summary
+if 'parity_passed' in report['benchmark_results']:
+    if report['benchmark_results']['parity_passed']:
+        report['performance_summary']['indicator_parity'] = '✅ PASSED'
+    else:
+        report['performance_summary']['indicator_parity'] = '❌ FAILED'
+        report['recommendations'].append('Fix indicator parity issues')
+
+# CPU and memory checks
+if 'performance_metrics' in report['load_test_results']:
+    metrics = report['load_test_results']['performance_metrics']
+    if metrics.get('avg_cpu_percent', 0) <= 88.0:
+        report['performance_summary']['cpu_usage'] = '✅ WITHIN LIMITS'
+    else:
+        report['performance_summary']['cpu_usage'] = '❌ EXCEEDS LIMIT'
+        report['recommendations'].append('Reduce CPU usage or increase MAX_CPU_PERCENT')
+
+    if metrics.get('avg_memory_gb', 0) <= 3.86:
+        report['performance_summary']['memory_usage'] = '✅ WITHIN LIMITS'
+    else:
+        report['performance_summary']['memory_usage'] = '❌ EXCEEDS LIMIT'
+        report['recommendations'].append('Reduce memory usage or increase MAX_RAM_GB')
+
+# Save comprehensive report
+report_file = 'run_artifacts/benchmark_report_$(shell date +%Y%m%d_%H%M%S).json'
+with open(report_file, 'w') as f:
+    json.dump(report, f, indent=2)
+
+print(f'📊 Comprehensive benchmark report saved to: {report_file}')
+print('')
+print('🎯 PERFORMANCE SUMMARY:')
+for key, value in report['performance_summary'].items():
+    print(f'  {key}: {value}')
+
+if report['recommendations']:
+    print('')
+    print('💡 RECOMMENDATIONS:')
+    for rec in report['recommendations']:
+        print(f'  • {rec}')
+else:
+    print('')
+    print('✅ All performance criteria met!')
+"
+
+	@echo ""
+	@echo "✅ Benchmark pipeline completed!"
+	@echo "Check run_artifacts/ for detailed results and reports."
+
 # === BENCHMARKING ===
 benchmark: build-rust ## Run comprehensive benchmarks
 	@echo "🏁 Running comprehensive benchmarks..."
@@ -261,10 +369,10 @@ health: build-rust-dev ## Check system health
 		print('Health check failed:', e)"
 
 # === CI/CD ===
-ci: clean install test lint ## Full CI pipeline
+ci: clean install test lint validate-commit ## Full CI pipeline
 	@echo "✅ CI pipeline completed successfully"
 
-ci-fast: format quick-test lint-python ## Fast CI checks
+ci-fast: format quick-test lint-python validate-commit ## Fast CI checks
 	@echo "✅ Fast CI completed"
 
 # === HARDWARE-SPECIFIC TARGETS ===
