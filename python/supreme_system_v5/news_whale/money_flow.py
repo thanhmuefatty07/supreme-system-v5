@@ -258,8 +258,8 @@ def demo_money_flow():
     else:
         print("\n🎯 ARBITRAGE OPPORTUNITIES: None detected")
 
-    print("
-✅ Money Flow Analysis Demo Complete"    print("   System ready for inter-exchange flow monitoring!")
+    print("\n✅ Money Flow Analysis Demo Complete")
+    print("   System ready for inter-exchange flow monitoring!")
 
 if __name__ == "__main__":
     import random

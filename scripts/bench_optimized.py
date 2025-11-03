@@ -10,9 +10,43 @@ import os
 import numpy as np
 import statistics
 from typing import List, Dict, Any, Tuple
+from prometheus_client import Histogram, Gauge, Counter, start_http_server
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+
+# Prometheus Metrics for Benchmark Suite
+INDICATOR_UPDATE_LATENCY = Histogram(
+    'indicator_update_latency_seconds',
+    'Time taken to update indicators',
+    ['indicator', 'implementation'],
+    buckets=[0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+)
+
+EVENT_SKIP_RATIO = Gauge(
+    'event_skip_ratio',
+    'Ratio of events filtered by SmartEventProcessor',
+    ['benchmark_type']
+)
+
+CPU_PERCENT_GAUGE = Gauge(
+    'cpu_percent_gauge',
+    'CPU usage percentage during benchmark',
+    ['phase']
+)
+
+MEMORY_IN_USE_BYTES = Gauge(
+    'memory_in_use_bytes',
+    'Memory usage in bytes during benchmark',
+    ['phase']
+)
+
+STRATEGY_LATENCY = Histogram(
+    'strategy_latency_seconds',
+    'Strategy calculation latency',
+    ['strategy', 'percentile'],
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
+)
 
 from supreme_system_v5.optimized import (
     UltraOptimizedEMA, UltraOptimizedRSI, UltraOptimizedMACD,
@@ -146,7 +180,15 @@ def benchmark_indicator(name: str, optimized_func, reference_func, test_data: Li
 
         results = []
         for price in test_data:
+            update_start = time.perf_counter()
             result = optimized_func(price)
+            update_time = time.perf_counter() - update_start
+
+            # Record Prometheus metric
+            INDICATOR_UPDATE_LATENCY.labels(
+                indicator=name, implementation='optimized'
+            ).observe(update_time)
+
             if result is not None:
                 results.append(result)
 
@@ -163,7 +205,15 @@ def benchmark_indicator(name: str, optimized_func, reference_func, test_data: Li
 
         results = []
         for price in test_data:
+            update_start = time.perf_counter()
             result = reference_func(price)
+            update_time = time.perf_counter() - update_start
+
+            # Record Prometheus metric for reference
+            INDICATOR_UPDATE_LATENCY.labels(
+                indicator=name, implementation='reference'
+            ).observe(update_time)
+
             if result is not None:
                 results.append(result)
 
@@ -260,6 +310,9 @@ def benchmark_event_processor(test_data: List[Tuple[float, float]], num_runs: in
     total_events = events_processed + events_skipped
     skip_ratio = events_skipped / total_events if total_events > 0 else 0
 
+    # Record Prometheus metric
+    EVENT_SKIP_RATIO.labels(benchmark_type='micro_benchmark').set(skip_ratio)
+
     return {
         'component': 'SmartEventProcessor',
         'total_events': total_events,
@@ -320,7 +373,9 @@ def run_full_benchmark_suite():
     for result in results[:3]:  # EMA, RSI, MACD
         status = "✅" if result['parity_valid'] else "❌"
         print(f"{status} {result['indicator']}:")
-        print(".2f"        print(".1f"        print(f"   Parity Valid: {result['parity_valid']}")
+        print(f"   Optimized: {result['optimized_median_ms']:.2f}ms")
+        print(f"   Reference: {result['ref_median_ms']:.1f}ms")
+        print(f"   Parity Valid: {result['parity_valid']}")
 
     print("\n🔧 COMPONENT PERFORMANCE")
     print("-" * 50)
@@ -328,16 +383,18 @@ def run_full_benchmark_suite():
     # CircularBuffer results
     cb = next(r for r in results if r.get('component') == 'CircularBuffer')
     print("CircularBuffer:")
-    print(".3f"    print(".3f"
+    print(f"   Append Latency: {cb['append_latency_ms']:.3f}ms")
+    print(f"   Access Latency: {cb['access_latency_ms']:.3f}ms")
     # SmartEventProcessor results
     ep = next(r for r in results if r.get('component') == 'SmartEventProcessor')
     print("SmartEventProcessor:")
     print(f"   Events Processed: {ep['events_processed']}")
     print(f"   Events Skipped: {ep['events_skipped']}")
-    print(".3f"    print(".3f"
+    print(f"   Skip Ratio: {ep['skip_ratio']:.3f}")
+    print(f"   Processing Time: {ep['processing_time_ms']:.3f}ms")
     # Acceptance criteria validation
-    print("
-✅ ACCEPTANCE CRITERIA VALIDATION"    print("=" * 70)
+    print("\n✅ ACCEPTANCE CRITERIA VALIDATION")
+    print("=" * 70)
 
     criteria_passed = 0
     criteria_total = 0
@@ -354,7 +411,7 @@ def run_full_benchmark_suite():
     for result in results[:3]:
         latency_ok = result['optimized_median_ms'] < 200  # < 200ms median
         check_criteria(f"{result['indicator']} Latency", latency_ok,
-                      ".2f"
+                      f"{result['optimized_median_ms']:.2f}ms < 200ms")
     # Parity validation
     for result in results[:3]:
         check_criteria(f"{result['indicator']} Parity", result['parity_valid'],
@@ -364,15 +421,15 @@ def run_full_benchmark_suite():
     ep = next(r for r in results if r.get('component') == 'SmartEventProcessor')
     skip_ratio_ok = 0.2 <= ep['skip_ratio'] <= 0.8
     check_criteria("Event Skip Ratio", skip_ratio_ok,
-                   ".3f"
+                   f"{ep['skip_ratio']:.3f} in [0.2, 0.8]")
     print(f"\n🎯 OVERALL RESULT: {criteria_passed}/{criteria_total} acceptance criteria met")
 
     # Performance recommendations
-    print("
-💡 PERFORMANCE RECOMMENDATIONS"    print("-" * 50)
+    print("\n💡 PERFORMANCE RECOMMENDATIONS")
+    print("-" * 50)
 
     avg_speedup = statistics.mean([r['speedup_factor'] for r in results if 'speedup_factor' in r])
-    print(".1f"
+    print(f"   Average Speedup: {avg_speedup:.1f}x")
     if avg_speedup > 5:
         print("   ✅ Excellent optimization achieved!")
     elif avg_speedup > 2:
@@ -387,23 +444,53 @@ def run_full_benchmark_suite():
     return results
 
 def main():
-    """Main entry point."""
+    """Main entry point with system monitoring."""
     import argparse
+    import psutil
 
     parser = argparse.ArgumentParser(description='Supreme System V5 Performance Benchmark Suite')
     parser.add_argument('--samples', type=int, default=5000, help='Number of test samples')
     parser.add_argument('--runs', type=int, default=10, help='Number of benchmark runs')
+    parser.add_argument('--prometheus-port', type=int, default=9091, help='Prometheus metrics port')
 
     args = parser.parse_args()
 
-    # Run benchmark suite
-    results = run_full_benchmark_suite()
+    # Start Prometheus metrics server
+    print(f"📊 Starting Prometheus metrics server on port {args.prometheus_port}...")
+    start_http_server(args.prometheus_port)
 
+    # Monitor system resources before benchmark
+    process = psutil.Process()
+    initial_cpu = psutil.cpu_percent(interval=1)
+    initial_memory = process.memory_info().rss
+
+    CPU_PERCENT_GAUGE.labels(phase='initial').set(initial_cpu)
+    MEMORY_IN_USE_BYTES.labels(phase='initial').set(initial_memory)
+
+    print(".1f"
+    print(".1f"
+
+    # Run benchmark suite
+    benchmark_start = time.time()
+    results = run_full_benchmark_suite()
+    benchmark_duration = time.time() - benchmark_start
+
+    # Monitor system resources after benchmark
+    final_cpu = psutil.cpu_percent(interval=1)
+    final_memory = process.memory_info().rss
+
+    CPU_PERCENT_GAUGE.labels(phase='final').set(final_cpu)
+    MEMORY_IN_USE_BYTES.labels(phase='final').set(final_memory)
+
+    print("\n📈 Final System Resources:")
+    print(f"   Final CPU: {final_cpu:.1f}%")
+    print(f"   Final Memory: {final_memory / (1024**2):.1f}MB")
     # Determine exit code based on acceptance criteria
     criteria_passed = sum(1 for r in results[:3] if r['parity_valid'] and r['optimized_median_ms'] < 200)
     criteria_total = 6  # 3 indicators * 2 criteria each
 
     success_rate = criteria_passed / criteria_total
+    print(".1f"
     sys.exit(0 if success_rate >= 0.8 else 1)  # 80% pass rate
 
 if __name__ == "__main__":

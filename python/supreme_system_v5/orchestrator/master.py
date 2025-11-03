@@ -139,7 +139,7 @@ class MasterTradingOrchestrator:
             self._register_component(
                 "technical",
                 tech_analyzer,
-                ComponentPriority.CRITICAL
+                ComponentPriority.MEDIUM
             )
 
             # 2. News Analysis Component

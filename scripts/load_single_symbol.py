@@ -10,9 +10,37 @@ import sys
 import os
 import argparse
 from typing import Dict, List, Any
+from prometheus_client import Histogram, Gauge, start_http_server
+import numpy as np
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+
+# Prometheus Metrics for Load Test
+STRATEGY_LATENCY = Histogram(
+    'strategy_latency_seconds',
+    'Strategy calculation latency distribution',
+    ['strategy', 'percentile'],
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
+)
+
+CPU_PERCENT_GAUGE = Gauge(
+    'cpu_percent_gauge',
+    'CPU usage percentage during load test',
+    ['phase']
+)
+
+MEMORY_IN_USE_BYTES = Gauge(
+    'memory_in_use_bytes',
+    'Memory usage in bytes during load test',
+    ['phase']
+)
+
+EVENT_SKIP_RATIO = Gauge(
+    'event_skip_ratio',
+    'Ratio of events filtered during load test',
+    ['test_type']
+)
 
 from supreme_system_v5.optimized import OptimizedTechnicalAnalyzer
 from supreme_system_v5.strategies import ScalpingStrategy
@@ -124,13 +152,21 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
     events_processed = 0
     events_skipped = 0
 
+    strategy_latencies = []
+
     for i, tick in enumerate(price_feed):
-        # Process tick
+        # Process tick with latency measurement
+        start_time = time.perf_counter()
         signal = strategy.add_price_data(
             price=tick['price'],
             volume=tick['volume'],
             timestamp=tick['timestamp']
         )
+        latency = time.perf_counter() - start_time
+
+        # Record strategy latency
+        STRATEGY_LATENCY.labels(strategy='optimized_scalping', percentile='raw').observe(latency)
+        strategy_latencies.append(latency)
 
         events_processed += 1
 
@@ -177,6 +213,20 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
         print(".1f")
         print(f"Event Skip Ratio: {performance_metrics['avg_event_skip_ratio']:.3f}")
         print(f"Indicator Measurements: {performance_metrics['indicator_measurements']}")
+
+    # Record p50 and p95 latency metrics
+    if strategy_latencies:
+        p50_latency = np.percentile(strategy_latencies, 50)
+        p95_latency = np.percentile(strategy_latencies, 95)
+
+        STRATEGY_LATENCY.labels(strategy='optimized_scalping', percentile='p50').observe(p50_latency)
+        STRATEGY_LATENCY.labels(strategy='optimized_scalping', percentile='p95').observe(p95_latency)
+
+        print("
+📈 STRATEGY LATENCY METRICS"        print(".4f"        print(".4f"
+    # Record event skip ratio
+    skip_ratio = events_skipped / events_processed if events_processed > 0 else 0
+    EVENT_SKIP_RATIO.labels(test_type='load_test').set(skip_ratio)
 
     # Acceptance criteria validation
     print("
@@ -227,14 +277,32 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
     }
 
 def main():
-    """Main entry point."""
+    """Main entry point with system monitoring."""
+    import psutil
+
     parser = argparse.ArgumentParser(description='Supreme System V5 Load Test Suite')
     parser.add_argument('--symbol', default='BTC-USDT', help='Trading symbol')
     parser.add_argument('--rate', type=int, default=20, help='Ticks per second')
     parser.add_argument('--duration-min', type=int, default=5, help='Test duration in minutes')
     parser.add_argument('--no-monitoring', action='store_true', help='Disable resource monitoring')
+    parser.add_argument('--prometheus-port', type=int, default=9092, help='Prometheus metrics port')
 
     args = parser.parse_args()
+
+    # Start Prometheus metrics server
+    print(f"📊 Starting Prometheus metrics server on port {args.prometheus_port}...")
+    start_http_server(args.prometheus_port)
+
+    # Monitor initial system resources
+    process = psutil.Process()
+    initial_cpu = psutil.cpu_percent(interval=1)
+    initial_memory = process.memory_info().rss
+
+    CPU_PERCENT_GAUGE.labels(phase='initial').set(initial_cpu)
+    MEMORY_IN_USE_BYTES.labels(phase='initial').set(initial_memory)
+
+    print(".1f"
+    print(".1f"
 
     # Run async test
     async def run_test():
@@ -246,6 +314,16 @@ def main():
         )
 
     results = asyncio.run(run_test())
+
+    # Monitor final system resources
+    final_cpu = psutil.cpu_percent(interval=1)
+    final_memory = process.memory_info().rss
+
+    CPU_PERCENT_GAUGE.labels(phase='final').set(final_cpu)
+    MEMORY_IN_USE_BYTES.labels(phase='final').set(final_memory)
+
+    print("
+📈 Final System Resources:"    print(".1f"    print(".1f"
 
     # Exit with success/failure code
     success_rate = results['criteria_passed'] / results['criteria_total']
