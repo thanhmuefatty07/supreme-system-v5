@@ -1,126 +1,106 @@
 """
-Intelligent event processing based on market significance.
-Dramatically reduces CPU usage during quiet market periods.
+Intelligent event processing based on market significance + cadence control.
+Adds enforced scalping cadence 30–60s with ±10% jitter and backstop of max_time_gap_seconds.
 """
-
 from typing import Optional, Dict, Any
 import time
-from .circular_buffer import RollingAverage
+import random
 
 class SmartEventProcessor:
-    """
-    Event-driven processor that filters by market significance.
-
-    Performance Characteristics:
-    - CPU Reduction: 70-90% during quiet periods
-    - Memory: Minimal state tracking
-    - Accuracy: Maintains responsiveness to significant moves
-    - Configurable: Thresholds adjustable per strategy
-    """
-
-    __slots__ = ('_config', '_last_price', '_last_volume', '_last_timestamp',
-                 '_event_count', '_skip_count', '_volume_avg')
+    __slots__ = ('_config','_last_price','_last_volume','_last_timestamp','_event_count','_skip_count','_volume_avg','_last_cadence_ts','_current_deadline')
 
     def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize smart event processor.
-
-        Args:
-            config: Configuration with thresholds
-        """
         self._config = {
-            'min_price_change_pct': config.get('min_price_change_pct', 0.002),  # 0.2% - less aggressive for testing
-            'min_volume_multiplier': config.get('min_volume_multiplier', 1.5),  # 1.5x average - less aggressive for testing
-            'max_time_gap_seconds': config.get('max_time_gap_seconds', 60),     # 1 minute max gap
-            'volume_window': config.get('volume_window', 20),                   # Rolling average window
+            'min_price_change_pct': config.get('min_price_change_pct', 0.002),
+            'min_volume_multiplier': config.get('min_volume_multiplier', 1.5),
+            'max_time_gap_seconds': config.get('max_time_gap_seconds', 60),
+            'volume_window': config.get('volume_window', 20),
+            'scalping_min_interval': config.get('scalping_min_interval', 30),
+            'scalping_max_interval': config.get('scalping_max_interval', 60),
+            'cadence_jitter_pct': config.get('cadence_jitter_pct', 0.10)
         }
-
         self._last_price: Optional[float] = None
         self._last_volume: Optional[float] = None
         self._last_timestamp: Optional[float] = None
         self._event_count = 0
         self._skip_count = 0
-
-        # Rolling volume average for significance calculation
         from .circular_buffer import RollingAverage
         self._volume_avg = RollingAverage(self._config['volume_window'])
+        self._last_cadence_ts = 0.0
+        self._current_deadline = self._next_deadline()
+
+    def _next_deadline(self) -> float:
+        base = random.uniform(self._config['scalping_min_interval'], self._config['scalping_max_interval'])
+        jitter = base * random.uniform(-self._config['cadence_jitter_pct'], self._config['cadence_jitter_pct'])
+        return max(1.0, base + jitter)
 
     def should_process(self, price: float, volume: float, timestamp: Optional[float] = None) -> bool:
-        """
-        Determine if price update should trigger processing.
-
-        Args:
-            price: Current price
-            volume: Trading volume
-            timestamp: Event timestamp
-
-        Returns:
-            True if event is significant enough to process
-        """
         if timestamp is None:
             timestamp = time.time()
 
-        # Always process first event
+        # First event always processes and initializes cadence
         if self._last_price is None:
-            self._last_price = price
-            self._last_volume = volume
-            self._last_timestamp = timestamp
-            self._volume_avg.add(volume)
-            self._event_count += 1
+            self._initialize_state(price, volume, timestamp)
             return True
 
-        # Calculate significance metrics
-        price_change_pct = abs(price - self._last_price) / self._last_price
-        time_gap = timestamp - self._last_timestamp
+        # Enforce cadence window (primary objective per requirements)
+        elapsed_since_cadence = timestamp - self._last_cadence_ts
+        if elapsed_since_cadence < self._current_deadline:
+            # honor cadence unless backstop triggers
+            backstop = (timestamp - self._last_timestamp) >= self._config['max_time_gap_seconds']
+            if not backstop:
+                self._update_state(price, volume, timestamp, processed=False)
+                return False
 
-        # Update volume average
+        # Significance gates
+        price_change_pct = abs(price - self._last_price) / max(self._last_price or 1.0, 1e-9)
         self._volume_avg.add(volume)
         avg_volume = self._volume_avg.get_average()
+        volume_ratio = (volume / avg_volume) if avg_volume > 0 else 0.0
 
-        # Check significance criteria
-        price_significant = price_change_pct >= self._config['min_price_change_pct']
-        volume_significant = (avg_volume > 0 and
-                            volume >= avg_volume * self._config['min_volume_multiplier'])
-        time_significant = time_gap >= self._config['max_time_gap_seconds']
+        price_sig = price_change_pct >= self._config['min_price_change_pct']
+        vol_sig = volume_ratio >= self._config['min_volume_multiplier']
+        time_sig = (timestamp - self._last_timestamp) >= self._config['max_time_gap_seconds']
 
-        # Process if any significance threshold is met
-        should_process = price_significant or volume_significant or time_significant
+        processed = price_sig or vol_sig or time_sig or (elapsed_since_cadence >= self._current_deadline)
+        self._update_state(price, volume, timestamp, processed=processed)
 
-        # Update counters and state
-        if should_process:
+        if processed:
+            # reset cadence window
+            self._last_cadence_ts = timestamp
+            self._current_deadline = self._next_deadline()
+        return processed
+
+    def _initialize_state(self, price: float, volume: float, ts: float) -> None:
+        self._last_price = price
+        self._last_volume = volume
+        self._last_timestamp = ts
+        from .circular_buffer import RollingAverage
+        self._volume_avg = RollingAverage(self._config['volume_window'])
+        self._volume_avg.add(volume)
+        self._event_count = 1
+        self._skip_count = 0
+        self._last_cadence_ts = ts
+        self._current_deadline = self._next_deadline()
+
+    def _update_state(self, price: float, volume: float, ts: float, processed: bool) -> None:
+        self._last_price = price
+        self._last_volume = volume
+        self._last_timestamp = ts
+        if processed:
             self._event_count += 1
         else:
             self._skip_count += 1
 
-        self._last_price = price
-        self._last_volume = volume
-        self._last_timestamp = timestamp
-
-        return should_process
-
     def get_stats(self) -> Dict[str, Any]:
-        """Get processing statistics."""
-        total_events = self._event_count + self._skip_count
-        skip_ratio = self._skip_count / total_events if total_events > 0 else 0
-
+        total = self._event_count + self._skip_count
+        skip_ratio = (self._skip_count / total) if total > 0 else 0.0
         return {
             'events_processed': self._event_count,
             'events_skipped': self._skip_count,
-            'total_events': total_events,
             'skip_ratio': skip_ratio,
-            'efficiency_pct': (1 - skip_ratio) * 100
+            'cadence_deadline_s': self._current_deadline
         }
 
-    def reset_stats(self) -> None:
-        """Reset processing statistics."""
-        self._event_count = 0
-        self._skip_count = 0
-
     def reset(self) -> None:
-        """Reset processor state."""
-        self._last_price = None
-        self._last_volume = None
-        self._last_timestamp = None
-        self._event_count = 0
-        self._skip_count = 0
-        self._volume_avg = RollingAverage(self._config['volume_window'])
+        self.__init__(self._config)
