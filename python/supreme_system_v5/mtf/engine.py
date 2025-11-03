@@ -440,22 +440,22 @@ def demo_multi_timeframe_engine():
     print(".2f")
     print(".1f")
 
-    print("
-⏱️  TIMEFRAME STATUS:"    for tf in [Timeframe.M1, Timeframe.M5, Timeframe.M15, Timeframe.H1]:
+    print("⏱️  TIMEFRAME STATUS:")
+    for tf in [Timeframe.M1, Timeframe.M5, Timeframe.M15, Timeframe.H1]:
         tf_data = mtf_engine.tf_data[tf]
         initialized = tf_data.analyzer.is_initialized()
         status = "✅ READY" if initialized else "⏳ BUILDING"
         print(f"   {tf.value}: {status}")
 
-    print("
-🎯 SYSTEM CAPABILITIES:"    print("   • 4 timeframe consensus (1m, 5m, 15m, 1h)")
+    print("🎯 SYSTEM CAPABILITIES:")
+    print("   • 4 timeframe consensus (1m, 5m, 15m, 1h)")
     print("   • Intelligent caching reduces recalculations by 85%")
     print("   • Weighted consensus algorithm")
     print("   • Memory-efficient: ~200MB total")
     print("   • Real-time consensus updates")
 
-    print("
-✅ Multi-Timeframe Engine Demo Complete"    print("   Advanced technical analysis ready for trading signals!")
+    print("✅ Multi-Timeframe Engine Demo Complete")
+    print("   Advanced technical analysis ready for trading signals!")
 
 if __name__ == "__main__":
     demo_multi_timeframe_engine()
