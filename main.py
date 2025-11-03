@@ -1,287 +1,289 @@
 #!/usr/bin/env python3
 """
-🚀 Supreme System V5 - Main Application
-Quantum-Mamba-Neuromorphic Fusion Trading System
-World's First Neuromorphic Trading Platform
+Supreme System V5 - Ultra-Constrained Entry Point
+Optimized for 1GB RAM, 2 vCPU with ETH-USDT scalping
+Agent Mode: Maximum resource efficiency
+
+Usage:
+    python main.py                          # Paper trading
+    EXECUTION_MODE=live python main.py     # Live trading (CAUTION)
+    ULTRA_CONSTRAINED=1 python main.py     # Force ultra-constrained mode
 """
 
-import argparse
-import asyncio
-import logging
 import os
 import sys
+import asyncio
+import signal
+from pathlib import Path
+from typing import Optional
 import time
-from datetime import datetime
-from typing import Any, Dict
 
-import numpy as np
+# Add project path
+sys.path.insert(0, str(Path(__file__).parent / "python"))
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+from loguru import logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/supreme_v5.log"),
-        logging.StreamHandler(),
-    ],
-)
-
-logger = logging.getLogger(__name__)
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 
-class SupremeSystemV5:
-    """
-    Main Supreme System V5 Application
-    Revolutionary Quantum-Mamba-Neuromorphic Trading System
-    """
-
-    def __init__(self) -> None:
-        self.version = "5.0.0"
-        self.start_time = datetime.now()
-        self.components: Dict[str, Any] = {}
-        self.performance_metrics: Dict[str, Any] = {}
-
-        logger.info("🚀 Supreme System V5 %s initializing...", self.version)
-        logger.info("🧠 World's First Neuromorphic Trading System")
-        logger.info("⚡ Ultra-Low Latency: <10μs processing target")
-        logger.info("🚀 Throughput: >486K TPS capability")
-
-    async def initialize_components(self) -> None:
-        """Initialize all system components"""
-        logger.info("🔧 Initializing Supreme System V5 components...")
-
+class UltraConstrainedLauncher:
+    """Ultra-constrained launcher for Supreme System V5"""
+    
+    def __init__(self):
+        self.shutdown_event = asyncio.Event()
+        self.setup_signal_handlers()
+        self.validate_environment()
+        
+    def setup_signal_handlers(self):
+        """Setup graceful shutdown handlers"""
+        def signal_handler(sig, frame):
+            logger.info(f"Received signal {sig}, initiating graceful shutdown...")
+            asyncio.create_task(self.shutdown())
+            
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+    def validate_environment(self) -> bool:
+        """Validate environment for ultra-constrained deployment"""
+        logger.info("🔍 Validating ultra-constrained environment...")
+        
+        # Check Python version
+        if sys.version_info < (3, 10):
+            logger.error(f"Python 3.10+ required, found {sys.version_info}")
+            return False
+            
+        # Check RAM availability
+        if psutil:
+            memory = psutil.virtual_memory()
+            available_gb = memory.available / (1024**3)
+            total_gb = memory.total / (1024**3)
+            
+            logger.info(f"RAM: {available_gb:.1f}GB available / {total_gb:.1f}GB total")
+            
+            if available_gb < 0.8:
+                logger.error(f"Insufficient RAM: {available_gb:.1f}GB < 0.8GB required")
+                return False
+            elif available_gb < 1.0:
+                logger.warning(f"Low RAM: {available_gb:.1f}GB, monitoring required")
+                
+        # Check configuration
+        env_files = [".env", ".env.ultra_constrained"]
+        config_found = any(Path(f).exists() for f in env_files)
+        
+        if not config_found:
+            logger.error("No configuration found. Run 'make setup-ultra' first")
+            return False
+            
+        logger.success("✅ Environment validation passed")
+        return True
+        
+    def load_ultra_constrained_config(self):
+        """Load ultra-constrained configuration"""
+        # Force ultra-constrained mode
+        os.environ["ULTRA_CONSTRAINED"] = "1"
+        
+        # Load .env file (prefer .env, fallback to .env.ultra_constrained)
+        env_file = ".env" if Path(".env").exists() else ".env.ultra_constrained"
+        
+        if Path(env_file).exists():
+            logger.info(f"📋 Loading configuration from {env_file}")
+            
+            # Simple .env parser
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        os.environ[key.strip()] = value.strip()
+                        
+        # Apply ultra-constrained defaults
+        defaults = {
+            "SYMBOLS": "ETH-USDT",
+            "SCALPING_INTERVAL_MIN": "30",
+            "SCALPING_INTERVAL_MAX": "60", 
+            "NEWS_POLL_INTERVAL_MINUTES": "12",
+            "MAX_RAM_MB": "450",
+            "MAX_CPU_PERCENT": "85",
+            "LOG_LEVEL": "WARNING",
+            "BUFFER_SIZE_LIMIT": "200",
+            "DATA_SOURCES": "binance,coingecko",
+            "EXECUTION_MODE": "paper"
+        }
+        
+        for key, value in defaults.items():
+            if key not in os.environ:
+                os.environ[key] = value
+                
+        logger.info(f"🎯 Ultra-constrained mode active:")
+        logger.info(f"   Symbol: {os.environ['SYMBOLS']}")
+        logger.info(f"   Scalping: {os.environ['SCALPING_INTERVAL_MIN']}-{os.environ['SCALPING_INTERVAL_MAX']}s")
+        logger.info(f"   News: {os.environ['NEWS_POLL_INTERVAL_MINUTES']}min")
+        logger.info(f"   RAM Budget: {os.environ['MAX_RAM_MB']}MB")
+        logger.info(f"   Mode: {os.environ['EXECUTION_MODE']}")
+        
+    async def launch_system(self):
+        """Launch Supreme System V5 with ultra-constrained profile"""
         try:
-            # Create logs directory
-            os.makedirs("logs", exist_ok=True)
-
-            # Initialize mock components for demonstration
-            logger.info("   🤖 Initializing Foundation Models...")
-            await asyncio.sleep(0.1)  # Simulate initialization
-            self.components["foundation_models"] = {
-                "status": "initialized",
-                "models": ["TimesFM-2.5", "Chronos"],
-                "zero_shot_ready": True,
-            }
-
-            logger.info("   🐍 Initializing Mamba SSM...")
-            await asyncio.sleep(0.1)
-            self.components["mamba_ssm"] = {
-                "status": "initialized",
-                "complexity": "O(L) linear",
-                "layers": 4,
-            }
-
-            logger.info("   🧠 Initializing Neuromorphic Processor...")
-            await asyncio.sleep(0.1)
-            self.components["neuromorphic"] = {
-                "status": "initialized",
-                "neurons": 512,
-                "power_efficiency": "1000x improvement",
-                "latency_target": "<10μs",
-            }
-
-            logger.info("   ⚛️ Initializing Quantum Engine...")
-            await asyncio.sleep(0.1)
-            self.components["quantum"] = {
-                "status": "ready",
-                "algorithms": ["QAOA", "QMC"],
-                "qubits": "simulated",
-            }
-
-            logger.info("   ⚡ Initializing Ultra-Low Latency Engine...")
-            await asyncio.sleep(0.1)
-            self.components["ultra_low_latency"] = {
-                "status": "operational",
-                "avg_latency": "0.26μs",
-                "throughput": "486K+ TPS",
-                "jitter": "<0.1μs",
-            }
-
-            logger.info("✅ All components initialized successfully")
-
-        except Exception as exc:
-            logger.error("❌ Component initialization failed: %s", exc)
-            raise
-
-    async def run_performance_demo(self) -> None:
-        """Run performance demonstration"""
-        logger.info("🧪 Running Supreme System V5 performance demonstration...")
-
-        try:
-            # Generate sample market data
-            np.random.seed(42)
-            market_data = np.random.randn(1000) * 0.01 + 100.0  # Price movements
-
-            start_time = time.perf_counter()
-
-            # Simulate neuromorphic processing
-            logger.info("   🧠 Processing market data through neuromorphic system...")
-            await asyncio.sleep(0.005)  # Simulate 5ms processing
-
-            neuromorphic_time = (
-                time.perf_counter() - start_time
-            ) * 1000000  # microseconds
-
-            # Simulate ultra-low latency processing
-            start_time = time.perf_counter()
-            logger.info("   ⚡ Ultra-low latency signal generation...")
-
-            # Simulate sub-microsecond processing
-            signals_generated = 0
-            for _i in range(100):
-                # Mock signal processing
-                if np.random.random() > 0.7:  # 30% signal rate
-                    signals_generated += 1
-
-            latency_time = (time.perf_counter() - start_time) * 1000000  # microseconds
-
-            # Calculate performance metrics
-            self.performance_metrics = {
-                "neuromorphic_processing": {
-                    "time_microseconds": neuromorphic_time,
-                    "patterns_detected": np.random.randint(5, 15),
-                    "power_consumption_mw": 1.05,
-                    "efficiency_improvement": "1000x",
+            # Load configuration
+            self.load_ultra_constrained_config()
+            
+            # Import core components (after config loaded)
+            from supreme_system_v5.master_orchestrator import MasterOrchestrator
+            from supreme_system_v5.resource_monitor import SystemResourceMonitor
+            
+            # Initialize resource monitor
+            monitor = SystemResourceMonitor({
+                'max_memory_mb': int(os.environ.get('MAX_RAM_MB', 450)),
+                'max_cpu_percent': int(os.environ.get('MAX_CPU_PERCENT', 85)),
+                'check_interval': 30,
+                'emergency_shutdown_enabled': True
+            })
+            
+            # Initialize orchestrator with ultra-constrained settings
+            orchestrator_config = {
+                'symbols': [os.environ['SYMBOLS']],  # Single symbol
+                'execution_mode': os.environ.get('EXECUTION_MODE', 'paper'),
+                'resource_limits': {
+                    'max_memory_mb': int(os.environ.get('MAX_RAM_MB', 450)),
+                    'max_cpu_percent': int(os.environ.get('MAX_CPU_PERCENT', 85))
                 },
-                "ultra_low_latency": {
-                    "avg_latency_microseconds": latency_time / 100,
-                    "signals_generated": signals_generated,
-                    "throughput_estimate": f"{int(100 / (latency_time / 1000000)):,} TPS",
-                    "jitter_microseconds": 0.1,
+                'data_sources': os.environ.get('DATA_SOURCES', 'binance,coingecko').split(','),
+                'scalping_config': {
+                    'interval_min': int(os.environ.get('SCALPING_INTERVAL_MIN', 30)),
+                    'interval_max': int(os.environ.get('SCALPING_INTERVAL_MAX', 60)),
+                    'jitter_percent': 0.10
                 },
-                "total_processing": {
-                    "end_to_end_time": neuromorphic_time + latency_time,
-                    "market_data_points": len(market_data),
-                    "success_rate": "100%",
+                'news_config': {
+                    'poll_interval_minutes': int(os.environ.get('NEWS_POLL_INTERVAL_MINUTES', 12)),
+                    'enabled': os.environ.get('NEWS_ENABLED', 'true').lower() == 'true'
                 },
+                'buffer_limits': {
+                    'price_history': int(os.environ.get('BUFFER_SIZE_LIMIT', 200)),
+                    'indicator_cache': 100,
+                    'event_history': 50
+                }
             }
-
-            logger.info("✅ Performance demonstration completed successfully")
-
-        except Exception as exc:
-            logger.error("❌ Performance demo failed: %s", exc)
+            
+            logger.info("🚀 Initializing Supreme System V5 - Ultra-Constrained Mode")
+            orchestrator = MasterOrchestrator(orchestrator_config)
+            
+            # Start monitoring
+            monitor_task = asyncio.create_task(monitor.start_monitoring())
+            
+            # Start main system
+            logger.info("▶️  Starting trading system...")
+            system_task = asyncio.create_task(orchestrator.run())
+            
+            # Wait for shutdown signal
+            await self.shutdown_event.wait()
+            
+            logger.info("🛑 Shutdown initiated...")
+            
+            # Cancel tasks
+            system_task.cancel()
+            monitor_task.cancel()
+            
+            # Wait for cleanup
+            try:
+                await asyncio.wait_for(system_task, timeout=10.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+                
+            try:
+                await asyncio.wait_for(monitor_task, timeout=5.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+                
+            logger.success("✅ Supreme System V5 shutdown complete")
+            
+        except Exception as e:
+            logger.error(f"❌ System error: {e}")
             raise
-
-    async def display_performance_results(self) -> None:
-        """Display performance results"""
-        logger.info("📈 SUPREME SYSTEM V5 - PERFORMANCE RESULTS")
-        logger.info("=" * 60)
-
-        if self.performance_metrics:
-            # Neuromorphic results
-            neuro = self.performance_metrics["neuromorphic_processing"]
-            logger.info("🧠 NEUROMORPHIC COMPUTING:")
-            logger.info("   Processing Time: %.1fμs", neuro["time_microseconds"])
-            logger.info("   Patterns Detected: %s", neuro["patterns_detected"])
-            logger.info("   Power Consumption: %smW", neuro["power_consumption_mw"])
-            logger.info("   Efficiency: %s", neuro["efficiency_improvement"])
-
-            # Ultra-low latency results
-            latency = self.performance_metrics["ultra_low_latency"]
-            logger.info("⚡ ULTRA-LOW LATENCY ENGINE:")
-            logger.info(
-                "   Average Latency: %.2fμs", latency["avg_latency_microseconds"]
-            )
-            logger.info("   Signals Generated: %s", latency["signals_generated"])
-            logger.info("   Throughput: %s", latency["throughput_estimate"])
-            logger.info("   Jitter: %sμs", latency["jitter_microseconds"])
-
-            # Total performance
-            total = self.performance_metrics["total_processing"]
-            logger.info("📈 TOTAL PERFORMANCE:")
-            logger.info("   End-to-End Time: %.1fμs", total["end_to_end_time"])
-            logger.info(
-                "   Data Points Processed: %s", f"{total['market_data_points']:,}"
-            )
-            logger.info("   Success Rate: %s", total["success_rate"])
-
-    async def start(self, demo_mode: bool = False) -> None:
-        """Start the Supreme System V5"""
-        try:
-            await self.initialize_components()
-
-            if demo_mode:
-                await self.run_performance_demo()
-                await self.display_performance_results()
-
-            runtime = datetime.now() - self.start_time
-
-            logger.info("🏆 SUPREME SYSTEM V5 READY!")
-            logger.info("   Startup Time: %.2fs", runtime.total_seconds())
-            logger.info("   Components Initialized: %d", len(self.components))
-            logger.info("   Version: %s", self.version)
-            logger.info("   Status: 🧠 Neuromorphic Breakthrough Complete")
-
-            if self.components:
-                logger.info("🔧 System Components:")
-                for name, info in self.components.items():
-                    status = info.get("status", "unknown")
-                    logger.info("   %s: %s", name, status)
-
-            logger.info("🔄 System ready for trading operations...")
-            logger.info("🎆 World's First Neuromorphic Trading System Operational!")
-
-        except Exception as exc:
-            logger.error("❌ Failed to start Supreme System V5: %s", exc)
-            raise
-
-
-def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(
-        description="Supreme System V5 - Neuromorphic Trading System",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py --demo          Run with performance demonstration
-  python main.py --init          Initialize system only
-  python main.py --version       Show version information
-  
-🚀 Supreme System V5 - World's First Neuromorphic Trading System
-""",
+            
+    async def shutdown(self):
+        """Initiate graceful shutdown"""
+        self.shutdown_event.set()
+        
+        
+def setup_logging():
+    """Setup logging for ultra-constrained deployment"""
+    # Remove default logger
+    logger.remove()
+    
+    # Get log level from environment
+    log_level = os.environ.get("LOG_LEVEL", "WARNING")
+    
+    # Console logging (minimal for ultra-constrained)
+    logger.add(
+        sys.stderr,
+        level=log_level,
+        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {message}",
+        enqueue=True
     )
+    
+    # File logging (if enabled)
+    if os.environ.get("LOG_TO_FILE", "true").lower() == "true":
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        
+        logger.add(
+            log_dir / "supreme_system.log",
+            level=log_level,
+            rotation=f"{os.environ.get('LOG_ROTATION_MB', 10)}MB",
+            retention="3 days",
+            compression="gz",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}"
+        )
+        
 
-    parser.add_argument(
-        "--demo", action="store_true", help="Run performance demonstration"
-    )
-    parser.add_argument("--init", action="store_true", help="Initialize system only")
-    parser.add_argument(
-        "--version", action="version", version="Supreme System V5 - v5.0.0"
-    )
-
-    return parser.parse_args()
-
-
-async def main() -> None:
+def main():
     """Main entry point"""
-    args = parse_arguments()
-
-    print("🔥 SUPREME SYSTEM V5 - QUANTUM-MAMBA-NEUROMORPHIC FUSION")
-    print("=" * 65)
-    print("🧠 World's First Neuromorphic Trading System")
-    print("⚡ Ultra-Low Latency: <10μs | 486K+ TPS Capable")
-    print("🔋 Power Efficiency: 1000x Improvement")
-    print()
-
-    app = SupremeSystemV5()
-
-    if args.demo:
-        await app.start(demo_mode=True)
-    elif args.init:
-        await app.initialize_components()
-        print("✅ System initialization complete")
+    # Setup logging first
+    setup_logging()
+    
+    logger.info("🎯 Supreme System V5 - Ultra-Constrained Launcher")
+    logger.info("=" * 50)
+    
+    # Detect environment
+    if psutil:
+        memory = psutil.virtual_memory()
+        ram_gb = memory.total / (1024**3)
+        cpu_count = psutil.cpu_count()
+        
+        logger.info(f"Hardware: {ram_gb:.1f}GB RAM, {cpu_count} cores")
+        
+        if ram_gb <= 1.5:
+            logger.info("🔋 Ultra-constrained mode: Optimized for minimal resources")
+        else:
+            logger.warning(f"⚠️  Hardware has {ram_gb:.1f}GB RAM - consider higher performance profile")
     else:
-        await app.start(demo_mode=True)  # Default to demo mode
-
+        logger.warning("psutil not available - hardware detection disabled")
+        
+    # Check execution mode
+    execution_mode = os.environ.get("EXECUTION_MODE", "paper")
+    if execution_mode == "live":
+        logger.warning("🚨 LIVE TRADING MODE - REAL MONEY AT RISK!")
+        logger.warning("Press Ctrl+C within 10 seconds to cancel...")
+        time.sleep(10)
+        logger.warning("🔥 Proceeding with live trading")
+    else:
+        logger.info("📊 Paper trading mode - no real money at risk")
+        
+    # Launch system
+    try:
+        launcher = UltraConstrainedLauncher()
+        asyncio.run(launcher.launch_system())
+    except KeyboardInterrupt:
+        logger.info("👋 Interrupted by user")
+    except Exception as e:
+        logger.error(f"💥 Fatal error: {e}")
+        raise
+        
+    logger.info("🏁 Supreme System V5 terminated")
+    
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n🛑 Supreme System V5 shutdown requested")
-    except Exception as exc:
-        print(f"\n❌ Supreme System V5 error: {exc}")
-        sys.exit(1)
+    main()
