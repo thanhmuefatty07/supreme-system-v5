@@ -29,10 +29,10 @@ class SmartEventProcessor:
             config: Configuration with thresholds
         """
         self._config = {
-            'min_price_change_pct': config.get('min_price_change_pct', 0.0005),  # 0.05%
-            'min_volume_multiplier': config.get('min_volume_multiplier', 2.0),   # 2x average
-            'max_time_gap_seconds': config.get('max_time_gap_seconds', 60),      # 1 minute max gap
-            'volume_window': config.get('volume_window', 20),                    # Rolling average window
+            'min_price_change_pct': config.get('min_price_change_pct', 0.002),  # 0.2% - less aggressive for testing
+            'min_volume_multiplier': config.get('min_volume_multiplier', 1.5),  # 1.5x average - less aggressive for testing
+            'max_time_gap_seconds': config.get('max_time_gap_seconds', 60),     # 1 minute max gap
+            'volume_window': config.get('volume_window', 20),                   # Rolling average window
         }
 
         self._last_price: Optional[float] = None

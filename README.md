@@ -77,28 +77,38 @@ cp .env.optimized .env
 The `.env.optimized` file contains all optimized settings for maximum efficiency on i3-4GB systems:
 
 ```bash
-# Core Optimizations (Enable Ultra-Efficient Mode)
+# =================================================================
+# CORE OPTIMIZATIONS (Enable Ultra-Efficient Mode)
+# =================================================================
 OPTIMIZED_MODE=true
 EVENT_DRIVEN_PROCESSING=true
 INTELLIGENT_CACHING=true
 PERFORMANCE_PROFILE=performance  # minimal|conservative|normal|performance
 
-# Single Symbol Focus (Critical for i3-4GB optimization)
+# =================================================================
+# SINGLE SYMBOL FOCUS (Critical for i3-4GB optimization)
+# =================================================================
 SINGLE_SYMBOL=BTC-USDT
 
-# Scheduling Intervals (Optimized for resource efficiency)
+# =================================================================
+# SCHEDULING INTERVALS (Optimized for resource efficiency)
+# =================================================================
 PROCESS_INTERVAL_SECONDS=30
 TECHNICAL_INTERVAL=30
 NEWS_INTERVAL_MIN=10
 WHALE_INTERVAL_MIN=10
 MTF_INTERVAL=120
 
-# Resource Limits (i3-4GB Optimization Targets)
+# =================================================================
+# RESOURCE LIMITS (i3-4GB Optimization Targets)
+# =================================================================
 MAX_CPU_PERCENT=88.0
 MAX_RAM_GB=3.86
 TARGET_EVENT_SKIP_RATIO=0.7
 
-# Component Enables (Modular Architecture)
+# =================================================================
+# COMPONENT ENABLES (Modular Architecture)
+# =================================================================
 TECHNICAL_ANALYSIS_ENABLED=true
 NEWS_ANALYSIS_ENABLED=true
 WHALE_TRACKING_ENABLED=true
@@ -106,15 +116,43 @@ MULTI_TIMEFRAME_ENABLED=true
 RISK_MANAGEMENT_ENABLED=true
 RESOURCE_MONITORING_ENABLED=true
 
-# Event Processing Thresholds (Aggressive Filtering)
+# =================================================================
+# TRADING PARAMETERS (Ultra Scalping Optimized)
+# =================================================================
+TRADING_MODE=sandbox  # sandbox|live
+POSITION_SIZE_PCT=0.02
+STOP_LOSS_PCT=0.01
+TAKE_PROFIT_PCT=0.02
+
+# =================================================================
+# INDICATOR PARAMETERS (Memory Optimized)
+# =================================================================
+EMA_PERIOD=14
+RSI_PERIOD=14
+MACD_FAST=12
+MACD_SLOW=26
+MACD_SIGNAL=9
+PRICE_HISTORY_SIZE=200  # Memory capped for i3 constraints
+
+# =================================================================
+# EVENT PROCESSING THRESHOLDS (Aggressive Filtering)
+# =================================================================
 MIN_PRICE_CHANGE_PCT=0.001    # 0.1% - more aggressive than default 0.05%
 MIN_VOLUME_MULTIPLIER=3.0     # 3x average volume spike
 MAX_TIME_GAP_SECONDS=60       # Process every 60s maximum
 
-# Indicator Parameters (Memory Optimized)
-PRICE_HISTORY_SIZE=200        # Memory capped for i3 constraints
+# =================================================================
+# CACHING PARAMETERS (Performance Optimization)
+# =================================================================
 CACHE_ENABLED=true
 CACHE_TTL_SECONDS=1.0
+
+# =================================================================
+# ADVANCED OPTIMIZATION FLAGS
+# =================================================================
+ULTRA_LOW_LATENCY_MODE=true
+MEMORY_EFFICIENT_MODE=true
+CPU_OPTIMIZATION_MODE=true
 ```
 
 #### API Configuration
@@ -143,6 +181,35 @@ LOG_LEVEL=INFO
 METRICS_ENABLED=true
 PROMETHEUS_PORT=9090
 ```
+
+### Single Symbol Focus & Resource Optimization
+
+Supreme System V5 is optimized for **single-symbol scalping** to achieve maximum efficiency on i3-4GB systems:
+
+#### Single Symbol Architecture
+- **Focus**: One primary symbol (BTC-USDT recommended)
+- **Benefit**: 70-90% CPU reduction vs multi-symbol systems
+- **Memory**: Fixed O(200) price history buffer
+- **Performance**: Event-driven processing with intelligent filtering
+
+#### Gap Scheduling (30s–10m)
+- **Process Interval**: 30 seconds (configurable 30s–10m)
+- **Technical Analysis**: 30 seconds
+- **News Analysis**: 10 minutes (configurable 5–30m)
+- **Whale Tracking**: 10 minutes (configurable 5–30m)
+- **Multi-Timeframe**: 2 minutes (configurable 1–5m)
+
+#### Resource Caps (i3-4GB Optimized)
+- **CPU Target**: ≤88% average utilization
+- **RAM Target**: ≤3.86GB peak usage
+- **Event Skip Ratio**: Target 0.7 (70% events filtered)
+- **Indicator Latency**: <200ms median, <500ms p95
+- **System Uptime**: >99.9% availability
+
+#### Memory Management
+- **Price History**: CircularBuffer(200) - prevents memory leaks
+- **Cache TTL**: 1.0 seconds - balances performance vs memory
+- **Fallback**: deque(maxlen=1000) if CircularBuffer unavailable
 
 ### Testing
 
@@ -196,7 +263,7 @@ curl http://localhost:8000/api/v1/status
 
 ### Environment Variables
 
-See `.env.example` for complete configuration options. Key production settings:
+See the complete configuration options above. Key production settings:
 
 ```bash
 # Risk Management

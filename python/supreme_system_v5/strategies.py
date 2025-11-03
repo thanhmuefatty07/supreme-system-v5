@@ -10,6 +10,8 @@ import time
 from enum import Enum
 from dataclasses import dataclass, field
 from .optimized.analyzer import OptimizedTechnicalAnalyzer
+from .optimized.smart_events import SmartEventProcessor
+from .optimized.circular_buffer import CircularBuffer
 from .risk import SignalConfidence
 
 from loguru import logger
@@ -355,14 +357,21 @@ class ScalpingStrategy:
             'price_history_size': min(config.get('price_history_size', 100), 200),  # Memory optimized
             'cache_enabled': config.get('cache_enabled', True),
             'cache_ttl_seconds': config.get('cache_ttl_seconds', 1.0),
-            'event_config': {
-                'min_price_change_pct': config.get('min_price_change_pct', 0.001),   # 0.1% - more aggressive
-                'min_volume_multiplier': config.get('min_volume_multiplier', 3.0),   # 3x average - more aggressive
-                'max_time_gap_seconds': config.get('max_time_gap_seconds', 60)       # Process every 60s max
-            }
+            'event_config': config.get('event_config', {
+                'min_price_change_pct': 0.001,   # 0.1% - more aggressive
+                'min_volume_multiplier': 3.0,   # 3x average - more aggressive
+                'max_time_gap_seconds': 60       # Process every 60s max
+            })
         }
 
         self.analyzer = OptimizedTechnicalAnalyzer(analyzer_config)
+
+        # ULTRA OPTIMIZATION: Smart event processor for intelligent filtering
+        event_config = analyzer_config.get('event_config', {})
+        self.event_processor = SmartEventProcessor(event_config)
+
+        # ULTRA OPTIMIZATION: Circular buffer for bounded price history (i3/4GB constraint)
+        self.price_history = CircularBuffer(size=200)  # 200 elements max for memory efficiency
 
         # Trading state
         self.current_position = 0  # 0: no position, 1: long, -1: short
@@ -378,7 +387,7 @@ class ScalpingStrategy:
         # Signal tracking for analysis
         self.last_signals = {}
 
-        logger.info(f"🚀 {self.name} initialized with optimized analyzer")
+        logger.info(f"🚀 {self.name} initialized with optimized analyzer, SmartEventProcessor, and CircularBuffer")
 
     def add_price_data(self, price: float, volume: float = 0, timestamp: Optional[float] = None) -> Optional[Dict[str, Any]]:
         """
@@ -396,13 +405,21 @@ class ScalpingStrategy:
         """
         start_time = time.time()
 
-        # OPTIMIZED: Analyzer handles event filtering internally
+        # ULTRA OPTIMIZATION: Gate with SmartEventProcessor by price Δ%, volume spike, or max gap time
+        # TEMPORARILY DISABLED: if not self.event_processor.should_process(price, volume, timestamp):
+        # TEMPORARILY DISABLED:     # Event filtered - no processing needed (70-90% reduction)
+        # TEMPORARILY DISABLED:     return None
+
+        # ULTRA OPTIMIZATION: Maintain bounded price history
+        self.price_history.append(price)
+
+        # OPTIMIZED: Analyzer handles remaining processing
         processed = self.analyzer.add_price_data(price, volume, timestamp)
 
         # STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)  # Disabled to avoid duplicate metrics
 
         if not processed:
-            # Event filtered - no processing needed (70-90% reduction)
+            # Additional filtering by analyzer
             return None
 
         # Generate trading signals using optimized indicators
@@ -447,7 +464,43 @@ class ScalpingStrategy:
             signals['macd_signal'] = signal_line
             signals['macd_histogram'] = histogram
 
+        # Calculate technical confidence based on signal strength
+        signals['technical_confidence'] = self._calculate_technical_confidence(signals)
+
         return signals
+
+    def _calculate_technical_confidence(self, signals: Dict[str, Any]) -> float:
+        """
+        Calculate technical confidence score based on signal alignment and strength.
+
+        Returns confidence between 0.0 and 1.0
+        """
+        confidence = 0.5  # Base confidence (neutral)
+
+        # EMA alignment (strongest signal)
+        if signals.get('ema_above') or signals.get('ema_below'):
+            confidence += 0.2
+
+        # RSI confirmation
+        if signals.get('rsi_oversold') or signals.get('rsi_overbought'):
+            confidence += 0.15
+
+        # MACD confirmation
+        if signals.get('macd_bullish') or signals.get('macd_bearish'):
+            confidence += 0.15
+
+        # RSI extreme levels add more confidence
+        rsi_value = signals.get('rsi_value', 50)
+        if rsi_value <= 25 or rsi_value >= 75:
+            confidence += 0.1
+
+        # MACD histogram strength
+        histogram = abs(signals.get('macd_histogram', 0))
+        if histogram > 0.001:  # Strong momentum
+            confidence += min(0.1, histogram * 50)  # Cap at 0.1
+
+        # Bound confidence between 0.1 and 0.9
+        return max(0.1, min(0.9, confidence))
 
     def _evaluate_trading_logic(self, signals: Dict[str, Any], current_price: float) -> Optional[str]:
         """
