@@ -21,7 +21,7 @@ import signal
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 # Setup enhanced logging
 logging.basicConfig(
@@ -29,8 +29,9 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)8s | %(name)20s | %(message)s',
     handlers=[
         logging.FileHandler('logs/enhanced_backtest.log'),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(sys.stdout)
+    ],
+    encoding='utf-8'  # Fix Unicode encoding for emojis
 )
 logger = logging.getLogger('EnhancedBacktest')
 
@@ -187,24 +188,38 @@ async def main():
         setup_environment()
         
         # Create enhanced configuration
-        config = EnhancedBacktestConfig(
-            symbols=args.symbols,
-            initial_balance=args.balance,
-            data_sources=args.data_sources,
-            realtime_interval=args.interval,
-            max_position_size=args.max_position,
-            enable_risk_management=args.enable_risk_management,
-            historical_days=args.historical_days,
-            
-            # Enhanced settings
-            enable_adapter=args.enable_adapter if ENHANCED_AVAILABLE else False,
-            enable_quorum_policy=args.enable_quorum if ENHANCED_AVAILABLE else False,
-            enable_scalping_optimization=args.enable_scalping if ENHANCED_AVAILABLE else False,
-            strict_interface=args.strict_interface,
-            metrics_port=args.metrics_port,
-            output_dir=args.output_dir,
-            max_memory_mb=args.max_memory
-        )
+        config_dict = {
+            'symbols': args.symbols,
+            'initial_balance': args.balance,
+            'data_sources': args.data_sources,
+            'realtime_interval': args.interval,
+            'max_position_size': args.max_position,
+            'enable_risk_management': args.enable_risk_management,
+        }
+
+        # Add historical_days if supported
+        try:
+            test_config = EnhancedBacktestConfig()
+            if hasattr(test_config, 'historical_days'):
+                config_dict['historical_days'] = args.historical_days
+        except:
+            pass  # historical_days not supported
+
+        # Add enhanced settings if available
+        if ENHANCED_AVAILABLE:
+            config_dict.update({
+                'enable_adapter': args.enable_adapter,
+                'enable_quorum_policy': args.enable_quorum,
+                'enable_scalping_optimization': args.enable_scalping,
+                'strict_interface': args.strict_interface,
+                'metrics_port': args.metrics_port,
+                'output_dir': args.output_dir,
+                'max_memory_mb': args.max_memory,
+                'circuit_breaker_threshold': args.circuit_breaker_threshold,
+                'data_quality_threshold': args.data_quality_threshold,
+            })
+
+        config = EnhancedBacktestConfig(**config_dict)
         
         # Display configuration
         logger.info(f"\n🎯 ENHANCED BACKTEST CONFIGURATION:")
