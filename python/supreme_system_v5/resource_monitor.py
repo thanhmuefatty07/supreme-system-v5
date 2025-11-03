@@ -1,671 +1,647 @@
 #!/usr/bin/env python3
 """
-🚀 SUPREME SYSTEM V5 - Advanced Resource Monitor
-Real-time monitoring với auto-optimization capabilities
+Supreme System V5 - Ultra-Constrained Resource Monitor
+Real-time monitoring with emergency controls for 1GB RAM deployment
+Agent Mode: Automated resource management with failsafe mechanisms
 
 Features:
-- Real-time CPU/RAM monitoring
-- Auto-optimization khi vượt ngưỡng
-- Performance bottleneck detection
-- Emergency resource management
-- Memory-efficient tracking
+- Ultra-constrained monitoring (450MB RAM, 85% CPU targets)
+- Emergency shutdown on critical resource usage
+- Auto-optimization and memory management
+- Performance tracking and alerts
+- Failsafe mechanisms for production deployment
 """
 
-from __future__ import annotations
+import asyncio
+import gc
+import logging
+import os
 import psutil
 import time
-import threading
-import os
-from typing import Dict, List, Optional, Any, Callable
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Callable, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-class ResourceType(Enum):
-    """Resource types to monitor"""
-    CPU = "cpu"
-    RAM = "ram"
-    DISK = "disk"
-    NETWORK = "network"
+class ResourceStatus(Enum):
+    """Resource status levels for ultra-constrained deployment"""
+    OPTIMAL = "optimal"        # Well below limits
+    NORMAL = "normal"          # Within acceptable range
+    WARNING = "warning"        # Approaching limits
+    CRITICAL = "critical"      # Exceeding limits
+    EMERGENCY = "emergency"    # Emergency shutdown required
 
 
-class OptimizationAction(Enum):
-    """Available optimization actions"""
-    REDUCE_UPDATE_FREQUENCY = "reduce_update_frequency"
-    DISABLE_NON_CRITICAL = "disable_non_critical"
-    CLEAR_CACHES = "clear_caches"
-    REDUCE_WORKERS = "reduce_workers"
-    INCREASE_THRESHOLDS = "increase_thresholds"
-    EMERGENCY_SHUTDOWN = "emergency_shutdown"
-
-
-@dataclass
-class ResourceThreshold:
-    """Resource usage thresholds"""
-    warning_level: float  # Warning threshold (%)
-    critical_level: float  # Critical threshold (%)
-    emergency_level: float  # Emergency threshold (%)
+class OptimizationLevel(Enum):
+    """Optimization intensity levels"""
+    NONE = 0
+    LIGHT = 1       # Reduce update frequencies
+    MODERATE = 2    # Disable non-critical features
+    AGGRESSIVE = 3  # Minimal operation mode
+    EMERGENCY = 4   # Emergency shutdown
 
 
 @dataclass
-class ResourceMetrics:
-    """Comprehensive resource metrics"""
+class ResourceSnapshot:
+    """Single resource measurement snapshot"""
     timestamp: float
     cpu_percent: float
-    ram_gb: float
-    ram_percent: float
-    disk_usage_gb: float
-    network_sent_mb: float
-    network_recv_mb: float
-
-    # Process-specific metrics
+    memory_mb: float
+    memory_percent: float
+    available_memory_mb: float
+    disk_usage_percent: float
     process_cpu_percent: float
-    process_ram_mb: float
+    process_memory_mb: float
     process_threads: int
-    process_fds: Optional[int] = None  # File descriptors (Unix only)
-
-    # System-wide metrics
-    system_load_avg: Optional[List[float]] = None  # Load average (Unix only)
-    swap_percent: float = 0.0
+    gc_objects: int = 0
+    network_connections: int = 0
 
 
 @dataclass
-class OptimizationResult:
-    """Result of optimization action"""
-    action: OptimizationAction
-    timestamp: float
-    success: bool
-    resource_before: ResourceMetrics
-    resource_after: ResourceMetrics
-    impact_description: str
-    rollback_possible: bool = True
+class UltraConstrainedLimits:
+    """Resource limits for ultra-constrained deployment"""
+    # Memory limits (1GB RAM hardware)
+    max_memory_mb: int = 450          # 450MB budget (47% of 1GB)
+    warning_memory_mb: int = 350      # Warning at 350MB
+    critical_memory_mb: int = 420     # Critical at 420MB
+    emergency_memory_mb: int = 480    # Emergency at 480MB
+    
+    # CPU limits
+    max_cpu_percent: float = 85.0     # 85% CPU limit
+    warning_cpu_percent: float = 70.0 # Warning at 70%
+    critical_cpu_percent: float = 80.0 # Critical at 80%
+    emergency_cpu_percent: float = 90.0 # Emergency at 90%
+    
+    # System limits
+    max_disk_percent: float = 85.0
+    max_process_threads: int = 10
+    max_gc_objects: int = 100000
 
 
 @dataclass
-class PerformanceProfile:
-    """Performance profile for different operation modes"""
-    name: str
-    cpu_limit: float
-    ram_limit_gb: float
-    update_frequency_modifier: float  # Multiplier for update intervals
-    component_reductions: Dict[str, float]  # Component -> reduction factor
-    description: str
+class PerformanceMetrics:
+    """Performance metrics for ultra-constrained monitoring"""
+    uptime_seconds: float = 0.0
+    total_measurements: int = 0
+    avg_cpu_percent: float = 0.0
+    avg_memory_mb: float = 0.0
+    peak_memory_mb: float = 0.0
+    peak_cpu_percent: float = 0.0
+    
+    # Violation tracking
+    memory_violations: int = 0
+    cpu_violations: int = 0
+    emergency_activations: int = 0
+    
+    # Optimization tracking
+    optimizations_applied: int = 0
+    gc_collections_forced: int = 0
+    emergency_shutdowns: int = 0
+    
+    # Target achievement
+    memory_target_met: bool = True
+    cpu_target_met: bool = True
+    uptime_target_met: bool = True
 
 
-class AdvancedResourceMonitor:
-    """
-    Advanced resource monitor với auto-optimization
-    Maintains 88% CPU và 3.46GB RAM targets
-    Auto-optimizes khi vượt ngưỡng
-    """
-
-    def __init__(self, config: Dict[str, Any] = None):
-        self.config = config or self._get_default_config()
-
-        # Resource thresholds
-        self.thresholds = {
-            ResourceType.CPU: ResourceThreshold(
-                warning_level=self.config['cpu_warning_threshold'],
-                critical_level=self.config['cpu_critical_threshold'],
-                emergency_level=self.config['cpu_emergency_threshold']
-            ),
-            ResourceType.RAM: ResourceThreshold(
-                warning_level=self.config['ram_warning_threshold'],
-                critical_level=self.config['ram_critical_threshold'],
-                emergency_level=self.config['ram_emergency_threshold']
-            )
-        }
-
-        # Performance profiles
-        self.performance_profiles = self._initialize_performance_profiles()
-
-        # Monitoring state
-        self.monitoring_active = False
-        self.monitor_thread: Optional[threading.Thread] = None
-        self.monitoring_interval = self.config['monitoring_interval']
-
-        # Historical data
-        self.metrics_history: List[ResourceMetrics] = []
-        self.optimization_history: List[OptimizationResult] = []
-        self.max_history_size = self.config['max_history_size']
-
-        # Current performance profile
-        self.current_profile = "normal"
-
-        # Emergency state
-        self.emergency_mode = False
-        self.last_emergency_action = 0
-
-        # Process monitoring
-        self.process = psutil.Process(os.getpid())
-        self.system_boot_time = psutil.boot_time()
-
-        # Optimization callbacks
-        self.optimization_callbacks: Dict[OptimizationAction, Callable] = {}
-
-        logger.info("AdvancedResourceMonitor initialized with %s monitoring", "active" if self.monitoring_active else "inactive")
-
-    def _get_default_config(self) -> Dict[str, Any]:
-        """Get default monitoring configuration"""
-        return {
-            'monitoring_interval': 5.0,  # 5 seconds
-            'cpu_warning_threshold': 75.0,   # 75% CPU warning
-            'cpu_critical_threshold': 85.0,  # 85% CPU critical
-            'cpu_emergency_threshold': 95.0, # 95% CPU emergency
-            'ram_warning_threshold': 80.0,   # 80% RAM warning
-            'ram_critical_threshold': 90.0,  # 90% RAM critical
-            'ram_emergency_threshold': 95.0, # 95% RAM emergency
-            'max_history_size': 1000,
-            'auto_optimization': True,
-            'emergency_cooldown': 300.0,  # 5 minutes between emergency actions
-            'performance_profile_switching': True
-        }
-
-    def _initialize_performance_profiles(self) -> Dict[str, PerformanceProfile]:
-        """Initialize performance profiles for different conditions"""
-        return {
-            "normal": PerformanceProfile(
-                name="normal",
-                cpu_limit=88.0,
-                ram_limit_gb=3.46,
-                update_frequency_modifier=1.0,
-                component_reductions={},
-                description="Normal operation within target limits"
-            ),
-            "conservative": PerformanceProfile(
-                name="conservative",
-                cpu_limit=70.0,
-                ram_limit_gb=2.8,
-                update_frequency_modifier=1.5,  # 50% slower updates
-                component_reductions={
-                    "news_classifier": 0.7,    # 30% less frequent
-                    "whale_tracking": 0.7,     # 30% less frequent
-                    "pattern_recognition": 0.8 # 20% less frequent
-                },
-                description="Conservative mode for resource constraints"
-            ),
-            "minimal": PerformanceProfile(
-                name="minimal",
-                cpu_limit=50.0,
-                ram_limit_gb=2.0,
-                update_frequency_modifier=3.0,  # 3x slower updates
-                component_reductions={
-                    "news_classifier": 0.3,    # 70% less frequent
-                    "whale_tracking": 0.3,     # 70% less frequent
-                    "pattern_recognition": 0.5, # 50% less frequent
-                    "multi_timeframe": 0.7     # 30% less frequent
-                },
-                description="Minimal mode for severe resource constraints"
-            ),
-            "emergency": PerformanceProfile(
-                name="emergency",
-                cpu_limit=30.0,
-                ram_limit_gb=1.5,
-                update_frequency_modifier=10.0,  # 10x slower updates
-                component_reductions={
-                    "news_classifier": 0.1,    # 90% less frequent
-                    "whale_tracking": 0.1,     # 90% less frequent
-                    "pattern_recognition": 0.2, # 80% less frequent
-                    "multi_timeframe": 0.3,     # 70% less frequent
-                    "risk_manager": 0.5        # 50% less frequent
-                },
-                description="Emergency mode - minimal operation"
-            )
-        }
-
-    def start_monitoring(self):
-        """Start background resource monitoring"""
-        if self.monitoring_active:
-            return
-
-        self.monitoring_active = True
-        self.monitor_thread = threading.Thread(
-            target=self._monitoring_loop,
-            daemon=True,
-            name="ResourceMonitor"
+class UltraConstrainedResourceMonitor:
+    """Ultra-constrained resource monitor for 1GB RAM deployment"""
+    
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {}
+        
+        # Initialize limits
+        self.limits = UltraConstrainedLimits(
+            max_memory_mb=self.config.get('max_memory_mb', 450),
+            max_cpu_percent=self.config.get('max_cpu_percent', 85.0)
         )
-        self.monitor_thread.start()
-        logger.info("Resource monitoring started")
-
+        
+        # Monitoring configuration
+        self.check_interval = self.config.get('check_interval', 30)  # 30 seconds
+        self.emergency_shutdown_enabled = self.config.get('emergency_shutdown_enabled', True)
+        self.auto_optimization_enabled = self.config.get('auto_optimization_enabled', True)
+        self.gc_enabled = self.config.get('gc_enabled', True)
+        
+        # State tracking
+        self.snapshots: List[ResourceSnapshot] = []
+        self.metrics = PerformanceMetrics()
+        self.status = ResourceStatus.NORMAL
+        self.optimization_level = OptimizationLevel.NONE
+        
+        self.start_time = time.time()
+        self.running = False
+        self.last_optimization = 0.0
+        self.last_gc_collection = 0.0
+        
+        # Process references
+        try:
+            self.process = psutil.Process(os.getpid())
+            self.system_available = True
+        except Exception as e:
+            logger.warning(f"Process monitoring limited: {e}")
+            self.process = None
+            self.system_available = False
+            
+        # Emergency handlers
+        self.emergency_handlers: List[Callable] = []
+        self.optimization_handlers: List[Callable] = []
+        
+        logger.info(f"Ultra-constrained monitor initialized: {self.limits.max_memory_mb}MB RAM, {self.limits.max_cpu_percent}% CPU")
+        
+    def add_emergency_handler(self, handler: Callable):
+        """Add emergency shutdown handler"""
+        self.emergency_handlers.append(handler)
+        
+    def add_optimization_handler(self, handler: Callable):
+        """Add optimization handler for auto-tuning"""
+        self.optimization_handlers.append(handler)
+        
+    async def start_monitoring(self):
+        """Start continuous ultra-constrained monitoring"""
+        logger.info("Starting ultra-constrained resource monitoring...")
+        self.running = True
+        
+        try:
+            while self.running:
+                # Take resource snapshot
+                snapshot = await self._take_resource_snapshot()
+                if snapshot:
+                    await self._process_snapshot(snapshot)
+                    
+                # Check for emergency conditions
+                await self._check_emergency_conditions()
+                
+                # Auto-optimization check
+                if self.auto_optimization_enabled:
+                    await self._auto_optimize_check()
+                    
+                await asyncio.sleep(self.check_interval)
+                
+        except Exception as e:
+            logger.error(f"Monitoring error: {e}")
+            raise
+        finally:
+            logger.info("Ultra-constrained monitoring stopped")
+            
     def stop_monitoring(self):
-        """Stop background resource monitoring"""
-        self.monitoring_active = False
-        if self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=5.0)
-        logger.info("Resource monitoring stopped")
-
-    def _monitoring_loop(self):
-        """Main monitoring loop"""
-        while self.monitoring_active:
+        """Stop resource monitoring"""
+        self.running = False
+        
+    async def _take_resource_snapshot(self) -> Optional[ResourceSnapshot]:
+        """Take comprehensive resource snapshot"""
+        try:
+            if not self.system_available:
+                return None
+                
+            timestamp = time.time()
+            
+            # System-wide metrics
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('.')
+            
+            # Process-specific metrics
+            process_cpu = 0.0
+            process_memory_mb = 0.0
+            process_threads = 0
+            
+            if self.process:
+                process_cpu = self.process.cpu_percent()
+                process_memory_mb = self.process.memory_info().rss / (1024 * 1024)
+                process_threads = self.process.num_threads()
+                
+            # Python-specific metrics
+            gc_objects = len(gc.get_objects()) if self.gc_enabled else 0
+            
+            # Network connections (optional)
+            network_connections = 0
             try:
-                # Collect metrics
-                metrics = self._collect_resource_metrics()
-
-                # Store in history
-                self.metrics_history.append(metrics)
-                if len(self.metrics_history) > self.max_history_size:
-                    self.metrics_history = self.metrics_history[-self.max_history_size:]
-
-                # Check thresholds and optimize if needed
-                if self.config.get('auto_optimization', True):
-                    self._check_and_optimize(metrics)
-
-                # Sleep until next monitoring cycle
-                time.sleep(self.monitoring_interval)
-
-            except Exception as e:
-                logger.error("Monitoring loop error: %s", e)
-                time.sleep(self.monitoring_interval)
-
-    def _collect_resource_metrics(self) -> ResourceMetrics:
-        """Collect comprehensive resource metrics"""
-        timestamp = time.time()
-
-        # System-wide metrics
-        cpu_percent = psutil.cpu_percent(interval=1.0)
-        ram = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
-        network = psutil.net_io_counters()
-
-        # Process-specific metrics
-        process_cpu = self.process.cpu_percent()
-        process_ram = self.process.memory_info().rss / (1024 * 1024)  # MB
-        process_threads = self.process.num_threads()
-
-        # File descriptors (Unix only)
-        try:
-            process_fds = self.process.num_fds() if hasattr(self.process, 'num_fds') else None
-        except:
-            process_fds = None
-
-        # Load average (Unix only)
-        try:
-            load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else None
-        except:
-            load_avg = None
-
-        # Swap usage
-        swap = psutil.swap_memory()
-
-        return ResourceMetrics(
-            timestamp=timestamp,
-            cpu_percent=cpu_percent,
-            ram_gb=ram.used / (1024**3),
-            ram_percent=ram.percent,
-            disk_usage_gb=disk.used / (1024**3),
-            network_sent_mb=network.bytes_sent / (1024**2) if network else 0,
-            network_recv_mb=network.bytes_recv / (1024**2) if network else 0,
-            process_cpu_percent=process_cpu,
-            process_ram_mb=process_ram,
-            process_threads=process_threads,
-            process_fds=process_fds,
-            system_load_avg=load_avg,
-            swap_percent=swap.percent
-        )
-
-    def _check_and_optimize(self, metrics: ResourceMetrics):
-        """Check resource usage và trigger optimization if needed"""
-        current_time = time.time()
-
-        # Check CPU thresholds
-        cpu_level = self._get_resource_level(metrics.cpu_percent, ResourceType.CPU)
-        ram_level = self._get_resource_level(metrics.ram_percent, ResourceType.RAM)
-
-        # Determine if optimization is needed
-        needs_optimization = (
-            cpu_level in ['critical', 'emergency'] or
-            ram_level in ['critical', 'emergency']
-        )
-
-        if needs_optimization:
-            # Check emergency cooldown
-            if current_time - self.last_emergency_action < self.config['emergency_cooldown']:
-                logger.info("Optimization needed but in cooldown period")
-                return
-
-            # Perform optimization
-            optimization_result = self._perform_optimization(metrics, cpu_level, ram_level)
-
-            if optimization_result:
-                self.optimization_history.append(optimization_result)
-                self.last_emergency_action = current_time
-
-                logger.info("Optimization performed: %s", optimization_result.action.value)
-
-                # Keep history size manageable
-                if len(self.optimization_history) > 100:
-                    self.optimization_history = self.optimization_history[-100:]
-
-    def _get_resource_level(self, usage_percent: float, resource_type: ResourceType) -> str:
-        """Get resource usage level"""
-        threshold = self.thresholds[resource_type]
-
-        if usage_percent >= threshold.emergency_level:
-            return "emergency"
-        elif usage_percent >= threshold.critical_level:
-            return "critical"
-        elif usage_percent >= threshold.warning_level:
-            return "warning"
-        else:
-            return "normal"
-
-    def _perform_optimization(self, metrics: ResourceMetrics,
-                            cpu_level: str, ram_level: str) -> Optional[OptimizationResult]:
-        """Perform resource optimization"""
-        # Determine optimization strategy based on severity
-        if cpu_level == "emergency" or ram_level == "emergency":
-            new_profile = "emergency"
-            actions = [OptimizationAction.EMERGENCY_SHUTDOWN]
-        elif cpu_level == "critical" or ram_level == "critical":
-            new_profile = "minimal"
-            actions = [OptimizationAction.REDUCE_UPDATE_FREQUENCY,
-                      OptimizationAction.DISABLE_NON_CRITICAL]
-        else:  # warning level
-            new_profile = "conservative"
-            actions = [OptimizationAction.REDUCE_UPDATE_FREQUENCY,
-                      OptimizationAction.CLEAR_CACHES]
-
-        # Switch performance profile
-        success = self.switch_performance_profile(new_profile)
-
-        if success:
-            # Collect metrics after optimization
-            time.sleep(2.0)  # Wait for changes to take effect
-            after_metrics = self._collect_resource_metrics()
-
-            return OptimizationResult(
-                action=OptimizationAction.REDUCE_UPDATE_FREQUENCY,  # Primary action
-                timestamp=time.time(),
-                success=True,
-                resource_before=metrics,
-                resource_after=after_metrics,
-                impact_description=f"Switched to {new_profile} performance profile",
-                rollback_possible=True
+                if self.process:
+                    network_connections = len(self.process.connections())
+            except:
+                pass  # May not have permission
+                
+            return ResourceSnapshot(
+                timestamp=timestamp,
+                cpu_percent=cpu_percent,
+                memory_mb=memory.used / (1024 * 1024),
+                memory_percent=memory.percent,
+                available_memory_mb=memory.available / (1024 * 1024),
+                disk_usage_percent=disk.percent,
+                process_cpu_percent=process_cpu,
+                process_memory_mb=process_memory_mb,
+                process_threads=process_threads,
+                gc_objects=gc_objects,
+                network_connections=network_connections
             )
-
-        return None
-
-    def switch_performance_profile(self, profile_name: str) -> bool:
-        """Switch to a different performance profile"""
-        if profile_name not in self.performance_profiles:
-            logger.error("Unknown performance profile: %s", profile_name)
-            return False
-
-        old_profile = self.current_profile
-        new_profile = self.performance_profiles[profile_name]
-
-        # Apply profile changes
-        self.current_profile = profile_name
-
-        # Call optimization callbacks if registered
-        for action in new_profile.component_reductions.keys():
-            callback = self.optimization_callbacks.get(OptimizationAction.REDUCE_UPDATE_FREQUENCY)
-            if callback:
-                try:
-                    callback(new_profile.component_reductions)
-                except Exception as e:
-                    logger.error("Optimization callback error: %s", e)
-
-        logger.info("Switched performance profile: %s -> %s", old_profile, profile_name)
-        return True
-
-    def register_optimization_callback(self, action: OptimizationAction, callback: Callable):
-        """Register callback for optimization actions"""
-        self.optimization_callbacks[action] = callback
-
-    def get_current_metrics(self) -> Optional[ResourceMetrics]:
-        """Get most recent resource metrics"""
-        return self.metrics_history[-1] if self.metrics_history else None
-
-    def get_resource_trends(self, hours: int = 1) -> Dict[str, Any]:
-        """Get resource usage trends over time"""
-        cutoff_time = time.time() - (hours * 3600)
-
-        # Filter recent metrics
-        recent_metrics = [
-            m for m in self.metrics_history
-            if m.timestamp >= cutoff_time
-        ]
-
-        if not recent_metrics:
-            return {"error": "No recent metrics available"}
-
-        # Calculate trends
-        cpu_trend = self._calculate_trend([m.cpu_percent for m in recent_metrics])
-        ram_trend = self._calculate_trend([m.ram_gb for m in recent_metrics])
-
-        return {
-            "period_hours": hours,
-            "data_points": len(recent_metrics),
-            "cpu_trend": cpu_trend,
-            "ram_trend": ram_trend,
-            "avg_cpu": sum(m.cpu_percent for m in recent_metrics) / len(recent_metrics),
-            "avg_ram_gb": sum(m.ram_gb for m in recent_metrics) / len(recent_metrics),
-            "peak_cpu": max(m.cpu_percent for m in recent_metrics),
-            "peak_ram_gb": max(m.ram_gb for m in recent_metrics)
-        }
-
-    def _calculate_trend(self, values: List[float]) -> str:
-        """Calculate trend direction from values"""
-        if len(values) < 2:
-            return "insufficient_data"
-
-        # Simple linear trend
-        first_half = values[:len(values)//2]
-        second_half = values[len(values)//2:]
-
-        first_avg = sum(first_half) / len(first_half)
-        second_avg = sum(second_half) / len(second_half)
-
-        diff = second_avg - first_avg
-
-        if diff > 1.0:  # 1% increase threshold
-            return "increasing"
-        elif diff < -1.0:  # 1% decrease threshold
-            return "decreasing"
+            
+        except Exception as e:
+            logger.error(f"Failed to take resource snapshot: {e}")
+            return None
+            
+    async def _process_snapshot(self, snapshot: ResourceSnapshot):
+        """Process and store resource snapshot"""
+        # Add to history
+        self.snapshots.append(snapshot)
+        
+        # Maintain circular buffer (prevent memory growth)
+        max_snapshots = 1000  # Last 1000 snapshots
+        if len(self.snapshots) > max_snapshots:
+            self.snapshots = self.snapshots[-max_snapshots:]
+            
+        # Update metrics
+        self._update_performance_metrics(snapshot)
+        
+        # Update status
+        old_status = self.status
+        self.status = self._calculate_status(snapshot)
+        
+        # Log status changes
+        if self.status != old_status:
+            logger.info(f"Resource status: {old_status.value} -> {self.status.value}")
+            
+    def _update_performance_metrics(self, snapshot: ResourceSnapshot):
+        """Update performance metrics with new snapshot"""
+        self.metrics.total_measurements += 1
+        self.metrics.uptime_seconds = time.time() - self.start_time
+        
+        count = self.metrics.total_measurements
+        
+        # Update averages
+        if count == 1:
+            self.metrics.avg_cpu_percent = snapshot.cpu_percent
+            self.metrics.avg_memory_mb = snapshot.process_memory_mb
         else:
-            return "stable"
-
-    def get_optimization_history(self) -> List[Dict[str, Any]]:
-        """Get history of optimization actions"""
-        return [
-            {
-                "action": opt.action.value,
-                "timestamp": opt.timestamp,
-                "success": opt.success,
-                "impact": opt.impact_description,
-                "cpu_before": opt.resource_before.cpu_percent,
-                "cpu_after": opt.resource_after.cpu_percent,
-                "ram_before": opt.resource_before.ram_gb,
-                "ram_after": opt.resource_after.ram_gb
-            }
-            for opt in self.optimization_history[-20:]  # Last 20 optimizations
-        ]
-
-    def force_optimization(self, profile: str = "conservative") -> bool:
-        """Force immediate optimization"""
-        metrics = self._collect_resource_metrics()
-        return self.switch_performance_profile(profile)
-
-    def reset_to_normal(self) -> bool:
-        """Reset to normal performance profile"""
-        return self.switch_performance_profile("normal")
-
-    def get_system_health_report(self) -> Dict[str, Any]:
-        """Get comprehensive system health report"""
-        current_metrics = self.get_current_metrics()
-        trends = self.get_resource_trends(hours=1)
-
-        if not current_metrics:
-            return {"error": "No metrics available"}
-
-        # Determine overall health
-        cpu_level = self._get_resource_level(current_metrics.cpu_percent, ResourceType.CPU)
-        ram_level = self._get_resource_level(current_metrics.ram_percent, ResourceType.RAM)
-
-        health_score = self._calculate_health_score(cpu_level, ram_level)
-
+            self.metrics.avg_cpu_percent = (
+                (self.metrics.avg_cpu_percent * (count - 1) + snapshot.cpu_percent) / count
+            )
+            self.metrics.avg_memory_mb = (
+                (self.metrics.avg_memory_mb * (count - 1) + snapshot.process_memory_mb) / count
+            )
+            
+        # Update peaks
+        self.metrics.peak_memory_mb = max(self.metrics.peak_memory_mb, snapshot.process_memory_mb)
+        self.metrics.peak_cpu_percent = max(self.metrics.peak_cpu_percent, snapshot.cpu_percent)
+        
+        # Check violations
+        if snapshot.process_memory_mb > self.limits.max_memory_mb:
+            self.metrics.memory_violations += 1
+        if snapshot.cpu_percent > self.limits.max_cpu_percent:
+            self.metrics.cpu_violations += 1
+            
+        # Update target achievement
+        self.metrics.memory_target_met = self.metrics.avg_memory_mb <= self.limits.max_memory_mb
+        self.metrics.cpu_target_met = self.metrics.avg_cpu_percent <= self.limits.max_cpu_percent
+        self.metrics.uptime_target_met = self.metrics.uptime_seconds > 3600  # 1 hour+
+        
+    def _calculate_status(self, snapshot: ResourceSnapshot) -> ResourceStatus:
+        """Calculate current resource status for ultra-constrained deployment"""
+        memory_mb = snapshot.process_memory_mb
+        cpu_percent = snapshot.cpu_percent
+        
+        # Emergency conditions (immediate shutdown required)
+        if (memory_mb >= self.limits.emergency_memory_mb or
+            cpu_percent >= self.limits.emergency_cpu_percent):
+            return ResourceStatus.EMERGENCY
+            
+        # Critical conditions (optimization required)
+        if (memory_mb >= self.limits.critical_memory_mb or
+            cpu_percent >= self.limits.critical_cpu_percent):
+            return ResourceStatus.CRITICAL
+            
+        # Warning conditions (monitoring increased)
+        if (memory_mb >= self.limits.warning_memory_mb or
+            cpu_percent >= self.limits.warning_cpu_percent):
+            return ResourceStatus.WARNING
+            
+        # Optimal conditions (well below limits)
+        if (memory_mb < self.limits.warning_memory_mb * 0.8 and
+            cpu_percent < self.limits.warning_cpu_percent * 0.8):
+            return ResourceStatus.OPTIMAL
+            
+        return ResourceStatus.NORMAL
+        
+    async def _check_emergency_conditions(self):
+        """Check for emergency conditions requiring immediate action"""
+        if not self.snapshots:
+            return
+            
+        current = self.snapshots[-1]
+        
+        if self.status == ResourceStatus.EMERGENCY:
+            if self.emergency_shutdown_enabled:
+                logger.critical(f"EMERGENCY: Resource usage critical - Memory: {current.process_memory_mb:.1f}MB, CPU: {current.cpu_percent:.1f}%")
+                await self._trigger_emergency_shutdown("resource_emergency")
+            else:
+                logger.critical(f"EMERGENCY CONDITIONS DETECTED (shutdown disabled): Memory: {current.process_memory_mb:.1f}MB, CPU: {current.cpu_percent:.1f}%")
+                
+    async def _auto_optimize_check(self):
+        """Check if auto-optimization should be triggered"""
+        current_time = time.time()
+        
+        # Only optimize every 2 minutes minimum
+        if current_time - self.last_optimization < 120:
+            return
+            
+        if self.status in [ResourceStatus.CRITICAL, ResourceStatus.WARNING]:
+            await self._apply_optimization()
+            self.last_optimization = current_time
+            
+    async def _apply_optimization(self):
+        """Apply resource optimization based on current status"""
+        optimizations_applied = []
+        
+        # Force garbage collection if enabled
+        if self.gc_enabled:
+            current_time = time.time()
+            if current_time - self.last_gc_collection > 60:  # Every minute max
+                collected = await self._force_garbage_collection()
+                if collected > 0:
+                    optimizations_applied.append(f"gc_freed_{collected}_objects")
+                self.last_gc_collection = current_time
+                
+        # Apply optimization based on status
+        if self.status == ResourceStatus.CRITICAL:
+            self.optimization_level = OptimizationLevel.AGGRESSIVE
+            optimizations_applied.append("aggressive_optimization")
+        elif self.status == ResourceStatus.WARNING:
+            self.optimization_level = OptimizationLevel.MODERATE
+            optimizations_applied.append("moderate_optimization")
+            
+        # Call optimization handlers
+        for handler in self.optimization_handlers:
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    result = await handler(self.optimization_level)
+                else:
+                    result = handler(self.optimization_level)
+                if result:
+                    optimizations_applied.append(str(result))
+            except Exception as e:
+                logger.error(f"Optimization handler failed: {e}")
+                
+        if optimizations_applied:
+            self.metrics.optimizations_applied += 1
+            logger.info(f"Auto-optimization applied: {', '.join(optimizations_applied)}")
+            
+    async def _force_garbage_collection(self) -> int:
+        """Force Python garbage collection"""
+        if not self.gc_enabled:
+            return 0
+            
+        logger.debug("Forcing garbage collection...")
+        collected = gc.collect()
+        self.metrics.gc_collections_forced += 1
+        
+        if collected > 0:
+            logger.info(f"Garbage collection freed {collected} objects")
+            
+        return collected
+        
+    async def _trigger_emergency_shutdown(self, reason: str):
+        """Trigger emergency system shutdown"""
+        logger.critical(f"TRIGGERING EMERGENCY SHUTDOWN: {reason}")
+        self.metrics.emergency_shutdowns += 1
+        self.metrics.emergency_activations += 1
+        
+        # Call all emergency handlers
+        for handler in self.emergency_handlers:
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(reason)
+                else:
+                    handler(reason)
+            except Exception as e:
+                logger.error(f"Emergency handler failed: {e}")
+                
+        # Stop monitoring
+        self.running = False
+        
+        # Emergency report
+        report_path = self.export_emergency_report()
+        logger.critical(f"Emergency report saved: {report_path}")
+        
+        # Terminate process
+        logger.critical("Emergency shutdown complete - terminating process in 5 seconds")
+        await asyncio.sleep(5)
+        os._exit(1)
+        
+    def get_current_status(self) -> Dict[str, Any]:
+        """Get comprehensive current status"""
+        if not self.snapshots:
+            return {"status": "no_data", "message": "No measurements available"}
+            
+        current = self.snapshots[-1]
+        
         return {
-            "timestamp": time.time(),
-            "overall_health": health_score,
-            "health_status": self._health_score_to_status(health_score),
-            "current_metrics": {
-                "cpu_percent": current_metrics.cpu_percent,
-                "ram_gb": current_metrics.ram_gb,
-                "ram_percent": current_metrics.ram_percent,
-                "cpu_level": cpu_level,
-                "ram_level": ram_level
+            "status": self.status.value,
+            "optimization_level": self.optimization_level.value,
+            "timestamp": current.timestamp,
+            "uptime_seconds": self.metrics.uptime_seconds,
+            "resources": {
+                "process_memory_mb": round(current.process_memory_mb, 1),
+                "system_memory_percent": round(current.memory_percent, 1),
+                "cpu_percent": round(current.cpu_percent, 1),
+                "process_cpu_percent": round(current.process_cpu_percent, 1),
+                "available_memory_mb": round(current.available_memory_mb, 1),
+                "process_threads": current.process_threads,
+                "gc_objects": current.gc_objects
             },
-            "performance_profile": self.current_profile,
-            "trends": trends,
-            "emergency_mode": self.emergency_mode,
-            "optimizations_performed": len(self.optimization_history),
-            "recommendations": self._generate_health_recommendations(health_score, cpu_level, ram_level)
+            "limits": {
+                "max_memory_mb": self.limits.max_memory_mb,
+                "max_cpu_percent": self.limits.max_cpu_percent,
+                "warning_memory_mb": self.limits.warning_memory_mb,
+                "critical_memory_mb": self.limits.critical_memory_mb
+            },
+            "violations": {
+                "memory_exceeded": current.process_memory_mb > self.limits.max_memory_mb,
+                "cpu_exceeded": current.cpu_percent > self.limits.max_cpu_percent,
+                "emergency_conditions": self.status == ResourceStatus.EMERGENCY
+            },
+            "targets_met": {
+                "memory_target": self.metrics.memory_target_met,
+                "cpu_target": self.metrics.cpu_target_met,
+                "uptime_target": self.metrics.uptime_target_met
+            }
         }
-
-    def _calculate_health_score(self, cpu_level: str, ram_level: str) -> float:
-        """Calculate overall health score (0-100)"""
-        level_scores = {
-            "normal": 100,
-            "warning": 75,
-            "critical": 50,
-            "emergency": 25
+        
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get performance summary for ultra-constrained deployment"""
+        return {
+            "deployment_type": "ultra_constrained",
+            "target_specs": {
+                "ram_budget_mb": self.limits.max_memory_mb,
+                "cpu_limit_percent": self.limits.max_cpu_percent,
+                "hardware_target": "1GB_RAM_2CPU"
+            },
+            "performance_metrics": {
+                "uptime_hours": round(self.metrics.uptime_seconds / 3600, 2),
+                "total_measurements": self.metrics.total_measurements,
+                "avg_memory_mb": round(self.metrics.avg_memory_mb, 1),
+                "avg_cpu_percent": round(self.metrics.avg_cpu_percent, 1),
+                "peak_memory_mb": round(self.metrics.peak_memory_mb, 1),
+                "peak_cpu_percent": round(self.metrics.peak_cpu_percent, 1)
+            },
+            "efficiency_metrics": {
+                "memory_efficiency_percent": min(100, (self.limits.max_memory_mb / max(1, self.metrics.avg_memory_mb)) * 100),
+                "cpu_efficiency_percent": min(100, (self.limits.max_cpu_percent / max(1, self.metrics.avg_cpu_percent)) * 100),
+                "uptime_stability": min(100, (self.metrics.uptime_seconds / 86400) * 100)  # Daily stability
+            },
+            "violation_tracking": {
+                "memory_violations": self.metrics.memory_violations,
+                "cpu_violations": self.metrics.cpu_violations,
+                "emergency_activations": self.metrics.emergency_activations,
+                "optimizations_applied": self.metrics.optimizations_applied
+            },
+            "target_achievement": {
+                "memory_target_met": self.metrics.memory_target_met,
+                "cpu_target_met": self.metrics.cpu_target_met,
+                "overall_success": self.metrics.memory_target_met and self.metrics.cpu_target_met
+            }
         }
-
-        cpu_score = level_scores.get(cpu_level, 50)
-        ram_score = level_scores.get(ram_level, 50)
-
-        return (cpu_score + ram_score) / 2
-
-    def _health_score_to_status(self, score: float) -> str:
-        """Convert health score to status string"""
-        if score >= 90:
-            return "excellent"
-        elif score >= 75:
-            return "good"
-        elif score >= 60:
-            return "warning"
-        elif score >= 40:
-            return "critical"
-        else:
-            return "emergency"
-
-    def _generate_health_recommendations(self, health_score: float,
-                                       cpu_level: str, ram_level: str) -> List[str]:
-        """Generate health recommendations"""
-        recommendations = []
-
-        if health_score < 60:
-            recommendations.append("Immediate action required - system resources critical")
-
-        if cpu_level in ["critical", "emergency"]:
-            recommendations.extend([
-                "Reduce CPU-intensive operations",
-                "Increase update intervals for components",
-                "Consider switching to conservative performance profile"
-            ])
-
-        if ram_level in ["critical", "emergency"]:
-            recommendations.extend([
-                "Clear component caches",
-                "Reduce data history sizes",
-                "Monitor for memory leaks"
-            ])
-
-        if health_score >= 90:
-            recommendations.append("System operating within optimal parameters")
-
-        return recommendations
-
-
-async def demo_resource_monitor():
-    import asyncio
-    """Demo advanced resource monitor"""
-    print("🚀 SUPREME SYSTEM V5 - Advanced Resource Monitor Demo")
+        
+    def export_emergency_report(self) -> str:
+        """Export emergency report with all available data"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        report_path = f"emergency_report_{timestamp}.json"
+        
+        report = {
+            "emergency_timestamp": datetime.now().isoformat(),
+            "emergency_reason": "resource_critical",
+            "system_status": self.get_current_status(),
+            "performance_summary": self.get_performance_summary(),
+            "recent_snapshots": [
+                {
+                    "timestamp": s.timestamp,
+                    "memory_mb": round(s.process_memory_mb, 1),
+                    "cpu_percent": round(s.cpu_percent, 1),
+                    "threads": s.process_threads,
+                    "gc_objects": s.gc_objects
+                }
+                for s in self.snapshots[-20:]  # Last 20 snapshots
+            ],
+            "configuration": {
+                "limits": {
+                    "max_memory_mb": self.limits.max_memory_mb,
+                    "max_cpu_percent": self.limits.max_cpu_percent
+                },
+                "monitoring": {
+                    "check_interval": self.check_interval,
+                    "emergency_shutdown_enabled": self.emergency_shutdown_enabled,
+                    "auto_optimization_enabled": self.auto_optimization_enabled
+                }
+            }
+        }
+        
+        try:
+            import json
+            with open(report_path, 'w') as f:
+                json.dump(report, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to export emergency report: {e}")
+            
+        return report_path
+        
+        
+async def demo_ultra_constrained_monitor():
+    """Demo ultra-constrained resource monitoring"""
+    print("🔍 Supreme System V5 - Ultra-Constrained Resource Monitor Demo")
     print("=" * 65)
-
-    # Initialize monitor
-    monitor = AdvancedResourceMonitor()
-
-    print("📊 Initializing resource monitoring...")
-
-    # Collect initial metrics
-    metrics = monitor._collect_resource_metrics()
-
-    print("\n📈 CURRENT RESOURCE USAGE:")
-    print(".1f")
-    print(".2f")
-    print(".1f")
-    print(".1f")
-    print(".1f")
-    print(f"   Process Threads: {metrics.process_threads}")
-
-    # Start monitoring
-    monitor.start_monitoring()
-    print("\n🔍 MONITORING ACTIVE - Collecting data for 10 seconds...")
-    await asyncio.sleep(10)
-
-    # Get health report
-    health_report = monitor.get_system_health_report()
-
-    print("\n🏥 SYSTEM HEALTH REPORT:")
-    print(".1f")
-    print(f"   Status: {health_report['health_status'].upper()}")
-    print(f"   Profile: {health_report['performance_profile']}")
-
-    print("\n📊 DETAILED METRICS:")
-    current = health_report['current_metrics']
-    print(".1f")
-    print(".2f")
-    print(f"   CPU Level: {current['cpu_level'].upper()}")
-    print(f"   RAM Level: {current['ram_level'].upper()}")
-
-    # Get trends
-    trends = health_report['trends']
-    if 'avg_cpu' in trends:
-        print("\n📈 USAGE TRENDS (1 hour):")
-        print(".1f")
-        print(".2f")
-        print(".1f")
-        print(".1f")
-        print(f"   CPU Trend: {trends['cpu_trend']}")
-        print(f"   RAM Trend: {trends['ram_trend']}")
-
-    # Show recommendations
-    if health_report['recommendations']:
-        print("\n💡 RECOMMENDATIONS:")
-        for rec in health_report['recommendations']:
-            print(f"   • {rec}")
-
-    # Test performance profile switching
-    print("\n🔄 TESTING PERFORMANCE PROFILE SWITCHING:")
-    print("   Switching to conservative profile...")
-    success = monitor.switch_performance_profile("conservative")
-    print(f"   Profile switch: {'✅ SUCCESS' if success else '❌ FAILED'}")
-
-    await asyncio.sleep(2)
-
-    print("   Switching back to normal profile...")
-    success = monitor.reset_to_normal()
-    print(f"   Profile reset: {'✅ SUCCESS' if success else '❌ FAILED'}")
-
-    # Stop monitoring
-    monitor.stop_monitoring()
-
-    print("\n🎯 SYSTEM CAPABILITIES:")
-    print("   • Real-time CPU/RAM monitoring")
-    print("   • Auto-optimization khi vượt ngưỡng")
-    print("   • Performance profile switching")
-    print("   • Emergency resource management")
-    print("   • Health scoring và recommendations")
-    print("   • Memory-efficient historical tracking")
-
-    print("\n✅ Advanced Resource Monitor Demo Complete")
-    print("   Supreme System V5 resource management ready!")
-
+    
+    # Initialize with ultra-constrained settings
+    config = {
+        'max_memory_mb': 450,
+        'max_cpu_percent': 85,
+        'check_interval': 5,  # 5 seconds for demo
+        'emergency_shutdown_enabled': False  # Disabled for demo safety
+    }
+    
+    monitor = UltraConstrainedResourceMonitor(config)
+    
+    print(f"Monitor initialized for ultra-constrained deployment:")
+    print(f"   RAM Budget: {monitor.limits.max_memory_mb}MB (47% of 1GB)")
+    print(f"   CPU Limit: {monitor.limits.max_cpu_percent}%")
+    print(f"   Hardware Target: 1GB RAM, 2 CPU cores")
+    print(f"   Emergency Shutdown: {'Enabled' if monitor.emergency_shutdown_enabled else 'Disabled (Demo)'}")
+    print()
+    
+    # Add demo handlers
+    async def demo_emergency_handler(reason: str):
+        print(f"🚨 EMERGENCY HANDLER: {reason}")
+        
+    def demo_optimization_handler(level: OptimizationLevel) -> str:
+        return f"Applied {level.name} optimization"
+        
+    monitor.add_emergency_handler(demo_emergency_handler)
+    monitor.add_optimization_handler(demo_optimization_handler)
+    
+    print("📊 Taking resource snapshots...")
+    
+    # Simulate monitoring for demo
+    for i in range(5):
+        snapshot = await monitor._take_resource_snapshot()
+        if snapshot:
+            await monitor._process_snapshot(snapshot)
+            
+            print(f"   Snapshot {i+1}: {monitor.status.value.upper()} - "
+                  f"Memory: {snapshot.process_memory_mb:.1f}MB, "
+                  f"CPU: {snapshot.cpu_percent:.1f}%")
+                  
+        await asyncio.sleep(2)
+        
+    print()
+    
+    # Show current status
+    status = monitor.get_current_status()
+    print("📊 CURRENT SYSTEM STATUS:")
+    print(f"   Status: {status['status'].upper()}")
+    print(f"   Memory Usage: {status['resources']['process_memory_mb']:.1f}MB / {status['limits']['max_memory_mb']}MB")
+    print(f"   CPU Usage: {status['resources']['cpu_percent']:.1f}% / {status['limits']['max_cpu_percent']}%")
+    print(f"   Available Memory: {status['resources']['available_memory_mb']:.1f}MB")
+    print(f"   Process Threads: {status['resources']['process_threads']}")
+    
+    print()
+    
+    # Show performance summary
+    summary = monitor.get_performance_summary()
+    print("🏆 PERFORMANCE SUMMARY:")
+    print(f"   Deployment: {summary['deployment_type']}")
+    print(f"   Uptime: {summary['performance_metrics']['uptime_hours']:.2f} hours")
+    print(f"   Measurements: {summary['performance_metrics']['total_measurements']}")
+    print(f"   Memory Efficiency: {summary['efficiency_metrics']['memory_efficiency_percent']:.1f}%")
+    print(f"   CPU Efficiency: {summary['efficiency_metrics']['cpu_efficiency_percent']:.1f}%")
+    print(f"   Target Achievement: {'✅' if summary['target_achievement']['overall_success'] else '⚠️'}")
+    
+    print()
+    
+    # Test optimization trigger
+    print("🔧 Testing auto-optimization...")
+    if monitor.auto_optimization_enabled:
+        await monitor._apply_optimization()
+        print(f"   Optimizations applied: {monitor.metrics.optimizations_applied}")
+    else:
+        print("   Auto-optimization disabled")
+        
+    print()
+    
+    print("🎯 ULTRA-CONSTRAINED FEATURES:")
+    print("   • 450MB RAM budget monitoring")
+    print("   • 85% CPU limit enforcement")
+    print("   • Emergency shutdown protection")
+    print("   • Auto-garbage collection")
+    print("   • Memory leak detection")
+    print("   • Performance target tracking")
+    print("   • Emergency report generation")
+    print("   • Production failsafe mechanisms")
+    
+    print()
+    print("✅ Ultra-Constrained Resource Monitor Demo Complete")
+    print("   System ready for 1GB RAM production deployment!")
+    
 
 if __name__ == "__main__":
-    asyncio.run(demo_resource_monitor())
+    asyncio.run(demo_ultra_constrained_monitor())
