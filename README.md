@@ -18,6 +18,258 @@ Supreme System V5 implements the **ULTRA SFL (Strict Free Mode)** methodology wi
 
 ---
 
+## 🚀 Quick Start (ULTRA OPTIMIZED MODE)
+
+### For i3-4GB Systems (RECOMMENDED)
+
+```bash
+# Clone repository
+git clone https://github.com/thanhmuefatty07/supreme-system-v5.git
+cd supreme-system-v5
+
+# Install dependencies with optimizations
+pip install -r requirements.txt
+
+# Copy ultra-optimized configuration (CPU ≤88%, RAM ≤3.86GB)
+cp .env.optimized .env
+
+# Validate environment (CRITICAL STEP)
+python scripts/validate_environment.py
+
+# Run parity tests (ensures ≤1e-6 accuracy)
+python -m pytest tests/test_parity_indicators.py -v
+
+# Launch optimized system
+python realtime_backtest.py --symbols BTC-USDT --balance 1000
+```
+
+**✅ Success Criteria:**
+- Environment validation: ALL CHECKS PASSED
+- Parity tests: ALL INDICATORS PASS (≤1e-6 tolerance)
+- CPU usage: ≤88% average
+- RAM usage: ≤3.86GB peak
+- Event skip ratio: 0.2-0.8 (intelligent filtering)
+
+### Alternative Entry Points
+
+```bash
+# Module entry point
+python -m supreme_system_v5.core
+
+# Direct script execution
+python realtime_backtest.py --symbols BTC-USDT --balance 1000
+
+# Environment validation only
+python scripts/validate_environment.py
+```
+
+---
+
+## 🔧 Troubleshooting & Error Resolution
+
+### 🚨 Common Issues & Quick Fixes
+
+#### PowerShell Exit Code -1 Error
+```bash
+# Run comprehensive error diagnosis
+python scripts/error_diagnosis.py --exit-code -1
+
+# Manual diagnosis steps:
+# 1. Check Python version >= 3.10
+python --version
+
+# 2. Validate environment
+python scripts/validate_environment.py
+
+# 3. Test basic imports
+python -c "import sys; print('Python OK'); import numpy; print('NumPy OK')"
+
+# 4. Run from command line instead of IDE terminal
+```
+
+#### Import Errors (supreme_system_v5 modules)
+```bash
+# Verify you're in project root
+ls -la  # Should see python/ directory
+
+# Add to Python path
+export PYTHONPATH="${PWD}/python:$PYTHONPATH"
+
+# Or run from project root
+python -m supreme_system_v5.core
+```
+
+#### Memory/CPU Issues (i3-4GB systems)
+```bash
+# Check system resources
+python -c "import psutil; print(f'CPU: {psutil.cpu_count()}, RAM: {psutil.virtual_memory().total/(1024**3):.1f}GB')"
+
+# Apply memory optimizations
+echo "PRICE_HISTORY_SIZE=100" >> .env
+echo "TARGET_EVENT_SKIP_RATIO=0.8" >> .env
+echo "MAX_CPU_PERCENT=80.0" >> .env
+```
+
+#### Configuration Issues
+```bash
+# Reset to optimized defaults
+cp .env.optimized .env
+
+# Validate configuration
+python -c "from pathlib import Path; print('Config file exists:', Path('.env').exists())"
+```
+
+### 🔍 Advanced Error Diagnosis
+
+Supreme System V5 includes comprehensive error diagnosis capabilities:
+
+```bash
+# Run full error diagnosis (RECOMMENDED for any issues)
+python scripts/error_diagnosis.py
+
+# Specific error types:
+python scripts/error_diagnosis.py --exit-code 1    # Validation failures
+python scripts/error_diagnosis.py --exit-code 2    # Config errors
+python scripts/error_diagnosis.py --exit-code 3    # Dependency errors
+```
+
+**Error Report Features:**
+- Complete system information capture
+- Dependency status validation  
+- Context-aware recommendations
+- Structured error reports in JSON format
+- Automatic recovery plan generation
+
+**Exit Code Mapping:**
+- `0`: SUCCESS
+- `1`: VALIDATION_FAILED - Run environment validation
+- `2`: CONFIG_ERROR - Check .env file
+- `3`: DEPENDENCY_ERROR - Install missing packages
+- `4`: RUNTIME_ERROR - Check logs for specific error
+- `5`: IMPORT_ERROR - Verify Python path
+- `-1`: TERMINAL_ERROR - Run from command line
+
+### 📊 Performance Validation
+
+```bash
+# Run benchmark tests (validates optimization claims)
+python scripts/bench_optimized.py --samples 1000 --runs 3
+
+# Run 60-minute load test
+python scripts/load_single_symbol.py --symbol BTC-USDT --duration-min 60 --rate 10
+
+# Monitor system resources during test
+watch -n 5 'python -c "import psutil; print(f\"CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%\")"'
+```
+
+**Expected Results:**
+- Indicator latency: median <0.2ms, p95 <0.5ms
+- CPU usage: average <88%
+- RAM usage: peak <3.86GB
+- No GC stalls >50ms
+
+---
+
+## ⚙️ Configuration Guide
+
+Supreme System V5 supports both standard and ultra-optimized configurations:
+
+### Ultra-Optimized Configuration (.env.optimized)
+
+```bash
+# Core optimizations
+OPTIMIZED_MODE=true
+EVENT_DRIVEN_PROCESSING=true
+SINGLE_SYMBOL=BTC-USDT
+
+# Resource targets (i3-4GB)
+MAX_CPU_PERCENT=88.0
+MAX_RAM_GB=3.86
+TARGET_EVENT_SKIP_RATIO=0.7
+
+# Aggressive scheduling
+PROCESS_INTERVAL_SECONDS=30
+NEWS_INTERVAL_MIN=10
+WHALE_INTERVAL_MIN=10
+
+# Memory optimization
+PRICE_HISTORY_SIZE=200  # CircularBuffer capped
+CACHE_TTL_SECONDS=1.0
+
+# Event filtering (intelligent processing)
+MIN_PRICE_CHANGE_PCT=0.001     # 0.1% threshold
+MIN_VOLUME_MULTIPLIER=3.0      # 3x volume spike
+MAX_TIME_GAP_SECONDS=60        # Max 60s gap
+```
+
+### Standard Configuration (.env.example)
+
+```bash
+# For systems with >4GB RAM
+OPTIMIZED_MODE=false
+EVENT_DRIVEN_PROCESSING=false
+MAX_CPU_PERCENT=95.0
+MAX_RAM_GB=4.5
+PRICE_HISTORY_SIZE=1000
+```
+
+### Hardware-Specific Recommendations
+
+**i3-4GB Systems:**
+- Use `.env.optimized` configuration
+- Enable all optimization flags
+- Monitor resources during operation
+- Consider disabling news/whale analysis if needed
+
+**i5-8GB Systems:**
+- Can use standard configuration
+- Optional optimizations for better performance
+- Support multiple symbols if needed
+
+**i7+ Systems:**
+- Full feature set available
+- Multiple symbol support
+- Higher processing frequencies
+- Advanced analytics enabled
+
+---
+
+## 🧪 Testing & Validation
+
+### Parity Testing (Mathematical Accuracy)
+
+```bash
+# Run comprehensive parity tests
+python -m pytest tests/test_parity_indicators.py -v
+
+# Expected output:
+# ✅ EMA parity test PASSED - 100 data points validated
+# ✅ RSI parity test PASSED - 100 data points validated  
+# ✅ MACD parity test PASSED - 100 data points validated
+# ✅ ALL INDICATORS parity test PASSED
+```
+
+### Performance Testing
+
+```bash
+# Quick performance test (5 minutes)
+python scripts/bench_optimized.py --samples 1000 --runs 3
+
+# Full load test (60 minutes - validates optimization claims)
+python scripts/load_single_symbol.py --symbol BTC-USDT --duration-min 60 --rate 10
+```
+
+### Environment Testing
+
+```bash
+# Complete environment validation
+python scripts/validate_environment.py
+
+# Should output: "✅ ALL CHECKS PASSED - Environment ready for Supreme System V5"
+```
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for:
@@ -29,13 +281,13 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 **Quick validation commands:**
 ```bash
 # Validate environment
-make validate-env
+python scripts/validate_environment.py
 
-# Validate commit quality
-make validate-commit
+# Run parity tests
+python -m pytest tests/test_parity_indicators.py
 
-# Run full CI pipeline
-make ci
+# Performance validation
+python scripts/bench_optimized.py
 ```
 
 ---
@@ -65,7 +317,7 @@ cd supreme-system-v5
 pip install -e . --config-settings editable_mode=compat
 
 # Copy ultra-optimized configuration (CPU ≤88%, RAM ≤3.86GB)
-cp env_optimized.template .env
+cp .env.optimized .env
 
 # Validate environment before running
 python scripts/validate_environment.py
@@ -125,331 +377,6 @@ make quick-bench
 make optimize-i3    # For i3-4GB systems
 make optimize-i5    # For i5-8GB systems
 make optimize-i7    # For i7+ systems
-```
-
-### Troubleshooting & Hardware Optimization
-
-#### 🔧 Hardware-Specific Issues
-
-**i3-4GB Systems (Ultra Optimized Mode):**
-```bash
-# Verify memory constraints
-python -c "import psutil; print(f'RAM: {psutil.virtual_memory().total/(1024**3):.1f}GB')"
-
-# Check CPU cores
-python -c "import psutil; print(f'CPU Cores: {psutil.cpu_count()}')"
-
-# Test optimized configuration
-make validate-env
-
-# Monitor resource usage during operation
-python -c "import psutil; print(f'CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%')"
-```
-
-**Memory Issues (RAM < 4GB):**
-```bash
-# Reduce price history size
-echo "PRICE_HISTORY_SIZE=100" >> .env
-
-# Disable heavy components
-echo "MULTI_TIMEFRAME_ENABLED=false" >> .env
-echo "NEWS_ANALYSIS_ENABLED=false" >> .env
-
-# Enable aggressive event filtering
-echo "TARGET_EVENT_SKIP_RATIO=0.8" >> .env
-```
-
-**CPU Throttling Issues:**
-```bash
-# Reduce processing frequency
-echo "PROCESS_INTERVAL_SECONDS=120" >> .env
-echo "TECHNICAL_INTERVAL=120" >> .env
-
-# Enable backpressure
-echo "MAX_CPU_PERCENT=70.0" >> .env
-```
-
-**Network Connectivity Issues:**
-```bash
-# Test network
-curl -s https://api.coingecko.com/api/v3/ping
-
-# Reduce API frequency
-echo "NEWS_INTERVAL_MIN=30" >> .env
-echo "WHALE_INTERVAL_MIN=30" >> .env
-```
-
-#### 🐛 Common Error Resolution
-
-**Import Errors:**
-```bash
-# Validate environment
-python scripts/validate_environment.py
-
-# Run comprehensive error diagnosis
-python scripts/error_diagnosis.py
-
-# Reinstall dependencies
-pip install -e . --force-reinstall
-
-# Check Python path
-python -c "import sys; print('\\n'.join(sys.path))"
-```
-
-**Configuration Errors:**
-```bash
-# Validate configuration
-python -c "from pydantic_settings import BaseSettings; print('Config validation: OK')"
-
-# Reset to defaults
-cp .env.example .env
-```
-
-**Performance Issues:**
-```bash
-# Run diagnostics
-make benchmark
-
-# Check system resources
-python -c "import psutil; print(f'CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%')"
-
-# Adjust optimization profile
-echo "PERFORMANCE_PROFILE=conservative" >> .env
-```
-
-#### 🚨 Advanced Error Diagnosis
-
-Supreme System V5 includes comprehensive error diagnosis capabilities:
-
-```bash
-# Run full error diagnosis (recommended for any issues)
-python scripts/error_diagnosis.py
-
-# This will:
-# - Analyze system environment and dependencies
-# - Identify root causes of errors
-# - Provide specific remediation steps
-# - Generate detailed error reports in logs/ directory
-```
-
-**Error Report Features:**
-- Complete system information capture
-- Dependency status validation
-- Context-aware recommendations
-- Structured error reports for debugging
-- Automatic log file generation
-
-### Configuration
-
-Create `.env` file with required settings or use `.env.optimized` for production-ready configuration:
-
-```bash
-# Copy optimized configuration (RECOMMENDED for i3-4GB systems)
-cp .env.optimized .env
-
-# Or create custom configuration
-```
-
-#### Complete Configuration Reference
-
-Supreme System V5 supports both standard and ultra-optimized configurations. Copy the appropriate template and customize for your environment:
-
-**Quick Setup Commands:**
-```bash
-# For standard deployment (recommended for most systems)
-cp .env.example .env
-
-# For ultra-optimized i3-4GB deployment
-cp env_optimized.template .env
-
-# For custom configuration, edit .env manually
-```
-
-##### Standard Configuration (Default Values)
-```bash
-# =================================================================
-# CORE SETTINGS
-# =================================================================
-OPTIMIZED_MODE=false                    # true for ultra-optimization
-EVENT_DRIVEN_PROCESSING=false          # true for event filtering
-INTELLIGENT_CACHING=false              # true for advanced caching
-PERFORMANCE_PROFILE=normal             # minimal|conservative|normal|performance
-
-# =================================================================
-# TRADING FOCUS
-# =================================================================
-SINGLE_SYMBOL=BTC-USDT                 # Primary symbol for scalping
-
-# =================================================================
-# SCHEDULING INTERVALS (seconds/minutes)
-# =================================================================
-PROCESS_INTERVAL_SECONDS=60            # Main processing interval
-TECHNICAL_INTERVAL=60                  # Technical analysis updates
-NEWS_INTERVAL_MIN=15                   # News analysis frequency
-WHALE_INTERVAL_MIN=15                  # Whale tracking frequency
-MTF_INTERVAL=300                       # Multi-timeframe updates
-
-# =================================================================
-# RESOURCE LIMITS
-# =================================================================
-MAX_CPU_PERCENT=95.0                   # CPU usage limit
-MAX_RAM_GB=4.5                         # RAM usage limit
-TARGET_EVENT_SKIP_RATIO=0.5            # Event filtering target
-
-# =================================================================
-# COMPONENT ENABLES
-# =================================================================
-TECHNICAL_ANALYSIS_ENABLED=true        # Technical indicators
-NEWS_ANALYSIS_ENABLED=true             # News sentiment analysis
-WHALE_TRACKING_ENABLED=true            # Whale activity monitoring
-MULTI_TIMEFRAME_ENABLED=true           # Multi-timeframe analysis
-RISK_MANAGEMENT_ENABLED=true           # Risk management system
-RESOURCE_MONITORING_ENABLED=false      # Resource monitoring
-
-# =================================================================
-# TRADING PARAMETERS
-# =================================================================
-TRADING_MODE=sandbox                   # sandbox|live
-POSITION_SIZE_PCT=0.02                 # Position size (2% of portfolio)
-STOP_LOSS_PCT=0.01                     # Stop loss (1%)
-TAKE_PROFIT_PCT=0.02                   # Take profit (2%)
-
-# =================================================================
-# TECHNICAL INDICATORS
-# =================================================================
-EMA_PERIOD=14                          # EMA period
-RSI_PERIOD=14                          # RSI period
-MACD_FAST=12                           # MACD fast period
-MACD_SLOW=26                           # MACD slow period
-MACD_SIGNAL=9                          # MACD signal period
-PRICE_HISTORY_SIZE=1000                # Price history buffer size
-
-# =================================================================
-# EVENT PROCESSING THRESHOLDS
-# =================================================================
-MIN_PRICE_CHANGE_PCT=0.0005            # 0.05% price change threshold
-MIN_VOLUME_MULTIPLIER=2.0              # 2x volume spike threshold
-MAX_TIME_GAP_SECONDS=120               # Max time between processing
-
-# =================================================================
-# PERFORMANCE OPTIMIZATION
-# =================================================================
-CACHE_ENABLED=true                     # Enable result caching
-CACHE_TTL_SECONDS=1.0                  # Cache time-to-live
-
-# =================================================================
-# ADVANCED FLAGS
-# =================================================================
-ULTRA_LOW_LATENCY_MODE=false           # Ultra-low latency mode
-MEMORY_EFFICIENT_MODE=false            # Memory optimization
-CPU_OPTIMIZATION_MODE=false            # CPU optimization
-```
-
-##### Ultra-Optimized Configuration (i3-4GB Systems)
-```bash
-# =================================================================
-# CORE OPTIMIZATIONS (Enable Ultra-Efficient Mode)
-# =================================================================
-OPTIMIZED_MODE=true
-EVENT_DRIVEN_PROCESSING=true
-INTELLIGENT_CACHING=true
-PERFORMANCE_PROFILE=performance  # minimal|conservative|normal|performance
-
-# =================================================================
-# SINGLE SYMBOL FOCUS (Critical for i3-4GB optimization)
-# =================================================================
-SINGLE_SYMBOL=BTC-USDT
-
-# =================================================================
-# SCHEDULING INTERVALS (Optimized for resource efficiency)
-# =================================================================
-PROCESS_INTERVAL_SECONDS=30
-TECHNICAL_INTERVAL=30
-NEWS_INTERVAL_MIN=10
-WHALE_INTERVAL_MIN=10
-MTF_INTERVAL=120
-
-# =================================================================
-# RESOURCE LIMITS (i3-4GB Optimization Targets)
-# =================================================================
-MAX_CPU_PERCENT=88.0
-MAX_RAM_GB=3.86
-TARGET_EVENT_SKIP_RATIO=0.7
-
-# =================================================================
-# COMPONENT ENABLES (Modular Architecture)
-# =================================================================
-TECHNICAL_ANALYSIS_ENABLED=true
-NEWS_ANALYSIS_ENABLED=true
-WHALE_TRACKING_ENABLED=true
-MULTI_TIMEFRAME_ENABLED=true
-RISK_MANAGEMENT_ENABLED=true
-RESOURCE_MONITORING_ENABLED=true
-
-# =================================================================
-# TRADING PARAMETERS (Ultra Scalping Optimized)
-# =================================================================
-TRADING_MODE=sandbox  # sandbox|live
-POSITION_SIZE_PCT=0.02
-STOP_LOSS_PCT=0.01
-TAKE_PROFIT_PCT=0.02
-
-# =================================================================
-# INDICATOR PARAMETERS (Memory Optimized)
-# =================================================================
-EMA_PERIOD=14
-RSI_PERIOD=14
-MACD_FAST=12
-MACD_SLOW=26
-MACD_SIGNAL=9
-PRICE_HISTORY_SIZE=200  # Memory capped for i3 constraints
-
-# =================================================================
-# EVENT PROCESSING THRESHOLDS (Aggressive Filtering)
-# =================================================================
-MIN_PRICE_CHANGE_PCT=0.001    # 0.1% - more aggressive than default 0.05%
-MIN_VOLUME_MULTIPLIER=3.0     # 3x average volume spike
-MAX_TIME_GAP_SECONDS=60       # Process every 60s maximum
-
-# =================================================================
-# CACHING PARAMETERS (Performance Optimization)
-# =================================================================
-CACHE_ENABLED=true
-CACHE_TTL_SECONDS=1.0
-
-# =================================================================
-# ADVANCED OPTIMIZATION FLAGS
-# =================================================================
-ULTRA_LOW_LATENCY_MODE=true
-MEMORY_EFFICIENT_MODE=true
-CPU_OPTIMIZATION_MODE=true
-```
-
-#### API Configuration
-
-```bash
-# Data Fabric API Keys (optional, higher rate limits)
-COINGECKO_KEY=your_coingecko_api_key
-CMC_KEY=your_coinmarketcap_api_key
-ALPHA_VANTAGE_KEY=your_alpha_vantage_api_key
-
-# Exchange API Keys (required for live trading)
-OKX_API_KEY=your_okx_api_key
-OKX_SECRET_KEY=your_okx_secret_key
-OKX_PASSPHRASE=your_okx_passphrase
-
-# Database Configuration
-REDIS_URL=redis://localhost:6379/0
-DATABASE_URL=postgresql://user:password@localhost:5432/database
-```
-
-#### System Configuration
-
-```bash
-TRADING_MODE=sandbox  # sandbox|live
-LOG_LEVEL=INFO
-METRICS_ENABLED=true
-PROMETHEUS_PORT=9090
 ```
 
 ### Single Symbol Focus & Resource Optimization
@@ -893,7 +820,7 @@ python -m supreme_system_v5.core
 ### 📊 Performance Targets Achieved
 
 | Component | CPU Target | Memory Target | Status |
-|-----------|------------|----------------|---------|
+|-----------|------------|----------------|----------|
 | Technical Analysis | <30% | <1.0GB | ✅ |
 | News Analysis | <25% | <0.8GB | ✅ |
 | Whale Tracking | <20% | <0.6GB | ✅ |
@@ -901,23 +828,6 @@ python -m supreme_system_v5.core
 | **TOTAL** | **<88%** | **<3.46GB** | ✅ |
 
 **Resource Usage**: CPU <88%, RAM <3.86GB on i3-4GB hardware with 99.9% uptime.
-
----
-
-## 🤝 Contributing
-
-### Development Workflow
-1. Create feature branch from `main`
-2. Implement changes with tests
-3. Run full CI pipeline locally
-4. Submit PR with scope, risks, test plan, rollback plan
-5. CI must pass, coverage >80%
-
-### Code Standards
-- **Formatting**: Black + isort
-- **Linting**: Ruff (errors only)
-- **Testing**: pytest + hypothesis
-- **Documentation**: Inline docs + README updates
 
 ---
 
