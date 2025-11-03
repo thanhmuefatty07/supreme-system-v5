@@ -1,88 +1,87 @@
-# 🟡 REMAINING WORK & RISKS — LIVE (v4)
+# 🟡 REMAINING WORK & RISKS — LIVE (v5)
 
-This page lists ONLY the remaining actionable work and unresolved risks. All completed items have been removed for clarity. Targets: CPU ≤ 88%, RAM ≤ 3.86GB (i3/4GB), scalping cadence 1–5m with adaptive gaps.
+Only the remaining actionable work and unresolved risks are listed. Completed items have been removed. Targets: CPU ≤ 88%, RAM ≤ 3.86GB (i3/4GB), scalping cadence 1–5m with adaptive gaps.
 
 ---
 
 ## 1) Strategy Integration → OptimizedTechnicalAnalyzer (PRIORITY)
-- Scope:
-  - Replace TechnicalIndicators by OptimizedTechnicalAnalyzer in strategies.py.
-  - Enable SmartEventProcessor gating (price/volume/time significance).
-  - Cap histories using CircularBuffer or deque(maxlen) with N≤1000.
-- Success Criteria:
-  - CPU median ↓ ≥ 35% on single-symbol 1m stream (60 min).
-  - EMA/RSI/MACD parity vs reference within 1e-6.
-  - Event skip ratio in [0.2, 0.8] depending on regime.
-- Owner: Core Strategy Team
+- Prompt (Do this now):
+  - Replace all uses of `TechnicalIndicators` in `python/supreme_system_v5/strategies.py` with `OptimizedTechnicalAnalyzer`.
+  - Inject `SmartEventProcessor` gating into the strategy loop; gate by price Δ%, volume spike multiplier, or max gap time.
+  - Bound price history using `CircularBuffer(size=200)` (i3 constraint) or `deque(maxlen=1000)` as fallback.
+- Technical steps:
+  - Import: `from supreme_system_v5.optimized import OptimizedTechnicalAnalyzer, SmartEventProcessor, CircularBuffer`.
+  - Strategy state: `self.ta = OptimizedTechnicalAnalyzer(cfg); self.events = SmartEventProcessor(evt_cfg); self.history = CircularBuffer(200)`.
+  - On tick: if `self.events.should_process(price, volume, ts):` then compute; else skip.
+  - Keep indicator parity unit tests against reference (tolerance ≤ 1e-6).
+- Success criteria:
+  - CPU median ↓ ≥ 35% on 60-min single-symbol 1m stream.
+  - EMA/RSI/MACD parity ≤ 1e-6 vs reference.
+  - Event skip ratio ∈ [0.2, 0.8].
 - ETA: 0.5–1 day
 
 ## 2) Config Defaults & Docs (Plug & Play)
-- Changes:
-  - Update .env.example and README to expose optimized toggles and intervals.
-- Keys:
-  - OPTIMIZED_MODE=true
-  - EVENT_DRIVEN_PROCESSING=true
-  - SINGLE_SYMBOL=BTC-USDT
-  - PROCESS_INTERVAL_SECONDS=30
-  - NEWS_INTERVAL_MIN=10
-  - WHALE_INTERVAL_MIN=10
-  - MAX_RAM_GB=3.86
-  - MAX_CPU_PERCENT=88
-- Success Criteria: Fresh clone can run optimized mode with minimal edits.
-- Owner: Platform
+- Prompt:
+  - Update `.env.example` and README to expose all optimized toggles/intervals/limits identical to `.env.optimized`.
+  - Document single-symbol focus, gap scheduling (30s–10m), and resource caps.
+- Technical steps:
+  - Mirror keys from `.env.optimized` into `.env.example` and README snippets.
+  - Validate loader handles missing keys with sane defaults.
+- Success criteria: Fresh clone runs optimized mode with minimal edits.
 - ETA: 0.25 day
 
 ## 3) Benchmarks & Load Tests (Numbers or it didn’t happen)
-- Scripts:
-  - scripts/bench_optimized.py — microbench EMA/RSI/MACD vs reference
-  - scripts/load_single_symbol.py — 20 ticks/sec for 60 min
-- Metrics:
-  - indicator_update_latency_seconds
-  - event_skip_ratio
-  - cpu_percent_gauge, memory_in_use_bytes
-  - strategy_latency_seconds (p50/p95)
-- Success Criteria:
-  - Median indicator update < 0.2ms; p95 < 0.5ms
-  - CPU avg < 88%; RAM peak < 3.86GB; no GC stalls > 50ms
-- Owner: Perf Eng
+- Prompt:
+  - Run micro-bench (EMA/RSI/MACD parity + latency), then 60-min load test at 10–20 tps.
+  - Export CSV + Prometheus metrics for dashboards.
+- Technical steps:
+  - `python scripts/bench_optimized.py --samples 5000 --runs 10 --prometheus-port 9091`.
+  - `python scripts/load_single_symbol.py --symbol BTC-USDT --rate 10 --duration-min 60 --prometheus-port 9092`.
+  - Persist CSV in `run_artifacts/` and add Makefile targets.
+- Success criteria:
+  - Indicator median < 0.2ms; p95 < 0.5ms; parity pass.
+  - CPU avg < 88%; RAM peak < 3.86GB; no GC stalls > 50ms.
 - ETA: 0.75 day
 
 ## 4) Confidence Fusion → Dynamic Risk Manager
-- Scope:
-  - Combine technical/news/whale confidence → composite (weights adjustable by volatility).
-  - Map composite → leverage (5–50x) and position size; incorporate volatility factor.
-- Success Criteria:
-  - Unit-tested confidence→size/leverage curve; bounds enforced in logs.
-  - Decision logs include confidence breakdown per source.
-- Owner: Risk
+- Prompt:
+  - Fuse `technical_confidence`, `news_confidence`, `whale_confidence` → `composite_confidence`.
+  - Map to position size/leverage with volatility adjustment (bounds 5–50x).
+- Technical steps:
+  - Add `SignalConfidence` in risk module with weights (default Tech 0.4, News 0.35, Whale 0.25) and regime-aware scaling.
+  - `size = f(confidence, volatility); leverage = clamp(g(confidence, regime), 5, 50)`; log breakdown and decisions.
+  - Unit tests for monotonicity and bounds.
+- Success criteria: Unit-tested curve; logs include source breakdown and final sizing/leverage.
 - ETA: 0.5 day
 
 ## 5) Orchestrator Adaptive Policies
-- Scope:
-  - Backpressure: if CPU>88% for 60s → double intervals; recover when stable.
-  - Priority: risk > whale > news > technical > patterns; preemption-safe.
-- Success Criteria:
-  - Stress: intervals widen then recover; no starvation; fairness visible in metrics.
-- Owner: Orchestration
+- Prompt:
+  - Implement backpressure and priority queue with preemption safety.
+- Technical steps:
+  - If CPU>88% for 60s → multiply intervals ×2 (cap 5m); recover when <75% for 2m.
+  - Priority: risk > whale > news > technical > patterns; time-slice with quanta (e.g., 50–100ms) to avoid starvation.
+  - Record fairness metrics (per-component runtime/share) in Prometheus.
+- Success criteria: Stress shows widening→recovery, no starvation; fairness metrics stable.
 - ETA: 0.75 day
 
 ## 6) Observability & SLOs
-- Scope:
-  - Add Prometheus KPIs + Grafana dashboards for optimization metrics.
-  - SLOs: CPU<88%, RAM<3.86GB, p95 cycle < 500ms, uptime 99.9%.
-- Success Criteria:
-  - Dashboards render KPIs; alerts verified via test fires.
-- Owner: SRE
+- Prompt:
+  - Add dashboards and alerts for optimization KPIs and SLOs.
+- Technical steps:
+  - Prom KPIs: `indicator_update_latency_seconds`, `event_skip_ratio`, `strategy_latency_seconds`, `cpu_percent_gauge`, `memory_in_use_bytes`.
+  - Grafana: provision JSON dashboards; alerts for CPU>88%, RAM>3.86GB, p95>500ms, uptime<99.9%.
+  - Export CSV after tests for audit.
+- Success criteria: Dashboards render all KPIs; test alerts fire.
 - ETA: 0.5 day
 
 ## 7) 24h Sandbox A/B (Optimized vs Baseline)
-- Scope:
-  - Run both modes on same symbol feed; compare PnL, DD, win rate, latency, CPU/RAM.
-- Artifacts:
-  - docs/reports/ab_test_{date}.md with analysis & recommendation.
-- Success Criteria:
-  - Optimized ≥ baseline on risk-adjusted metrics, or not worse with lower resource use.
-- Owner: QA/Trading
+- Prompt:
+  - Run optimized vs baseline on same feed for 24h; publish report.
+- Technical steps:
+  - Scripts: `scripts/ab_test_run.sh`, `scripts/report_ab.py` (or reuse load test with two configs).
+  - Metrics: PnL, max DD, win rate, latency p50/p95, CPU/RAM.
+  - Statistical significance test; recommend winner.
+- Success criteria: Optimized ≥ baseline on risk-adjusted metrics, or not worse with lower resource use.
 - ETA: 1.0 day
 
 ---
@@ -90,28 +89,28 @@ This page lists ONLY the remaining actionable work and unresolved risks. All com
 # ⚠️ Unresolved Risks & Mitigations
 
 ## R1. Strategy chưa wired vào optimized engine
-- Impact: Chưa đạt toàn bộ tiết kiệm CPU/RAM.
-- Mitigation: Ưu tiên Task 1; thêm test parity vs reference; feature-flag fallback.
+- Impact: Chưa đạt tiết kiệm CPU/RAM đầy đủ.
+- Mitigation: Ưu tiên Task 1; parity tests; feature-flag fallback.
 
 ## R2. CPU spike khi burst news/whale
-- Impact: Có thể vượt 88% ngắn hạn.
-- Mitigation: Backpressure (Task 5), rate limit API, batch xử lý, debounce event.
+- Impact: Vượt 88% ngắn hạn.
+- Mitigation: Backpressure (Task 5), API rate-limit, batch + debounce.
 
 ## R3. Thiếu số liệu benchmark thực
-- Impact: Quyết định tối ưu dựa ước lượng.
-- Mitigation: Task 3 trong ngày; lưu CSV + Prom metrics; báo cáo docs/reports/.
+- Impact: Quyết định dựa ước lượng.
+- Mitigation: Task 3 trong ngày; lưu CSV + Prom metrics; báo cáo `docs/reports/`.
 
-## R4. Bộ nhớ tăng theo thời gian do lịch sử không giới hạn
+## R4. Memory growth do lịch sử không giới hạn
 - Impact: RAM vượt 3.86GB.
-- Mitigation: N≤1000 cho lịch sử; CircularBuffer; weekly memory audit.
+- Mitigation: `CircularBuffer(200)`/`deque(maxlen=1000)`; weekly memory audit.
 
-## R5. Divergence giữa approximate mode và reference
-- Impact: Giảm chất lượng tín hiệu > 5%.
-- Mitigation: Chỉ bật approx khi CPU cao; canary A/B; log sai số; auto rollback.
+## R5. Approximate mode divergence (>5%)
+- Impact: Giảm chất lượng tín hiệu.
+- Mitigation: Chỉ bật khi CPU cao; canary A/B; log sai số; auto-rollback.
 
-## R6. Orchestrator fairness chưa được chứng minh
-- Impact: Starvation của một số pipeline khi high-load.
-- Mitigation: Priority queue + quanta; metric fairness; stress test trước deploy.
+## R6. Orchestrator fairness chưa chứng minh
+- Impact: Starvation pipeline khi high-load.
+- Mitigation: Priority+quanta; fairness metrics; stress test.
 
 ---
 
