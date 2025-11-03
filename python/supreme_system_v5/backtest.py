@@ -21,7 +21,7 @@ from loguru import logger
 from .data_fabric import DataAggregator
 from .data_fabric.cache import CacheManager
 from .event_bus import get_event_bus, create_market_data_event
-from .risk import DynamicRiskManager, PortfolioState
+from .risk import DynamicRiskManager, PortfolioState, RiskLimits, RiskManager
 from .strategies import ScalpingStrategy, SignalType, TradingSignal
 
 
@@ -151,7 +151,7 @@ class RealTimeBacktestEngine:
                 max_position_size_usd=self.config.initial_balance * self.config.max_position_size,
                 max_leverage=2.0,
             )
-            self.risk_manager = RiskManager(limits=limits, portfolio_state=PortfolioState(total_value=self.config.initial_balance))
+            self.risk_manager = RiskManager(limits=limits, portfolio_state=PortfolioState(total_balance=self.config.initial_balance, available_balance=self.config.initial_balance))
 
         self.strategy = ScalpingStrategy(risk_manager=self.risk_manager, config={})
         await self.cache_manager.start(symbols=self.config.symbols)

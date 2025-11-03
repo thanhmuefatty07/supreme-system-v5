@@ -547,7 +547,7 @@ class RiskManager(DynamicRiskManager):
         config = kwargs.get('config', {})
 
         if limits:
-            total_value = portfolio_state.total_value if portfolio_state else 10000
+            total_value = portfolio_state.total_balance if portfolio_state else 10000
             config.update({
                 'base_position_size_pct': limits.max_position_size_usd / total_value * 0.1,
                 'max_position_size_pct': limits.max_position_size_usd / total_value,
