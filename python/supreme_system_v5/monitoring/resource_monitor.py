@@ -638,7 +638,7 @@ def demo_resource_monitor():
         processed = random.random() > 0.3  # 70% processed, 30% skipped
         monitor.record_event_processed(processed)
 
-        print(".1f")
+        print(f"   CPU Usage: {performance_metrics['avg_cpu_percent']:.1f}%")
         time.sleep(0.5)
 
     # Get health report
@@ -651,35 +651,35 @@ def demo_resource_monitor():
     print(f"   Overall Health: {health_report['overall_health']:.1f}/100 ({health_report['health_status']})")
     print(f"   CPU Usage: {health_report['current_metrics']['cpu_percent']:.1f}%")
     print(".2f")
-    print(".1f")
+    print(f"   CPU Usage: {performance_metrics['avg_cpu_percent']:.1f}%")
     print(".3f")
     print(f"   Performance Profile: {health_report['performance_profile']}")
     print(f"   Uptime: {health_report['uptime_seconds']:.1f} seconds")
 
-    print("
-📈 PERFORMANCE METRICS:"    print(".1f")
-    print(".2f")
-    print(".1f")
-    print(".3f")
+    print("\n📈 PERFORMANCE METRICS:")
+    print(f"   CPU Usage: {performance_metrics['avg_cpu_percent']:.1f}%")
+    print(f"   Memory Usage: {performance_metrics['avg_memory_gb']:.2f}GB")
+    print(f"   Latency: {performance_metrics['avg_latency_ms']:.1f}ms")
+    print(f"   Event Skip Ratio: {performance_metrics['avg_event_skip_ratio']:.3f}")
     print(f"   Indicator Measurements: {performance_metrics['indicator_measurements']}")
     print(f"   Events Processed: {performance_metrics['events_processed']}")
     print(f"   Events Skipped: {performance_metrics['events_skipped']}")
 
     # Export Prometheus metrics
     prometheus_output = monitor.export_prometheus_metrics()
-    print("
-📊 PROMETHEUS METRICS EXPORT:"    print(prometheus_output[:200] + "..." if len(prometheus_output) > 200 else prometheus_output)
+    print("\n📊 PROMETHEUS METRICS EXPORT:")
+    print(prometheus_output[:200] + "..." if len(prometheus_output) > 200 else prometheus_output)
 
-    print("
-🎯 SYSTEM CAPABILITIES:"    print("   • Real-time CPU/memory monitoring")
+    print("\n🎯 SYSTEM CAPABILITIES:")
+    print("   • Real-time CPU/memory monitoring")
     print("   • Auto-optimization based on thresholds")
     print("   • Prometheus metrics export")
     print("   • Performance profile switching")
     print("   • Indicator latency tracking")
     print("   • Event processing efficiency monitoring")
 
-    print("
-✅ Advanced Resource Monitor Demo Complete"    print("   System ready for production resource monitoring!")
+    print("\n✅ Advanced Resource Monitor Demo Complete")
+    print("   System ready for production resource monitoring!")
 
 if __name__ == "__main__":
     demo_resource_monitor()

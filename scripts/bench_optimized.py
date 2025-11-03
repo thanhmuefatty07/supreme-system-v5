@@ -230,9 +230,23 @@ def benchmark_indicator(name: str, optimized_func, reference_func, test_data: Li
     parity_ok = True
     if len(optimized_results) == len(reference_results):
         for opt, ref in zip(optimized_results, reference_results):
-            if abs(opt - ref) > 1e-6:  # 1e-6 tolerance as per roadmap
-                parity_ok = False
-                break
+            # Handle both single values and tuples (like MACD)
+            if isinstance(opt, tuple) and isinstance(ref, tuple):
+                # Compare each element in the tuple
+                if len(opt) != len(ref):
+                    parity_ok = False
+                    break
+                for o, r in zip(opt, ref):
+                    if abs(o - r) > 1e-6:  # 1e-6 tolerance as per roadmap
+                        parity_ok = False
+                        break
+                if not parity_ok:
+                    break
+            else:
+                # Single value comparison
+                if abs(opt - ref) > 1e-6:  # 1e-6 tolerance as per roadmap
+                    parity_ok = False
+                    break
     else:
         parity_ok = False
 
@@ -374,7 +388,7 @@ def run_full_benchmark_suite():
         status = "✅" if result['parity_valid'] else "❌"
         print(f"{status} {result['indicator']}:")
         print(f"   Optimized: {result['optimized_median_ms']:.2f}ms")
-        print(f"   Reference: {result['ref_median_ms']:.1f}ms")
+        print(f"   Reference: {result['reference_median_ms']:.1f}ms")
         print(f"   Parity Valid: {result['parity_valid']}")
 
     print("\n🔧 COMPONENT PERFORMANCE")
@@ -467,8 +481,8 @@ def main():
     CPU_PERCENT_GAUGE.labels(phase='initial').set(initial_cpu)
     MEMORY_IN_USE_BYTES.labels(phase='initial').set(initial_memory)
 
-    print(".1f"
-    print(".1f"
+    print(f"   Initial CPU: {initial_cpu:.1f}%")
+    print(f"   Initial Memory: {initial_memory / (1024**2):.1f}MB")
 
     # Run benchmark suite
     benchmark_start = time.time()
@@ -490,7 +504,7 @@ def main():
     criteria_total = 6  # 3 indicators * 2 criteria each
 
     success_rate = criteria_passed / criteria_total
-    print(".1f"
+    print(f"   Success Rate: {success_rate:.1f}")
     sys.exit(0 if success_rate >= 0.8 else 1)  # 80% pass rate
 
 if __name__ == "__main__":
