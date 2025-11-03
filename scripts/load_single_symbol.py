@@ -95,7 +95,8 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
         duration_minutes: Test duration
         enable_monitoring: Enable resource monitoring
     """
-    print("🧪 SUPREME SYSTEM V5 - LOAD TEST SUITE"    print("=" * 70)
+    print("🧪 SUPREME SYSTEM V5 - LOAD TEST SUITE")
+    print("=" * 70)
     print(f"Symbol: {symbol}")
     print(f"Tick Rate: {tick_rate} ticks/sec")
     print(f"Duration: {duration_minutes} minutes")
@@ -181,16 +182,16 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
         if (i + 1) % (tick_rate * 30) == 0:  # Every 30 seconds
             elapsed = time.time() - start_time
             progress = (i + 1) / len(price_feed) * 100
-            print(".1f"
+            print(f"   Progress: {progress:.1f}% complete ({elapsed:.1f}s elapsed)")
     # Final results
     test_duration = time.time() - start_time
     ticks_per_second = len(price_feed) / test_duration
 
-    print("
-📈 LOAD TEST RESULTS"    print("=" * 70)
-    print(".2f")
+    print("\n📈 LOAD TEST RESULTS")
+    print("=" * 70)
+    print(f"Test Duration: {test_duration:.2f}s")
     print(f"Total Ticks Processed: {len(price_feed):,}")
-    print(".1f")
+    print(f"Processing Rate: {ticks_per_second:.1f} ticks/second")
     print(f"Signals Generated: {signals_generated}")
     print(f"Trades Executed: {trades_executed}")
     print(f"Event Skip Ratio: {events_skipped/events_processed:.3f}")
@@ -200,17 +201,15 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
         health_report = monitor.get_system_health_report()
         performance_metrics = monitor.get_performance_stats()
 
-        print("
-🔧 RESOURCE UTILIZATION"        print(".1f")
-        print(".1f")
-        print(".2f")
-        print(".3f")
+        print("\n🔧 RESOURCE UTILIZATION")
+        print(f"Average CPU Usage: {performance_metrics['avg_cpu_percent']:.1f}%")
+        print(f"Average Memory Usage: {performance_metrics['avg_memory_gb']:.1f}GB")
+        print(f"Average Latency: {performance_metrics['avg_latency_ms']:.2f}ms")
+        print(f"Event Skip Ratio: {performance_metrics['avg_event_skip_ratio']:.3f}")
         print(f"Performance Profile: {health_report['performance_profile']}")
 
-        print("
-📊 DETAILED METRICS"        print(".1f")
-        print(".2f")
-        print(".1f")
+        print("\n📊 DETAILED METRICS")
+        print(f"Average Latency: {performance_metrics['avg_latency_ms']:.2f}ms")
         print(f"Event Skip Ratio: {performance_metrics['avg_event_skip_ratio']:.3f}")
         print(f"Indicator Measurements: {performance_metrics['indicator_measurements']}")
 
@@ -222,15 +221,16 @@ async def run_load_test(symbol: str, tick_rate: int, duration_minutes: int, enab
         STRATEGY_LATENCY.labels(strategy='optimized_scalping', percentile='p50').observe(p50_latency)
         STRATEGY_LATENCY.labels(strategy='optimized_scalping', percentile='p95').observe(p95_latency)
 
-        print("
-📈 STRATEGY LATENCY METRICS"        print(".4f"        print(".4f"
+        print("\n📈 STRATEGY LATENCY METRICS")
+        print(f"P50 Latency: {p50_latency:.4f}s")
+        print(f"P95 Latency: {p95_latency:.4f}s")
     # Record event skip ratio
     skip_ratio = events_skipped / events_processed if events_processed > 0 else 0
     EVENT_SKIP_RATIO.labels(test_type='load_test').set(skip_ratio)
 
     # Acceptance criteria validation
-    print("
-✅ ACCEPTANCE CRITERIA VALIDATION"    print("=" * 70)
+    print("\n✅ ACCEPTANCE CRITERIA VALIDATION")
+    print("=" * 70)
 
     criteria_passed = 0
     criteria_total = 0
@@ -301,8 +301,8 @@ def main():
     CPU_PERCENT_GAUGE.labels(phase='initial').set(initial_cpu)
     MEMORY_IN_USE_BYTES.labels(phase='initial').set(initial_memory)
 
-    print(".1f"
-    print(".1f"
+    print(f"   Initial CPU: {initial_cpu:.1f}%")
+    print(f"   Initial Memory: {initial_memory / (1024**2):.1f}MB")
 
     # Run async test
     async def run_test():
@@ -322,8 +322,9 @@ def main():
     CPU_PERCENT_GAUGE.labels(phase='final').set(final_cpu)
     MEMORY_IN_USE_BYTES.labels(phase='final').set(final_memory)
 
-    print("
-📈 Final System Resources:"    print(".1f"    print(".1f"
+    print("\n📈 Final System Resources:")
+    print(f"   Final CPU: {final_cpu:.1f}%")
+    print(f"   Final Memory: {final_memory / (1024**2):.1f}MB")
 
     # Exit with success/failure code
     success_rate = results['criteria_passed'] / results['criteria_total']

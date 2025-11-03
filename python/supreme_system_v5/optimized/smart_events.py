@@ -5,6 +5,7 @@ Dramatically reduces CPU usage during quiet market periods.
 
 from typing import Optional, Dict, Any
 import time
+from .circular_buffer import RollingAverage
 
 class SmartEventProcessor:
     """

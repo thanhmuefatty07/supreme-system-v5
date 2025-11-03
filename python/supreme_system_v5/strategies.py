@@ -24,9 +24,7 @@ SIGNALS_GENERATED = Counter(
 SIGNAL_CONFIDENCE = Histogram(
     "strategy_signal_confidence", "Signal confidence distribution", ["strategy"]
 )
-STRATEGY_LATENCY = Histogram(
-    "strategy_latency_seconds", "Strategy calculation latency", ["strategy"]
-)
+# STRATEGY_LATENCY moved to load_single_symbol.py to avoid duplicate registration
 
 
 class SignalType(Enum):
@@ -401,7 +399,7 @@ class ScalpingStrategy:
         # OPTIMIZED: Analyzer handles event filtering internally
         processed = self.analyzer.add_price_data(price, volume, timestamp)
 
-        STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)
+        # STRATEGY_LATENCY.labels(strategy=self.name).observe(time.time() - start_time)  # Disabled to avoid duplicate metrics
 
         if not processed:
             # Event filtered - no processing needed (70-90% reduction)
