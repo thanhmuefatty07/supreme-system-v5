@@ -1,247 +1,320 @@
 #!/usr/bin/env python3
 """
-Supreme System V5 - Environment Validation Script
-Automatically detects and resolves import/package issues for Windows and Linux.
-Validates all runtime and test dependencies.
+Environment Validation Script for Supreme System V5
+Validates Python version, dependencies, imports, and configuration
 """
 
 import sys
 import os
+import json
+import importlib
+import time
 import platform
-import subprocess
-import importlib.util
-from typing import List, Dict, Tuple, Optional
-
-# Add project root to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+from pathlib import Path
+from typing import Dict, List, Any, Optional
 
 class EnvironmentValidator:
-    """Comprehensive environment validation for Supreme System V5."""
-
+    """Comprehensive environment validation for Supreme System V5"""
+    
+    REQUIRED_PYTHON_VERSION = (3, 10)
+    REQUIRED_PACKAGES = [
+        'numpy',
+        'pandas', 
+        'loguru',
+        'prometheus_client',
+        'asyncio',
+        'websockets',
+        'aiohttp',
+        'pydantic',
+        'pytest'
+    ]
+    
+    REQUIRED_ENV_KEYS = [
+        'OPTIMIZED_MODE',
+        'EVENT_DRIVEN_PROCESSING',
+        'SINGLE_SYMBOL',
+        'PROCESS_INTERVAL_SECONDS',
+        'NEWS_INTERVAL_MIN',
+        'WHALE_INTERVAL_MIN',
+        'MAX_CPU_PERCENT',
+        'MAX_RAM_GB'
+    ]
+    
     def __init__(self):
-        self.system = platform.system().lower()
-        self.python_version = sys.version_info
-        self.issues = []
-        self.warnings = []
-        self.successes = []
-
-    def log_issue(self, message: str):
-        """Log a critical issue that prevents operation."""
-        self.issues.append(message)
-        print(f"❌ {message}")
-
-    def log_warning(self, message: str):
-        """Log a warning that may impact performance."""
-        self.warnings.append(message)
-        print(f"⚠️  {message}")
-
-    def log_success(self, message: str):
-        """Log a successful validation."""
-        self.successes.append(message)
-        print(f"✅ {message}")
-
-    def check_python_version(self) -> bool:
-        """Check if Python version is compatible."""
-        if self.python_version >= (3, 10):
-            self.log_success(f"Python {self.python_version.major}.{self.python_version.minor} - Compatible")
-            return True
-        else:
-            self.log_issue(f"Python {self.python_version.major}.{self.python_version.minor} - Requires Python 3.10+")
-            return False
-
-    def check_import(self, module_name: str, description: str = "", required: bool = True) -> bool:
-        """Check if a module can be imported."""
-        try:
-            importlib.import_module(module_name)
-            self.log_success(f"{module_name} - Available ({description})")
-            return True
-        except ImportError as e:
-            if required:
-                self.log_issue(f"{module_name} - Missing ({description}): {e}")
-                return False
-            else:
-                self.log_warning(f"{module_name} - Optional ({description}): {e}")
-                return False
-
-    def check_core_dependencies(self) -> bool:
-        """Check all core runtime dependencies."""
-        print("\n🔧 CORE DEPENDENCIES")
-        print("=" * 50)
-
-        core_deps = [
-            ('fastapi', 'Web framework'),
-            ('uvicorn', 'ASGI server'),
-            ('pydantic', 'Data validation'),
-            ('aiohttp', 'Async HTTP client'),
-            ('websockets', 'WebSocket support'),
-            ('numpy', 'Numerical computing'),
-            ('pandas', 'Data manipulation'),
-            ('psutil', 'System monitoring'),
-            ('prometheus_client', 'Metrics collection'),
-            ('loguru', 'Advanced logging'),
-            ('rich', 'Console output'),
-            ('python_dotenv', 'Environment variables'),
+        self.results = {
+            'timestamp': time.time(),
+            'platform': platform.platform(),
+            'python_version': sys.version,
+            'validation_results': {},
+            'errors': [],
+            'warnings': [],
+            'passed': False
+        }
+    
+    def validate_python_version(self) -> bool:
+        """Validate Python version >= 3.10"""
+        current_version = sys.version_info[:2]
+        required = self.REQUIRED_PYTHON_VERSION
+        
+        passed = current_version >= required
+        
+        self.results['validation_results']['python_version'] = {
+            'current': f"{current_version[0]}.{current_version[1]}",
+            'required': f"{required[0]}.{required[1]}",
+            'passed': passed
+        }
+        
+        if not passed:
+            self.results['errors'].append(
+                f"Python {required[0]}.{required[1]}+ required, found {current_version[0]}.{current_version[1]}"
+            )
+        
+        return passed
+    
+    def validate_dependencies(self) -> bool:
+        """Validate all required packages are installed and importable"""
+        dependency_results = {}
+        all_passed = True
+        
+        for package in self.REQUIRED_PACKAGES:
+            try:
+                module = importlib.import_module(package)
+                version = getattr(module, '__version__', 'unknown')
+                dependency_results[package] = {
+                    'installed': True,
+                    'version': version,
+                    'passed': True
+                }
+            except ImportError as e:
+                dependency_results[package] = {
+                    'installed': False,
+                    'error': str(e),
+                    'passed': False
+                }
+                all_passed = False
+                self.results['errors'].append(f"Missing package: {package}")
+        
+        self.results['validation_results']['dependencies'] = dependency_results
+        return all_passed
+    
+    def validate_project_imports(self) -> bool:
+        """Validate core Supreme System V5 modules can be imported"""
+        project_root = Path(__file__).parent.parent
+        sys.path.insert(0, str(project_root / 'python'))
+        
+        core_modules = [
+            'supreme_system_v5.optimized.analyzer',
+            'supreme_system_v5.optimized.smart_events',
+            'supreme_system_v5.optimized.circular_buffer',
+            'supreme_system_v5.strategies',
+            'supreme_system_v5.risk',
+            'supreme_system_v5.monitoring'
         ]
-
-        all_good = True
-        for module, desc in core_deps:
-            if not self.check_import(module, desc):
-                all_good = False
-
-        return all_good
-
-    def check_technical_analysis(self) -> bool:
-        """Check technical analysis libraries."""
-        print("\n📊 TECHNICAL ANALYSIS")
-        print("=" * 50)
-
-        ta_libs = [
-            ('ta', 'Technical Analysis (Python)', False),  # Optional
-            ('finta', 'Financial Technical Analysis', False),  # Optional
-        ]
-
-        # At least one TA library should be available
-        ta_available = False
-        for module, desc, required in ta_libs:
-            if self.check_import(module, desc, required):
-                ta_available = True
-
-        if not ta_available:
-            self.log_warning("No technical analysis library available - using fallback implementations")
-
-        return True  # Not blocking since we have fallbacks
-
-    def check_supreme_system_imports(self) -> bool:
-        """Check all Supreme System V5 imports."""
-        print("\n🚀 SUPREME SYSTEM V5 IMPORTS")
-        print("=" * 50)
-
-        supreme_imports = [
-            ('supreme_system_v5.core', 'Core system'),
-            ('supreme_system_v5.strategies', 'Trading strategies'),
-            ('supreme_system_v5.optimized.analyzer', 'Optimized analyzer'),
-            ('supreme_system_v5.optimized.smart_events', 'Smart event processor'),
-            ('supreme_system_v5.optimized.circular_buffer', 'Circular buffer'),
-            ('supreme_system_v5.risk', 'Risk management'),
-            ('supreme_system_v5.monitoring.resource_monitor', 'Resource monitor'),
-        ]
-
-        all_good = True
-        for module, desc in supreme_imports:
-            if not self.check_import(module, desc):
-                all_good = False
-
-        return all_good
-
-    def check_system_resources(self) -> bool:
-        """Check system resources and provide recommendations."""
-        print("\n💻 SYSTEM RESOURCES")
-        print("=" * 50)
-
+        
+        import_results = {}
+        all_passed = True
+        
+        for module_name in core_modules:
+            try:
+                importlib.import_module(module_name)
+                import_results[module_name] = {
+                    'importable': True,
+                    'passed': True
+                }
+            except ImportError as e:
+                import_results[module_name] = {
+                    'importable': False,
+                    'error': str(e),
+                    'passed': False
+                }
+                all_passed = False
+                self.results['errors'].append(f"Cannot import: {module_name} - {e}")
+        
+        self.results['validation_results']['project_imports'] = import_results
+        return all_passed
+    
+    def validate_environment_config(self) -> bool:
+        """Validate .env configuration completeness"""
+        project_root = Path(__file__).parent.parent
+        env_files = ['.env', '.env.optimized']
+        
+        config_results = {}
+        any_valid_config = False
+        
+        for env_file in env_files:
+            env_path = project_root / env_file
+            
+            if not env_path.exists():
+                config_results[env_file] = {
+                    'exists': False,
+                    'keys_present': [],
+                    'missing_keys': self.REQUIRED_ENV_KEYS,
+                    'passed': False
+                }
+                continue
+            
+            # Parse .env file
+            env_vars = {}
+            try:
+                with open(env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            env_vars[key.strip()] = value.strip()
+            except Exception as e:
+                config_results[env_file] = {
+                    'exists': True,
+                    'error': str(e),
+                    'passed': False
+                }
+                continue
+            
+            # Check required keys
+            present_keys = [key for key in self.REQUIRED_ENV_KEYS if key in env_vars]
+            missing_keys = [key for key in self.REQUIRED_ENV_KEYS if key not in env_vars]
+            
+            passed = len(missing_keys) == 0
+            if passed:
+                any_valid_config = True
+            
+            config_results[env_file] = {
+                'exists': True,
+                'keys_present': present_keys,
+                'missing_keys': missing_keys,
+                'total_keys': len(env_vars),
+                'completeness': len(present_keys) / len(self.REQUIRED_ENV_KEYS),
+                'passed': passed
+            }
+        
+        self.results['validation_results']['environment_config'] = config_results
+        
+        if not any_valid_config:
+            self.results['errors'].append(
+                "No complete .env configuration found. Required keys: " + ", ".join(self.REQUIRED_ENV_KEYS)
+            )
+        
+        return any_valid_config
+    
+    def validate_system_resources(self) -> bool:
+        """Validate system has adequate resources"""
         try:
             import psutil
+            
+            # Get system info
             cpu_count = psutil.cpu_count()
-            memory_gb = psutil.virtual_memory().total / (1024**3)
-
-            print(f"   CPU Cores: {cpu_count}")
-            print(f"   Total RAM: {memory_gb:.1f}GB")
-
-            # Check if system meets minimum requirements
-            if cpu_count >= 2 and memory_gb >= 4:
-                self.log_success("System meets minimum requirements (2+ cores, 4GB+ RAM)")
-                return True
-            elif cpu_count >= 1 and memory_gb >= 2:
-                self.log_warning("System meets basic requirements but may be slow (1+ core, 2GB+ RAM)")
-                return True
-            else:
-                self.log_issue("System does not meet minimum requirements (<1 core, <2GB RAM)")
-                return False
-
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            # Check minimum requirements
+            min_ram_gb = 2.0  # Minimum for i3 constraints
+            min_disk_gb = 1.0
+            
+            ram_gb = memory.total / (1024**3)
+            disk_gb = disk.free / (1024**3)
+            
+            resource_results = {
+                'cpu_cores': cpu_count,
+                'ram_total_gb': round(ram_gb, 2),
+                'ram_available_gb': round(memory.available / (1024**3), 2),
+                'disk_free_gb': round(disk_gb, 2),
+                'requirements_met': {
+                    'ram': ram_gb >= min_ram_gb,
+                    'disk': disk_gb >= min_disk_gb
+                },
+                'passed': ram_gb >= min_ram_gb and disk_gb >= min_disk_gb
+            }
+            
+            if ram_gb < min_ram_gb:
+                self.results['warnings'].append(f"Low RAM: {ram_gb:.1f}GB < {min_ram_gb}GB recommended")
+            
+            if disk_gb < min_disk_gb:
+                self.results['warnings'].append(f"Low disk space: {disk_gb:.1f}GB < {min_disk_gb}GB recommended")
+            
         except ImportError:
-            self.log_warning("psutil not available - cannot check system resources")
-            return True
-
-    def check_network_connectivity(self) -> bool:
-        """Check basic network connectivity."""
-        print("\n🌐 NETWORK CONNECTIVITY")
+            resource_results = {
+                'psutil_available': False,
+                'passed': True  # Assume OK if can't check
+            }
+            self.results['warnings'].append("psutil not available - cannot check system resources")
+        
+        self.results['validation_results']['system_resources'] = resource_results
+        return resource_results.get('passed', True)
+    
+    def run_comprehensive_validation(self) -> Dict[str, Any]:
+        """Run all validation checks"""
+        print("🔍 Supreme System V5 - Environment Validation")
         print("=" * 50)
-
-        try:
-            import socket
-            # Try to resolve a well-known host
-            socket.gethostbyname('google.com')
-            self.log_success("Network connectivity - OK")
-            return True
-        except Exception as e:
-            self.log_warning(f"Network connectivity check failed: {e}")
-            return False
-
-    def generate_installation_commands(self) -> List[str]:
-        """Generate installation commands for missing dependencies."""
-        commands = []
-
-        if self.system == 'windows':
-            commands.extend([
-                "# Windows Installation Commands:",
-                "python -m pip install --upgrade pip setuptools wheel",
-                "pip install -r requirements.txt --no-cache-dir",
-            ])
-        else:
-            commands.extend([
-                "# Linux/macOS Installation Commands:",
-                "python3 -m pip install --upgrade pip setuptools wheel",
-                "pip3 install -r requirements.txt --no-cache-dir",
-            ])
-
-        return commands
-
-    def run_validation(self) -> bool:
-        """Run complete environment validation."""
-        print("🚀 SUPREME SYSTEM V5 - ENVIRONMENT VALIDATION")
-        print("=" * 60)
-        print(f"System: {self.system}")
-        print(f"Python: {self.python_version.major}.{self.python_version.minor}.{self.python_version.micro}")
-        print()
-
+        
         checks = [
-            self.check_python_version,
-            self.check_core_dependencies,
-            self.check_technical_analysis,
-            self.check_supreme_system_imports,
-            self.check_system_resources,
-            self.check_network_connectivity,
+            ('Python Version', self.validate_python_version),
+            ('Dependencies', self.validate_dependencies),
+            ('Project Imports', self.validate_project_imports),
+            ('Environment Config', self.validate_environment_config),
+            ('System Resources', self.validate_system_resources)
         ]
-
+        
         all_passed = True
-        for check in checks:
-            if not check():
+        
+        for check_name, check_func in checks:
+            print(f"\n📋 {check_name}...")
+            try:
+                passed = check_func()
+                status = "✅ PASS" if passed else "❌ FAIL"
+                print(f"   {status}")
+                
+                if not passed:
+                    all_passed = False
+            except Exception as e:
+                print(f"   ❌ ERROR: {e}")
+                self.results['errors'].append(f"{check_name}: {e}")
                 all_passed = False
-
-        print("\n" + "=" * 60)
-        print("📊 VALIDATION SUMMARY")
-        print("=" * 60)
-
-        if all_passed and not self.issues:
-            print("🎉 ALL CHECKS PASSED - Environment ready for Supreme System V5!")
-            return True
+        
+        self.results['passed'] = all_passed
+        
+        # Print summary
+        print("\n" + "=" * 50)
+        if all_passed:
+            print("✅ ALL CHECKS PASSED - Environment ready for Supreme System V5")
         else:
-            print(f"❌ VALIDATION FAILED")
-            print(f"   Critical Issues: {len(self.issues)}")
-            print(f"   Warnings: {len(self.warnings)}")
-            print(f"   Successful Checks: {len(self.successes)}")
+            print("❌ VALIDATION FAILED - Issues found:")
+            for error in self.results['errors']:
+                print(f"   • {error}")
+        
+        if self.results['warnings']:
+            print("\n⚠️ Warnings:")
+            for warning in self.results['warnings']:
+                print(f"   • {warning}")
+        
+        return self.results
+    
+    def save_report(self, output_path: Optional[str] = None) -> str:
+        """Save validation report to JSON file"""
+        if output_path is None:
+            timestamp = int(time.time())
+            output_path = f"validation_report_{timestamp}.json"
+        
+        with open(output_path, 'w') as f:
+            json.dump(self.results, f, indent=2)
+        
+        print(f"\n📄 Validation report saved to: {output_path}")
+        return output_path
 
-            if self.issues:
-                print("\n🔧 TO FIX CRITICAL ISSUES:")
-                for cmd in self.generate_installation_commands():
-                    print(f"   {cmd}")
-
-            return False
 
 def main():
-    """Main validation entry point."""
+    """Main validation entry point"""
     validator = EnvironmentValidator()
-    success = validator.run_validation()
-    sys.exit(0 if success else 1)
+    results = validator.run_comprehensive_validation()
+    
+    # Save report
+    report_path = validator.save_report()
+    
+    # Exit with appropriate code
+    exit_code = 0 if results['passed'] else 1
+    print(f"\n🏁 Validation completed with exit code: {exit_code}")
+    
+    return exit_code
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
