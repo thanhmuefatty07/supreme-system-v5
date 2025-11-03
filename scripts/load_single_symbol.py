@@ -286,6 +286,7 @@ def main():
     parser.add_argument('--duration-min', type=int, default=5, help='Test duration in minutes')
     parser.add_argument('--no-monitoring', action='store_true', help='Disable resource monitoring')
     parser.add_argument('--prometheus-port', type=int, default=9092, help='Prometheus metrics port')
+    parser.add_argument('--output-json', type=str, help='Output results to JSON file')
 
     args = parser.parse_args()
 
@@ -325,6 +326,28 @@ def main():
     print("\n📈 Final System Resources:")
     print(f"   Final CPU: {final_cpu:.1f}%")
     print(f"   Final Memory: {final_memory / (1024**2):.1f}MB")
+
+    # Save results to JSON if requested
+    if args.output_json:
+        import json
+        output_data = {
+            'timestamp': time.time(),
+            'symbol': args.symbol,
+            'tick_rate': args.rate,
+            'duration_minutes': args.duration_min,
+            'results': results,
+            'performance_metrics': performance_metrics if 'performance_metrics' in locals() else {},
+            'system_resources': {
+                'initial_cpu': initial_cpu,
+                'final_cpu': final_cpu,
+                'initial_memory_mb': initial_memory / (1024**2),
+                'final_memory_mb': final_memory / (1024**2)
+            }
+        }
+
+        with open(args.output_json, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        print(f"📊 Results saved to {args.output_json}")
 
     # Exit with success/failure code
     success_rate = results['criteria_passed'] / results['criteria_total']

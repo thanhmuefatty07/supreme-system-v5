@@ -22,7 +22,16 @@ sys.path.insert(0, str(Path(__file__).parent / "python"))
 print("🚀 Supreme System V5 - Realtime Backtest")
 print("=" * 50)
 
-# Import validation with error handling
+# Import comprehensive error diagnosis
+try:
+    sys.path.insert(0, str(Path(__file__).parent / "scripts"))
+    from error_diagnosis import create_robust_entry_point
+    ERROR_DIAGNOSIS_AVAILABLE = True
+except ImportError:
+    ERROR_DIAGNOSIS_AVAILABLE = False
+    print("⚠️ Advanced error diagnosis not available")
+
+# Import validation with enhanced error handling
 try:
     from supreme_system_v5.backtest import run_realtime_backtest, BacktestConfig
     print("✅ Core backtest imports successful")
@@ -30,6 +39,8 @@ except ImportError as e:
     print(f"❌ Core import error: {e}")
     print("💡 Make sure you're in the supreme-system-v5 directory")
     print("🔧 Run: pip install -r requirements.txt")
+    if ERROR_DIAGNOSIS_AVAILABLE:
+        print("📊 Run: python scripts/error_diagnosis.py for detailed diagnosis")
     sys.exit(1)
 
 # Optional imports for enhanced features
@@ -209,12 +220,19 @@ async def main():
 
 
 if __name__ == "__main__":
-    try:
-        exit_code = asyncio.run(main())
-        sys.exit(exit_code)
-    except KeyboardInterrupt:
-        print("\n🛑 Production backtest interrupted")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
-        sys.exit(1)
+    # Use robust error handling if available
+    if ERROR_DIAGNOSIS_AVAILABLE:
+        robust_main = create_robust_entry_point(lambda: asyncio.run(main()), "realtime_backtest")
+        robust_main()
+    else:
+        # Fallback error handling
+        try:
+            exit_code = asyncio.run(main())
+            sys.exit(exit_code)
+        except KeyboardInterrupt:
+            print("\n🛑 Production backtest interrupted")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Unexpected error: {e}")
+            print("💡 For detailed diagnosis, run: python scripts/error_diagnosis.py")
+            sys.exit(1)

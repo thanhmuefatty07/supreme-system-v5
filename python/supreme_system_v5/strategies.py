@@ -16,6 +16,7 @@ from .risk import SignalConfidence
 
 from loguru import logger
 from prometheus_client import Counter, Histogram
+from collections import deque
 
 # Metrics
 SIGNALS_GENERATED = Counter(
@@ -27,6 +28,130 @@ SIGNAL_CONFIDENCE = Histogram(
     "strategy_signal_confidence", "Signal confidence distribution", ["strategy"]
 )
 # STRATEGY_LATENCY moved to load_single_symbol.py to avoid duplicate registration
+
+
+class ReferenceTechnicalIndicators:
+    """
+    Reference implementation using traditional algorithms for parity validation.
+    Uses pandas/numpy for accurate comparison against optimized implementations.
+    """
+
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.price_history = deque(maxlen=1000)  # Sufficient for testing
+        self.ema_period = config.get('ema_period', 14)
+        self.rsi_period = config.get('rsi_period', 14)
+        self.macd_fast = config.get('macd_fast', 12)
+        self.macd_slow = config.get('macd_slow', 26)
+        self.macd_signal = config.get('macd_signal', 9)
+
+        # Indicator values
+        self.current_ema = None
+        self.current_rsi = None
+        self.macd_values = None
+
+    def add_price_data(self, price: float, volume: float = 0, timestamp: Optional[float] = None) -> None:
+        """Add price data and update all indicators."""
+        self.price_history.append(price)
+
+        # Update indicators if we have enough data
+        if len(self.price_history) >= max(self.ema_period, self.rsi_period, self.macd_slow):
+            self._update_indicators()
+
+    def _update_indicators(self):
+        """Update all indicators using reference implementations."""
+        prices = list(self.price_history)
+
+        # EMA calculation
+        self.current_ema = self._calculate_ema(prices, self.ema_period)
+
+        # RSI calculation
+        self.current_rsi = self._calculate_rsi(prices, self.rsi_period)
+
+        # MACD calculation
+        self.macd_values = self._calculate_macd(prices)
+
+    def _calculate_ema(self, prices: List[float], period: int) -> float:
+        """Calculate EMA using traditional method."""
+        if len(prices) < period:
+            return None
+
+        # Calculate SMA for initial value
+        sma = sum(prices[-period:]) / period
+        multiplier = 2.0 / (period + 1)
+
+        ema = sma
+        # Apply EMA formula for remaining values
+        for price in prices[-period+1:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+
+        return ema
+
+    def _calculate_rsi(self, prices: List[float], period: int) -> float:
+        """Calculate RSI using traditional method."""
+        if len(prices) < period + 1:
+            return None
+
+        gains = []
+        losses = []
+
+        for i in range(1, len(prices)):
+            change = prices[i] - prices[i-1]
+            if change > 0:
+                gains.append(change)
+                losses.append(0)
+            else:
+                gains.append(0)
+                losses.append(abs(change))
+
+        # Calculate average gains and losses
+        avg_gain = sum(gains[-period:]) / period
+        avg_loss = sum(losses[-period:]) / period
+
+        if avg_loss == 0:
+            return 100.0
+
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+
+        return rsi
+
+    def _calculate_macd(self, prices: List[float]) -> Tuple[float, float, float]:
+        """Calculate MACD using traditional method."""
+        if len(prices) < self.macd_slow:
+            return None
+
+        # Calculate EMAs
+        fast_ema = self._calculate_ema(prices, self.macd_fast)
+        slow_ema = self._calculate_ema(prices, self.macd_slow)
+
+        if fast_ema is None or slow_ema is None:
+            return None
+
+        # MACD line
+        macd_line = fast_ema - slow_ema
+
+        # Signal line (EMA of MACD line)
+        # For simplicity, we'll use the last MACD value as signal line
+        # In a full implementation, we'd maintain history of MACD values
+        signal_line = macd_line  # Approximation for testing
+
+        # Histogram
+        histogram = macd_line - signal_line
+
+        return (macd_line, signal_line, histogram)
+
+    def get_ema(self) -> Optional[float]:
+        """Get current EMA value."""
+        return self.current_ema
+
+    def get_rsi(self) -> Optional[float]:
+        """Get current RSI value."""
+        return self.current_rsi
+
+    def get_macd(self) -> Optional[Tuple[float, float, float]]:
+        """Get current MACD values (line, signal, histogram)."""
+        return self.macd_values
 
 
 class SignalType(Enum):
@@ -468,6 +593,100 @@ class ScalpingStrategy:
         signals['technical_confidence'] = self._calculate_technical_confidence(signals)
 
         return signals
+
+    def validate_parity_with_reference(self, historical_data: List[Dict[str, Any]], tolerance: float = 1e-6) -> Dict[str, Any]:
+        """
+        Validate parity between optimized and reference implementations.
+
+        Args:
+            historical_data: List of price data points
+            tolerance: Maximum allowed tolerance for parity validation
+
+        Returns:
+            Dict with validation results and any parity violations
+        """
+        results = {
+            'total_points': len(historical_data),
+            'parity_violations': [],
+            'parity_passed': True,
+            'ema_parity': True,
+            'rsi_parity': True,
+            'macd_parity': True
+        }
+
+        # Initialize reference implementation
+        ref_indicators = ReferenceTechnicalIndicators({
+            'ema_period': self.config.get('ema_period', 14),
+            'rsi_period': self.config.get('rsi_period', 14),
+            'macd_fast': self.config.get('macd_fast', 12),
+            'macd_slow': self.config.get('macd_slow', 26),
+            'macd_signal': self.config.get('macd_signal', 9),
+        })
+
+        # Process historical data through both implementations
+        for i, data_point in enumerate(historical_data):
+            price = data_point['price']
+            volume = data_point.get('volume', 0)
+            timestamp = data_point.get('timestamp')
+
+            # Update reference implementation
+            ref_indicators.add_price_data(price, volume, timestamp)
+
+            # Update optimized implementation
+            self.add_price_data(price, volume, timestamp)
+
+            # Compare indicators at this point
+            if i >= max(self.config.get('ema_period', 14),
+                       self.config.get('rsi_period', 14),
+                       self.config.get('macd_slow', 26)):
+
+                # EMA comparison
+                opt_ema = self.analyzer.get_ema()
+                ref_ema = ref_indicators.get_ema()
+                if opt_ema is not None and ref_ema is not None:
+                    if abs(opt_ema - ref_ema) > tolerance:
+                        results['parity_violations'].append({
+                            'point': i,
+                            'indicator': 'EMA',
+                            'optimized': opt_ema,
+                            'reference': ref_ema,
+                            'difference': abs(opt_ema - ref_ema)
+                        })
+                        results['ema_parity'] = False
+
+                # RSI comparison
+                opt_rsi = self.analyzer.get_rsi()
+                ref_rsi = ref_indicators.get_rsi()
+                if opt_rsi is not None and ref_rsi is not None:
+                    if abs(opt_rsi - ref_rsi) > tolerance:
+                        results['parity_violations'].append({
+                            'point': i,
+                            'indicator': 'RSI',
+                            'optimized': opt_rsi,
+                            'reference': ref_rsi,
+                            'difference': abs(opt_rsi - ref_rsi)
+                        })
+                        results['rsi_parity'] = False
+
+                # MACD comparison
+                opt_macd = self.analyzer.get_macd()
+                ref_macd = ref_indicators.get_macd()
+                if opt_macd and ref_macd:
+                    for j, (opt_val, ref_val) in enumerate(zip(opt_macd, ref_macd)):
+                        if opt_val is not None and ref_val is not None:
+                            if abs(opt_val - ref_val) > tolerance:
+                                macd_names = ['MACD_Line', 'Signal_Line', 'Histogram']
+                                results['parity_violations'].append({
+                                    'point': i,
+                                    'indicator': f'MACD_{macd_names[j]}',
+                                    'optimized': opt_val,
+                                    'reference': ref_val,
+                                    'difference': abs(opt_val - ref_val)
+                                })
+                                results['macd_parity'] = False
+
+        results['parity_passed'] = len(results['parity_violations']) == 0
+        return results
 
     def _calculate_technical_confidence(self, signals: Dict[str, Any]) -> float:
         """

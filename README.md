@@ -18,6 +18,28 @@ Supreme System V5 implements the **ULTRA SFL (Strict Free Mode)** methodology wi
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for:
+- Commit standards and validation protocols
+- Development workflow and quality gates
+- Performance reporting requirements
+- Testing and validation procedures
+
+**Quick validation commands:**
+```bash
+# Validate environment
+make validate-env
+
+# Validate commit quality
+make validate-commit
+
+# Run full CI pipeline
+make ci
+```
+
+---
+
 ## 📋 Table of Contents
 
 - [🏃 Run](#-run) - Quick start and basic operation
@@ -30,36 +52,192 @@ Supreme System V5 implements the **ULTRA SFL (Strict Free Mode)** methodology wi
 
 ## 🏃 Run
 
-### Quick Start (Ultra Optimized Mode - RECOMMENDED)
+### Quick Start Guide
+
+#### 🚀 Ultra Optimized Mode (RECOMMENDED for i3-4GB systems)
 
 ```bash
 # Clone repository
 git clone https://github.com/thanhmuefatty07/supreme-system-v5.git
 cd supreme-system-v5
 
-# Install dependencies
-pip install -e .
+# Install dependencies with optimizations
+pip install -e . --config-settings editable_mode=compat
 
 # Copy ultra-optimized configuration (CPU ≤88%, RAM ≤3.86GB)
-cp .env.optimized .env
+cp env_optimized.template .env
+
+# Validate environment before running
+python scripts/validate_environment.py
 
 # Run optimized system
 python -m supreme_system_v5.core
 ```
 
-### Quick Start (Development)
+**Hardware Requirements for Ultra Optimized Mode:**
+- CPU: Intel i3 8th gen or equivalent (4+ cores recommended)
+- RAM: 4GB minimum, 8GB+ recommended
+- Storage: 10GB SSD minimum
+- Network: Stable internet connection
+
+#### 🔧 Standard Development Mode
 
 ```bash
 # Clone repository
 git clone https://github.com/thanhmuefatty07/supreme-system-v5.git
 cd supreme-system-v5
 
-# Install dependencies
+# Install all dependencies
 pip install -e .
+
+# Copy standard configuration
+cp .env.example .env
 
 # Run with default config
 python -m supreme_system_v5.core
 ```
+
+#### 🐳 Docker Deployment
+
+```bash
+# For i3-4GB systems (optimized)
+docker build -f docker/Dockerfile.i3 -t supreme-system-v5:i3
+docker run -p 8000:8000 supreme-system-v5:i3
+
+# For higher-end systems
+docker build -f docker/Dockerfile.standard -t supreme-system-v5:latest
+docker run -p 8000:8000 supreme-system-v5:latest
+```
+
+#### ⚡ Performance Optimization Commands
+
+```bash
+# Validate system readiness
+make validate-env
+
+# Run benchmarks
+make benchmark
+
+# Quick performance test
+make quick-bench
+
+# Optimize for specific hardware
+make optimize-i3    # For i3-4GB systems
+make optimize-i5    # For i5-8GB systems
+make optimize-i7    # For i7+ systems
+```
+
+### Troubleshooting & Hardware Optimization
+
+#### 🔧 Hardware-Specific Issues
+
+**i3-4GB Systems (Ultra Optimized Mode):**
+```bash
+# Verify memory constraints
+python -c "import psutil; print(f'RAM: {psutil.virtual_memory().total/(1024**3):.1f}GB')"
+
+# Check CPU cores
+python -c "import psutil; print(f'CPU Cores: {psutil.cpu_count()}')"
+
+# Test optimized configuration
+make validate-env
+
+# Monitor resource usage during operation
+python -c "import psutil; print(f'CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%')"
+```
+
+**Memory Issues (RAM < 4GB):**
+```bash
+# Reduce price history size
+echo "PRICE_HISTORY_SIZE=100" >> .env
+
+# Disable heavy components
+echo "MULTI_TIMEFRAME_ENABLED=false" >> .env
+echo "NEWS_ANALYSIS_ENABLED=false" >> .env
+
+# Enable aggressive event filtering
+echo "TARGET_EVENT_SKIP_RATIO=0.8" >> .env
+```
+
+**CPU Throttling Issues:**
+```bash
+# Reduce processing frequency
+echo "PROCESS_INTERVAL_SECONDS=120" >> .env
+echo "TECHNICAL_INTERVAL=120" >> .env
+
+# Enable backpressure
+echo "MAX_CPU_PERCENT=70.0" >> .env
+```
+
+**Network Connectivity Issues:**
+```bash
+# Test network
+curl -s https://api.coingecko.com/api/v3/ping
+
+# Reduce API frequency
+echo "NEWS_INTERVAL_MIN=30" >> .env
+echo "WHALE_INTERVAL_MIN=30" >> .env
+```
+
+#### 🐛 Common Error Resolution
+
+**Import Errors:**
+```bash
+# Validate environment
+python scripts/validate_environment.py
+
+# Run comprehensive error diagnosis
+python scripts/error_diagnosis.py
+
+# Reinstall dependencies
+pip install -e . --force-reinstall
+
+# Check Python path
+python -c "import sys; print('\\n'.join(sys.path))"
+```
+
+**Configuration Errors:**
+```bash
+# Validate configuration
+python -c "from pydantic_settings import BaseSettings; print('Config validation: OK')"
+
+# Reset to defaults
+cp .env.example .env
+```
+
+**Performance Issues:**
+```bash
+# Run diagnostics
+make benchmark
+
+# Check system resources
+python -c "import psutil; print(f'CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%')"
+
+# Adjust optimization profile
+echo "PERFORMANCE_PROFILE=conservative" >> .env
+```
+
+#### 🚨 Advanced Error Diagnosis
+
+Supreme System V5 includes comprehensive error diagnosis capabilities:
+
+```bash
+# Run full error diagnosis (recommended for any issues)
+python scripts/error_diagnosis.py
+
+# This will:
+# - Analyze system environment and dependencies
+# - Identify root causes of errors
+# - Provide specific remediation steps
+# - Generate detailed error reports in logs/ directory
+```
+
+**Error Report Features:**
+- Complete system information capture
+- Dependency status validation
+- Context-aware recommendations
+- Structured error reports for debugging
+- Automatic log file generation
 
 ### Configuration
 
@@ -72,10 +250,102 @@ cp .env.optimized .env
 # Or create custom configuration
 ```
 
-#### Ultra Optimized Configuration Keys
+#### Complete Configuration Reference
 
-The `.env.optimized` file contains all optimized settings for maximum efficiency on i3-4GB systems:
+Supreme System V5 supports both standard and ultra-optimized configurations. Copy the appropriate template and customize for your environment:
 
+**Quick Setup Commands:**
+```bash
+# For standard deployment (recommended for most systems)
+cp .env.example .env
+
+# For ultra-optimized i3-4GB deployment
+cp env_optimized.template .env
+
+# For custom configuration, edit .env manually
+```
+
+##### Standard Configuration (Default Values)
+```bash
+# =================================================================
+# CORE SETTINGS
+# =================================================================
+OPTIMIZED_MODE=false                    # true for ultra-optimization
+EVENT_DRIVEN_PROCESSING=false          # true for event filtering
+INTELLIGENT_CACHING=false              # true for advanced caching
+PERFORMANCE_PROFILE=normal             # minimal|conservative|normal|performance
+
+# =================================================================
+# TRADING FOCUS
+# =================================================================
+SINGLE_SYMBOL=BTC-USDT                 # Primary symbol for scalping
+
+# =================================================================
+# SCHEDULING INTERVALS (seconds/minutes)
+# =================================================================
+PROCESS_INTERVAL_SECONDS=60            # Main processing interval
+TECHNICAL_INTERVAL=60                  # Technical analysis updates
+NEWS_INTERVAL_MIN=15                   # News analysis frequency
+WHALE_INTERVAL_MIN=15                  # Whale tracking frequency
+MTF_INTERVAL=300                       # Multi-timeframe updates
+
+# =================================================================
+# RESOURCE LIMITS
+# =================================================================
+MAX_CPU_PERCENT=95.0                   # CPU usage limit
+MAX_RAM_GB=4.5                         # RAM usage limit
+TARGET_EVENT_SKIP_RATIO=0.5            # Event filtering target
+
+# =================================================================
+# COMPONENT ENABLES
+# =================================================================
+TECHNICAL_ANALYSIS_ENABLED=true        # Technical indicators
+NEWS_ANALYSIS_ENABLED=true             # News sentiment analysis
+WHALE_TRACKING_ENABLED=true            # Whale activity monitoring
+MULTI_TIMEFRAME_ENABLED=true           # Multi-timeframe analysis
+RISK_MANAGEMENT_ENABLED=true           # Risk management system
+RESOURCE_MONITORING_ENABLED=false      # Resource monitoring
+
+# =================================================================
+# TRADING PARAMETERS
+# =================================================================
+TRADING_MODE=sandbox                   # sandbox|live
+POSITION_SIZE_PCT=0.02                 # Position size (2% of portfolio)
+STOP_LOSS_PCT=0.01                     # Stop loss (1%)
+TAKE_PROFIT_PCT=0.02                   # Take profit (2%)
+
+# =================================================================
+# TECHNICAL INDICATORS
+# =================================================================
+EMA_PERIOD=14                          # EMA period
+RSI_PERIOD=14                          # RSI period
+MACD_FAST=12                           # MACD fast period
+MACD_SLOW=26                           # MACD slow period
+MACD_SIGNAL=9                          # MACD signal period
+PRICE_HISTORY_SIZE=1000                # Price history buffer size
+
+# =================================================================
+# EVENT PROCESSING THRESHOLDS
+# =================================================================
+MIN_PRICE_CHANGE_PCT=0.0005            # 0.05% price change threshold
+MIN_VOLUME_MULTIPLIER=2.0              # 2x volume spike threshold
+MAX_TIME_GAP_SECONDS=120               # Max time between processing
+
+# =================================================================
+# PERFORMANCE OPTIMIZATION
+# =================================================================
+CACHE_ENABLED=true                     # Enable result caching
+CACHE_TTL_SECONDS=1.0                  # Cache time-to-live
+
+# =================================================================
+# ADVANCED FLAGS
+# =================================================================
+ULTRA_LOW_LATENCY_MODE=false           # Ultra-low latency mode
+MEMORY_EFFICIENT_MODE=false            # Memory optimization
+CPU_OPTIMIZATION_MODE=false            # CPU optimization
+```
+
+##### Ultra-Optimized Configuration (i3-4GB Systems)
 ```bash
 # =================================================================
 # CORE OPTIMIZATIONS (Enable Ultra-Efficient Mode)
