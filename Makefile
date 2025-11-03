@@ -1,446 +1,421 @@
-# Supreme System V5 - Hybrid Python + Rust Makefile
-# Comprehensive build system for world's first neuromorphic trading system
-
-.PHONY: help install install-dev install-rust build-rust test clean docker benchmark
-
-# === VARIABLES ===
-PYTHON := python3
-CARGO := cargo
-MATURIN := maturin
-SOURCE_DIR := python/supreme_system_v5
-RUST_DIR := src
-TEST_DIR := tests
-
-# Hardware detection for optimization
-HARDWARE := $(shell $(PYTHON) -c "import psutil; print('i3' if psutil.virtual_memory().total/(1024**3) <= 5 else 'i5' if psutil.virtual_memory().total/(1024**3) <= 10 else 'i7')" 2>/dev/null || echo 'unknown')
-CPU_COUNT := $(shell $(PYTHON) -c "import os; print(os.cpu_count())" 2>/dev/null || echo 4)
-
-help: ## Show this help message
-	@echo "Supreme System V5 - Hybrid Python + Rust Build System"
-	@echo "===================================================="
-	@echo ""
-	@echo "Hardware detected: $(HARDWARE) ($(CPU_COUNT) cores)"
-	@echo ""
-	@echo "Available targets:"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-
-# === INSTALLATION ===
-install: install-rust install-python ## Install complete hybrid system
-
-install-python: ## Install Python dependencies
-	@echo "🐍 Installing Python dependencies..."
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install maturin
-	$(PYTHON) -m pip install -e . --config-settings=build-args="--release"
-	@echo "✅ Python installation complete"
-
-install-rust: ## Install Rust toolchain and dependencies
-	@echo "🦀 Installing Rust toolchain..."
-	@if ! command -v cargo >/dev/null 2>&1; then \
-		echo "Installing Rust..."; \
-		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
-		source ~/.cargo/env; \
-	fi
-	@echo "✅ Rust toolchain ready"
-
-install-dev: install-rust ## Install development dependencies
-	@echo "🔧 Installing development dependencies..."
-	$(PYTHON) -m pip install -e ".[dev]"
-	pre-commit install
-	@echo "✅ Development environment ready"
-
-# === RUST COMPILATION ===
-build-rust: ## Build Rust engine with optimization
-	@echo "🛠️ Building Rust engine..."
-	@echo "Target hardware: $(HARDWARE)"
-ifeq ($(HARDWARE),i3)
-	@echo "Applying i3-4GB optimizations..."
-	CARGO_TARGET_CPU=generic $(MATURIN) build --release --features "python"
-else ifeq ($(HARDWARE),i5)
-	@echo "Applying i5-8GB optimizations..."
-	CARGO_TARGET_CPU=native $(MATURIN) build --release --features "python,simd"
-else
-	@echo "Applying i7+ maximum performance..."
-	RUSTFLAGS="-C target-cpu=native -C target-feature=+avx2" $(MATURIN) build --release --features "python,simd,parallel"
-endif
-	@echo "✅ Rust engine built successfully"
-
-build-rust-dev: ## Build Rust engine for development
-	@echo "🔧 Building Rust engine (development)..."
-	$(MATURIN) develop --features "python"
-	@echo "✅ Development Rust engine ready"
-
-build-wheel: build-rust ## Build distribution wheel
-	@echo "🎃 Building distribution wheel..."
-	$(MATURIN) build --release --out dist/
-	@echo "✅ Wheel built in dist/"
-
-# === TESTING ===
-test: test-rust test-python ## Run all tests
-
-test-rust: ## Run Rust tests
-	@echo "🦀 Running Rust tests..."
-	$(CARGO) test --release
-	@echo "✅ Rust tests completed"
-
-test-python: ## Run Python tests
-	@echo "🐍 Running Python tests..."
-	pytest $(TEST_DIR) -v --tb=short
-	@echo "✅ Python tests completed"
-
-test-integration: build-rust-dev ## Run integration tests (Python + Rust)
-	@echo "🔗 Running integration tests..."
-	pytest $(TEST_DIR) -v -m "integration" 
-	@echo "✅ Integration tests completed"
-
-test-performance: build-rust ## Run performance benchmarks
-	@echo "🏁 Running performance benchmarks..."
-	$(CARGO) bench
-	pytest $(TEST_DIR) -v --benchmark-only --benchmark-sort=mean
-	@echo "✅ Performance benchmarks completed"
-
-# === CODE QUALITY ===
-lint: lint-rust lint-python ## Run all linters
-
-lint-rust: ## Lint Rust code
-	@echo "🦀 Linting Rust code..."
-	$(CARGO) clippy --all-features -- -D warnings
-	$(CARGO) fmt --check
-	@echo "✅ Rust linting completed"
-
-lint-python: ## Lint Python code
-	@echo "🐍 Linting Python code..."
-	ruff check $(SOURCE_DIR)
-	black --check $(SOURCE_DIR)
-	mypy $(SOURCE_DIR)
-	@echo "✅ Python linting completed"
-
-format: format-rust format-python ## Format all code
-
-format-rust: ## Format Rust code
-	@echo "🦀 Formatting Rust code..."
-	$(CARGO) fmt
-
-format-python: ## Format Python code  
-	@echo "🐍 Formatting Python code..."
-	black $(SOURCE_DIR) $(TEST_DIR)
-	ruff check --fix $(SOURCE_DIR) $(TEST_DIR)
-
-# === VALIDATION ===
-validate: build-rust-dev ## Validate system functionality
-	@echo "🔍 Validating Supreme System V5..."
-	$(PYTHON) -c "import supreme_system_v5; print('Python import: OK')"
-	$(PYTHON) -c "import supreme_engine_rs; print('Rust engine: OK')" 2>/dev/null || echo "Rust engine: Not available"
-	$(PYTHON) scripts/validate_system.py
-	@echo "✅ System validation completed"
-
-validate-env: ## Validate Python environment and dependencies
-	@echo "🔍 Validating Python environment..."
-	$(PYTHON) scripts/validate_environment.py
-	@echo "✅ Environment validation completed"
-
-validate-commit: ## Validate commit quality standards
-	@echo "📋 Validating commit quality..."
-	$(PYTHON) scripts/validate_commit.py --strict
-	@echo "✅ Commit validation completed"
-
-test-bench: ## Run comprehensive benchmark pipeline with performance report
-	@echo "🏁 Running comprehensive benchmark pipeline..."
-	@echo "Hardware: $(HARDWARE) - $(CPU_COUNT) cores"
-	@echo "Results will be saved to run_artifacts/benchmark_report_$(shell date +%Y%m%d_%H%M%S).json"
-	@echo ""
-
-	# Create artifacts directory
-	mkdir -p run_artifacts
-
-	# Run micro-benchmarks
-	@echo "1️⃣ Running micro-benchmarks (EMA/RSI/MACD parity)..."
-	$(PYTHON) scripts/bench_optimized.py --samples 5000 --runs 10 --prometheus-port 9091 --output-json run_artifacts/micro_benchmark_$(shell date +%Y%m%d_%H%M%S).json
-
-	# Run load test
-	@echo ""
-	@echo "2️⃣ Running load test (60-min simulation)..."
-	$(PYTHON) scripts/load_single_symbol.py --symbol BTC-USDT --rate 10 --duration-min 60 --prometheus-port 9092 --output-json run_artifacts/load_test_$(shell date +%Y%m%d_%H%M%S).json
-
-	# Generate comprehensive report
-	@echo ""
-	@echo "3️⃣ Generating performance report..."
-	$(PYTHON) -c "
-import json
-import glob
-from pathlib import Path
-
-# Find latest benchmark files
-benchmark_files = sorted(glob.glob('run_artifacts/micro_benchmark_*.json'), reverse=True)
-load_files = sorted(glob.glob('run_artifacts/load_test_*.json'), reverse=True)
-
-report = {
-    'timestamp': '$(shell date)',
-    'hardware_profile': '$(HARDWARE)',
-    'cpu_cores': $(CPU_COUNT),
-    'benchmark_results': {},
-    'load_test_results': {},
-    'performance_summary': {},
-    'recommendations': []
-}
-
-# Load benchmark results
-if benchmark_files:
-    with open(benchmark_files[0], 'r') as f:
-        report['benchmark_results'] = json.load(f)
-
-# Load load test results
-if load_files:
-    with open(load_files[0], 'r') as f:
-        report['load_test_results'] = json.load(f)
-
-# Generate summary
-if 'parity_passed' in report['benchmark_results']:
-    if report['benchmark_results']['parity_passed']:
-        report['performance_summary']['indicator_parity'] = '✅ PASSED'
-    else:
-        report['performance_summary']['indicator_parity'] = '❌ FAILED'
-        report['recommendations'].append('Fix indicator parity issues')
-
-# CPU and memory checks
-if 'performance_metrics' in report['load_test_results']:
-    metrics = report['load_test_results']['performance_metrics']
-    if metrics.get('avg_cpu_percent', 0) <= 88.0:
-        report['performance_summary']['cpu_usage'] = '✅ WITHIN LIMITS'
-    else:
-        report['performance_summary']['cpu_usage'] = '❌ EXCEEDS LIMIT'
-        report['recommendations'].append('Reduce CPU usage or increase MAX_CPU_PERCENT')
-
-    if metrics.get('avg_memory_gb', 0) <= 3.86:
-        report['performance_summary']['memory_usage'] = '✅ WITHIN LIMITS'
-    else:
-        report['performance_summary']['memory_usage'] = '❌ EXCEEDS LIMIT'
-        report['recommendations'].append('Reduce memory usage or increase MAX_RAM_GB')
-
-# Save comprehensive report
-report_file = 'run_artifacts/benchmark_report_$(shell date +%Y%m%d_%H%M%S).json'
-with open(report_file, 'w') as f:
-    json.dump(report, f, indent=2)
-
-print(f'📊 Comprehensive benchmark report saved to: {report_file}')
-print('')
-print('🎯 PERFORMANCE SUMMARY:')
-for key, value in report['performance_summary'].items():
-    print(f'  {key}: {value}')
-
-if report['recommendations']:
-    print('')
-    print('💡 RECOMMENDATIONS:')
-    for rec in report['recommendations']:
-        print(f'  • {rec}')
-else:
-    print('')
-    print('✅ All performance criteria met!')
-"
-
-	@echo ""
-	@echo "✅ Benchmark pipeline completed!"
-	@echo "Check run_artifacts/ for detailed results and reports."
-
-# === BENCHMARKING ===
-benchmark: build-rust ## Run comprehensive benchmarks
-	@echo "🏁 Running comprehensive benchmarks..."
-	@echo "Hardware: $(HARDWARE) - $(CPU_COUNT) cores"
-	
-	@echo "\n1. Rust benchmarks:"
-	$(CARGO) bench --features "simd,parallel"
-	
-	@echo "\n2. Python benchmarks:"
-	pytest $(TEST_DIR) -v --benchmark-only
-	
-	@echo "\n3. Integration benchmarks:"
-	$(PYTHON) -c "import supreme_system_v5; print('System info:', supreme_system_v5.get_system_info())"
-	$(PYTHON) -c "import supreme_system_v5; print('Benchmark:', supreme_system_v5.benchmark_system(5))"
-	
-	@echo "✅ All benchmarks completed"
-
-# === DEPLOYMENT ===
-docker-build: ## Build Docker image for current hardware
-	@echo "🐳 Building Docker image for $(HARDWARE)..."
-ifeq ($(HARDWARE),i3)
-	docker build -f docker/Dockerfile.i3 -t supreme-system-v5:$(HARDWARE)-optimized .
-else
-	docker build -f docker/Dockerfile.standard -t supreme-system-v5:latest .
-endif
-	@echo "✅ Docker image built"
-
-docker-run: docker-build ## Run system in Docker
-	@echo "🚀 Running Supreme System V5 in Docker..."
-	docker run -p 8000:8000 -p 9090:9090 --env-file .env supreme-system-v5:latest
-
-# === DEVELOPMENT ===
-dev-setup: install-rust build-rust-dev install-dev ## Complete development setup
-	@echo "🚀 Development environment ready!"
-	@echo "Next steps:"
-	@echo "  1. make validate    # Check system"
-	@echo "  2. make test        # Run tests"
-	@echo "  3. make benchmark   # Performance test"
-	@echo "  4. make run-dev     # Start development server"
-
-run-dev: build-rust-dev ## Start development server
-	@echo "💻 Starting development server..."
-	uvicorn supreme_system_v5.api:app --reload --host 0.0.0.0 --port 8000
-
-run-prod: build-rust ## Start production server
-	@echo "🏭 Starting production server..."
-	gunicorn supreme_system_v5.api:app -w $(CPU_COUNT) -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-
-# === MONITORING ===
-monitor: ## Start monitoring stack
-	@echo "📈 Starting monitoring..."
-	docker-compose -f docker/docker-compose.monitoring.yml up -d
-	@echo "Grafana: http://localhost:3000"
-	@echo "Prometheus: http://localhost:9090"
-
-# === RELEASE ===
-release: clean build-rust build-wheel test ## Build release package
-	@echo "🏆 Building release package..."
-	@echo "Python version: $(shell $(PYTHON) --version)"
-	@echo "Rust version: $(shell $(CARGO) --version 2>/dev/null || echo 'Not available')"
-	@echo "Hardware optimized for: $(HARDWARE)"
-	@echo "✅ Release package ready in dist/"
-
-# === MAINTENANCE ===
-clean: ## Clean build artifacts
-	@echo "🧹 Cleaning build artifacts..."
-	$(CARGO) clean
-	rm -rf target/ dist/ build/ *.egg-info/
-	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-	find . -name "*.pyc" -delete
-	rm -rf .pytest_cache/ .mypy_cache/ .coverage htmlcov/
-	@echo "✅ Cleanup completed"
-
-clean-logs: ## Clean log files
-	@echo "🧹 Cleaning log files..."
-	rm -rf logs/ *.log
-	mkdir -p logs
-	@echo "✅ Logs cleaned"
-
-update-deps: ## Update all dependencies
-	@echo "🔄 Updating dependencies..."
-	$(CARGO) update
-	$(PYTHON) -m pip install --upgrade pip setuptools wheel
-	$(PYTHON) -m pip install --upgrade -e ".[dev]"
-	@echo "✅ Dependencies updated"
-
-# === QUICK COMMANDS ===
-quick-test: build-rust-dev ## Quick test (no full rebuild)
-	pytest $(TEST_DIR) -v --tb=short -x
-
-quick-bench: ## Quick benchmark (5 second test)
-	$(PYTHON) -c "import supreme_system_v5; print(supreme_system_v5.benchmark_system(5))"
-
-fix-f541: ## Fix F541 errors using comprehensive fixer
-	@echo "🔧 Fixing F541 errors..."
-	$(PYTHON) scripts/fix_f541_comprehensive.py --live
-	@echo "✅ F541 errors fixed"
-
-# === STATUS CHECKS ===
-status: ## Show system status
-	@echo "Supreme System V5 - System Status"
-	@echo "================================"
-	@echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores)"
-	@echo "Python: $(shell $(PYTHON) --version)"
-	@echo "Rust: $(shell $(CARGO) --version 2>/dev/null || echo 'Not installed')"
-	@echo "Maturin: $(shell $(MATURIN) --version 2>/dev/null || echo 'Not installed')"
-	@echo ""
-	@echo "Rust engine status:"
-	@$(PYTHON) -c "try: import supreme_engine_rs; print('  ✅ Available:', supreme_engine_rs.__version__)\nexcept: print('  ❌ Not available')" 2>/dev/null
-	@echo ""
-	@echo "System validation:"
-	@$(PYTHON) -c "import supreme_system_v5; info=supreme_system_v5.get_system_info(); [print(f'  {k}: {v}') for k,v in info.items()]"
-
-health: build-rust-dev ## Check system health
-	@echo "🏥 System health check..."
-	$(PYTHON) -c "\
-	try:\
-		import supreme_system_v5;\
-		system = supreme_system_v5.get_system();\
-		status = system.get_system_status();\
-		print('System Status:', status['is_running']);\
-		print('Hardware:', status['hardware_profile']);\
-		print('Performance:', status['performance']);\
-	except Exception as e:\
-		print('Health check failed:', e)"
-
-# === CI/CD ===
-ci: clean install test lint validate-commit ## Full CI pipeline
-	@echo "✅ CI pipeline completed successfully"
-
-ci-fast: format quick-test lint-python validate-commit ## Fast CI checks
-	@echo "✅ Fast CI completed"
-
-# === HARDWARE-SPECIFIC TARGETS ===
-optimize-i3: ## Optimize for i3-4GB systems
-	@echo "⚡ Optimizing for i3-4GB systems..."
-	CARGO_TARGET_CPU=generic $(MATURIN) build --release --features "python" --no-default-features
-	$(PYTHON) -c "import psutil; print(f'Memory usage: {psutil.virtual_memory().percent}%')"
-
-optimize-i5: ## Optimize for i5-8GB systems  
-	@echo "⚡ Optimizing for i5-8GB systems..."
-	$(MATURIN) build --release --features "python,simd"
-
-optimize-i7: ## Optimize for i7+ systems
-	@echo "⚡ Optimizing for i7+ systems..."
-	RUSTFLAGS="-C target-cpu=native -C target-feature=+avx2" $(MATURIN) build --release --features "python,simd,parallel"
-
-# === PROFILING ===
-profile-rust: ## Profile Rust performance
-	@echo "🔍 Profiling Rust performance..."
-	$(CARGO) build --release --features "python,simd,parallel"
-	perf record --call-graph=dwarf target/release/benchmark
-	perf report
-
-profile-python: build-rust-dev ## Profile Python performance
-	@echo "🔍 Profiling Python performance..."
-	$(PYTHON) -m cProfile -o profile_output.prof -m supreme_system_v5.benchmark
-	$(PYTHON) -c "import pstats; pstats.Stats('profile_output.prof').sort_stats('cumulative').print_stats(20)"
-
-profile-memory: ## Profile memory usage
-	@echo "💾 Profiling memory usage..."
-	$(PYTHON) -m memory_profiler -m supreme_system_v5.benchmark
-
-# === MAINTENANCE ===
-security: ## Run security checks
-	@echo "🔒 Running security checks..."
-	bandit -r $(SOURCE_DIR)
-	$(CARGO) audit
-	@echo "✅ Security checks completed"
-
-# === DOCUMENTATION ===
-docs: ## Build documentation
-	@echo "📚 Building documentation..."
-	$(CARGO) doc --no-deps --features "python,simd,parallel"
-	sphinx-build -b html docs/ docs/_build/html/
-	@echo "✅ Documentation built"
-
-serve-docs: docs ## Serve documentation locally
-	@echo "🌍 Serving documentation at http://localhost:8080"
-	$(PYTHON) -m http.server 8080 -d docs/_build/html/
-
-# === DEFAULT TARGET ===
+# Supreme System V5 - Ultra-Constrained Makefile
+# Optimized for 1GB RAM, 2 vCPU deployment with ETH-USDT scalping
+# Agent Mode: Maximum efficiency, minimum resource usage
+
+.PHONY: help validate run-ultra-local bench-light clean install-deps setup-ultra dev-setup
 .DEFAULT_GOAL := help
 
-# === SPECIAL TARGETS ===
-full-rebuild: clean install build-rust test ## Complete rebuild from scratch
-	@echo "🚀 Full rebuild completed successfully!"
-	@echo "System ready for production deployment."
+# Colors for output
+RED := \033[31m
+GREEN := \033[32m
+YELLOW := \033[33m
+BLUE := \033[34m
+MAGENTA := \033[35m
+CYAN := \033[36m
+RESET := \033[0m
 
-production-build: ## Build for production deployment
-	@echo "🏭 Building for production..."
-	make clean
-	make install-rust
-	RUSTFLAGS="-C opt-level=3 -C target-cpu=native" $(MATURIN) build --release --features "python,simd,parallel"
-	$(PYTHON) -m pip install dist/*.whl --force-reinstall
-	make validate
-	@echo "✅ Production build completed"
+# Configuration
+PYTHON := python3
+PIP := pip3
+PROFILE := ultra_constrained
+SYMBOL := ETH-USDT
+TEST_DURATION := 15
+BENCH_SAMPLES := 1000
 
-demonstration: build-rust-dev ## Run system demonstration
-	@echo "🎤 Running Supreme System V5 demonstration..."
-	$(PYTHON) -m supreme_system_v5.demo
-	@echo "✅ Demonstration completed"
+# Hardware detection
+HARDWARE := $(shell $(PYTHON) -c "import psutil; print('ultra_constrained' if psutil.virtual_memory().total/(1024**3) <= 1.5 else 'constrained' if psutil.virtual_memory().total/(1024**3) <= 4 else 'standard')" 2>/dev/null || echo 'unknown')
+CPU_COUNT := $(shell $(PYTHON) -c "import os; print(os.cpu_count())" 2>/dev/null || echo 2)
+RAM_GB := $(shell $(PYTHON) -c "import psutil; print(f'{psutil.virtual_memory().total/(1024**3):.1f}')" 2>/dev/null || echo '1.0')
+
+help: ## Show this help message
+	@echo "$(CYAN)Supreme System V5 - Ultra-Constrained Makefile$(RESET)"
+	@echo "$(YELLOW)Optimized for 1GB RAM, 2 vCPU with ETH-USDT scalping$(RESET)"
+	@echo ""
+	@echo "$(BLUE)System Info:$(RESET)"
+	@echo "  Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"
+	@echo "  Target: ETH-USDT scalping, 30-60s intervals"
+	@echo "  Profile: ultra_constrained (450MB RAM budget)"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*##"; printf "$(CYAN)Usage:\n  make <target>$(RESET)\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  $(CYAN)%-20s$(RESET) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+validate: ## Validate environment for ultra-constrained deployment
+	@echo "$(BLUE)🔍 Validating environment for profile: $(PROFILE)$(RESET)"
+	@echo "Target hardware: $(HARDWARE) ($(RAM_GB)GB RAM)"
+	$(PYTHON) scripts/validate_environment.py --profile $(PROFILE)
+	@echo "$(GREEN)✅ Environment validation complete$(RESET)"
+
+validate-json: ## Validate environment and output JSON report
+	@echo "$(BLUE)🔍 Validating environment (JSON output)$(RESET)"
+	@mkdir -p run_artifacts
+	$(PYTHON) scripts/validate_environment.py --profile $(PROFILE) --json --output run_artifacts/validation_$$(date +%Y%m%d_%H%M%S).json
+	@echo "$(GREEN)📄 JSON report saved to run_artifacts/$(RESET)"
+
+setup-ultra: ## Setup ultra-constrained configuration
+	@echo "$(BLUE)⚙️ Setting up ultra-constrained configuration$(RESET)"
+	@if [ ! -f .env ]; then \
+		cp .env.ultra_constrained .env; \
+		echo "$(GREEN)✅ Created .env from .env.ultra_constrained$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠️ .env already exists, backup created$(RESET)"; \
+		cp .env .env.backup_$$(date +%Y%m%d_%H%M%S); \
+		cp .env.ultra_constrained .env; \
+	fi
+	@echo "$(CYAN)📋 Ultra-constrained profile active:$(RESET)"
+	@echo "   Symbol: $(SYMBOL)"
+	@echo "   RAM Target: ~450MB ($(RAM_GB)GB available)"
+	@echo "   CPU Target: <85% ($(CPU_COUNT) cores)"
+	@echo "   Scalping: 30-60s intervals with jitter"
+	@echo "   News: 12min intervals"
+
+install-deps: ## Install minimal dependencies for ultra-constrained deployment
+	@echo "$(BLUE)📦 Installing minimal dependencies for $(HARDWARE) hardware$(RESET)"
+	$(PIP) install --upgrade pip
+	@if [ -f requirements-ultra.txt ]; then \
+		$(PIP) install -r requirements-ultra.txt; \
+	else \
+		$(PIP) install -r requirements.txt; \
+	fi
+	@echo "$(GREEN)✅ Dependencies installed for $(HARDWARE) profile$(RESET)"
+
+dev-setup: validate setup-ultra install-deps ## Complete development setup for ultra-constrained
+	@echo "$(GREEN)🚀 Ultra-constrained development environment ready!$(RESET)"
+	@echo "$(CYAN)Next steps:$(RESET)"
+	@echo "  make test-parity    # Test indicator accuracy"
+	@echo "  make bench-light    # Quick 15min benchmark"
+	@echo "  make run-ultra-local # Start paper trading"
+
+run-ultra-local: setup-ultra ## Run system with ultra-constrained profile (paper trading)
+	@echo "$(BLUE)🚀 Starting Supreme System V5 - Ultra-Constrained Mode$(RESET)"
+	@echo "$(CYAN)Configuration:$(RESET)"
+	@echo "   Profile: $(PROFILE)"
+	@echo "   Symbol: $(SYMBOL)"
+	@echo "   Mode: Paper Trading"
+	@echo "   Resource Budget: 450MB RAM, <85% CPU"
+	@echo "   Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB)"
+	@echo "$(YELLOW)Press Ctrl+C to stop. Monitor with 'make monitor' in another terminal$(RESET)"
+	@echo ""
+	ULTRA_CONSTRAINED=1 $(PYTHON) python/supreme_system_v5/realtime_backtest.py
+
+run-ultra-live: setup-ultra ## Run system with ultra-constrained profile (live trading - USE WITH CAUTION)
+	@echo "$(RED)⚠️  LIVE TRADING MODE - REAL MONEY AT RISK!$(RESET)"
+	@echo "$(RED)Hardware: $(HARDWARE) ($(RAM_GB)GB RAM) - Confirm this is adequate$(RESET)"
+	@echo "$(RED)Are you absolutely sure? [y/N]" && read ans && [ $${ans:-N} = y ]
+	@echo "$(BLUE)🚀 Starting Supreme System V5 - Live Trading$(RESET)"
+	ULTRA_CONSTRAINED=1 EXECUTION_MODE=live $(PYTHON) python/supreme_system_v5/realtime_backtest.py
+
+bench-light: setup-ultra ## Run lightweight 15-minute benchmark on ETH-USDT
+	@echo "$(BLUE)⚡ Running lightweight benchmark$(RESET)"
+	@echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"
+	@echo "Duration: $(TEST_DURATION) minutes"
+	@echo "Symbol: $(SYMBOL)"
+	@echo "Samples: $(BENCH_SAMPLES)"
+	@echo "Expected: <15ms latency, <85% CPU, <450MB RAM"
+	@mkdir -p run_artifacts
+	$(PYTHON) scripts/bench_optimized.py \
+		--symbol $(SYMBOL) \
+		--duration-min $(TEST_DURATION) \
+		--samples $(BENCH_SAMPLES) \
+		--profile $(PROFILE) \
+		--output run_artifacts/bench_light_$$(date +%Y%m%d_%H%M%S).json
+	@echo "$(GREEN)📊 Benchmark results saved to run_artifacts/$(RESET)"
+	@echo "$(CYAN)Check results with: make results$(RESET)"
+
+bench-full: ## Run comprehensive benchmark suite
+	@echo "$(BLUE)⚡ Running comprehensive benchmark$(RESET)"
+	@echo "$(YELLOW)Warning: This may take 60+ minutes on $(HARDWARE) hardware$(RESET)"
+	@mkdir -p run_artifacts
+	$(PYTHON) scripts/bench_optimized.py --samples 5000 --runs 10 --output run_artifacts/bench_full_$$(date +%Y%m%d_%H%M%S).json
+	$(PYTHON) scripts/load_single_symbol.py --symbol $(SYMBOL) --duration-min 60 --rate 10 --output run_artifacts/load_test_$$(date +%Y%m%d_%H%M%S).json
+	@echo "$(GREEN)📊 Full benchmark results saved to run_artifacts/$(RESET)"
+
+test-parity: ## Test parity between optimized and reference indicators
+	@echo "$(BLUE)🧪 Testing indicator parity (tolerance: 1e-6)$(RESET)"
+	$(PYTHON) -m pytest tests/test_parity_indicators.py -v --tb=short
+	@echo "$(GREEN)✅ Parity tests complete$(RESET)"
+
+test-quick: ## Run quick test suite
+	@echo "$(BLUE)🧪 Running quick tests for $(HARDWARE) profile$(RESET)"
+	$(PYTHON) -m pytest tests/ -x --tb=short -k "not slow" --maxfail=3
+	@echo "$(GREEN)✅ Quick tests complete$(RESET)"
+
+monitor: ## Monitor system resources during operation
+	@echo "$(BLUE)📊 Monitoring system resources (optimized for $(HARDWARE))$(RESET)"
+	@echo "$(YELLOW)Press Ctrl+C to stop monitoring$(RESET)"
+	@echo "$(CYAN)Watching: CPU, RAM, scalping events, latency$(RESET)"
+	watch -n 2 'echo "=== Supreme System V5 Resource Monitor ==="; \
+		echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"; \
+		echo "Target: <85% CPU, <450MB RAM, <15ms latency"; \
+		echo ""; \
+		echo "=== Active Python Processes ==="; \
+		ps aux | grep -E "(python|supreme)" | grep -v grep | head -3; \
+		echo ""; \
+		echo "=== Memory Usage ==="; \
+		free -h | head -2; \
+		echo ""; \
+		echo "=== CPU Usage ==="; \
+		top -bn1 | grep "Cpu(s)" | head -1; \
+		echo ""; \
+		echo "=== Disk Usage ==="; \
+		df -h | head -2; \
+		echo ""; \
+		echo "=== Network (if applicable) ==="; \
+		netstat -i 2>/dev/null | head -3 || echo "netstat not available"'
+
+logs: ## Show recent logs
+	@echo "$(BLUE)📋 Recent logs (last 50 lines)$(RESET)"
+	@if [ -f logs/supreme_system.log ]; then \
+		tail -50 logs/supreme_system.log | grep -E "(ERROR|WARNING|INFO)" --color=always; \
+	elif [ -f supreme_system.log ]; then \
+		tail -50 supreme_system.log | grep -E "(ERROR|WARNING|INFO)" --color=always; \
+	else \
+		echo "$(YELLOW)No log file found. Check: logs/supreme_system.log$(RESET)"; \
+		ls -la logs/ 2>/dev/null || echo "logs/ directory not found"; \
+	fi
+
+status: ## Show system status and configuration
+	@echo "$(CYAN)Supreme System V5 - Status Report$(RESET)"
+	@echo "================================"
+	@echo "Profile: $(PROFILE)"
+	@echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"
+	@echo "Target Symbol: $(SYMBOL)"
+	@echo "Python: $$(python3 --version)"
+	@echo "Platform: $$(uname -s -m)"
+	@echo ""
+	@if [ -f .env ]; then \
+		echo "Config: .env found"; \
+		echo "Active settings:"; \
+		grep -E "^(ULTRA_CONSTRAINED|SYMBOLS|SCALPING_|MAX_|LOG_LEVEL)" .env | head -5; \
+	else \
+		echo "Config: $(RED).env missing - run 'make setup-ultra'$(RESET)"; \
+	fi
+	@echo ""
+	@if command -v free >/dev/null 2>&1; then \
+		echo "Current Memory: $$(free -h | awk 'NR==2{printf "%s/%s (%.1f%%)", $$3,$$2,$$3*100/$$2 }')";\
+	fi
+	@if [ -d run_artifacts ]; then \
+		echo "Artifacts: $$(ls -la run_artifacts/ | wc -l) files"; \
+	else \
+		echo "Artifacts: No run_artifacts directory"; \
+	fi
+
+results: ## Show latest benchmark results
+	@echo "$(CYAN)Latest Benchmark Results$(RESET)"
+	@echo "======================="
+	@if [ -d run_artifacts ]; then \
+		echo "Available results:"; \
+		ls -lt run_artifacts/*.json 2>/dev/null | head -5; \
+		echo ""; \
+		latest=$$(ls -t run_artifacts/*.json 2>/dev/null | head -1); \
+		if [ -n "$$latest" ]; then \
+			echo "Latest result: $$latest"; \
+			$(PYTHON) -c "import json; data=json.load(open('$$latest')); print('Performance Summary:'); [print(f'  {k}: {v}') for k,v in data.items() if k in ['latency_p95_ms', 'cpu_avg_percent', 'memory_peak_mb', 'parity_passed']]"; \
+		else \
+			echo "$(YELLOW)No benchmark results found. Run 'make bench-light'$(RESET)"; \
+		fi; \
+	else \
+		echo "$(YELLOW)No run_artifacts directory. Run 'make bench-light'$(RESET)"; \
+	fi
+
+clean: ## Clean up temporary files and artifacts
+	@echo "$(BLUE)🧹 Cleaning up$(RESET)"
+	rm -rf __pycache__/
+	rm -rf python/supreme_system_v5/__pycache__/
+	rm -rf python/supreme_system_v5/*/__pycache__/
+	rm -rf .pytest_cache/
+	rm -f validation_report*.json
+	find . -name "*.pyc" -delete
+	find . -name "*.pyo" -delete
+	@echo "$(GREEN)✅ Cleanup complete$(RESET)"
+
+clean-artifacts: ## Clean benchmark artifacts (keep config)
+	@echo "$(YELLOW)⚠️ This will delete all benchmark results$(RESET)"
+	@echo "Continue? [y/N]" && read ans && [ $${ans:-N} = y ]
+	rm -rf run_artifacts/
+	mkdir -p run_artifacts
+	@echo "$(GREEN)✅ Artifacts cleaned$(RESET)"
+
+clean-all: clean clean-artifacts ## Clean everything including run artifacts and logs
+	@echo "$(YELLOW)⚠️ This will delete all results, logs, and backups$(RESET)"
+	@echo "Continue? [y/N]" && read ans && [ $${ans:-N} = y ]
+	rm -rf logs/
+	rm -f .env.backup_*
+	mkdir -p logs
+	@echo "$(GREEN)✅ Full cleanup complete$(RESET)"
+
+# Advanced targets
+profile-cpu: ## Profile CPU usage during benchmark
+	@echo "$(BLUE)⚡ Profiling CPU usage on $(HARDWARE) hardware$(RESET)"
+	$(PYTHON) -m cProfile -o cpu_profile_$$(date +%Y%m%d_%H%M%S).prof scripts/bench_optimized.py --samples 500 --runs 1
+	@echo "$(GREEN)📊 CPU profile saved$(RESET)"
+
+profile-memory: ## Profile memory usage
+	@echo "$(BLUE)⚡ Profiling memory usage$(RESET)"
+	@if command -v mprof >/dev/null 2>&1; then \
+		mprof run scripts/bench_optimized.py --samples 100 --runs 1; \
+		mprof plot; \
+	else \
+		echo "$(YELLOW)memory_profiler not installed. Install with: pip install memory_profiler$(RESET)"; \
+	fi
+
+check-config: ## Validate current configuration
+	@echo "$(CYAN)Configuration Check for $(HARDWARE)$(RESET)"
+	@echo "================================="
+	@if [ -f .env ]; then \
+		echo "$(GREEN)✅ .env file found$(RESET)"; \
+		echo "Key settings:"; \
+		grep -E "^(ULTRA_CONSTRAINED|SYMBOLS|SCALPING_|MAX_|LOG_LEVEL)" .env | head -10; \
+		echo ""; \
+		echo "Resource limits:"; \
+		grep -E "^(MAX_RAM_MB|MAX_CPU_PERCENT)" .env; \
+	else \
+		echo "$(RED)❌ .env file not found$(RESET)"; \
+		echo "Run 'make setup-ultra' to create from template"; \
+	fi
+
+# Hardware-specific optimizations
+optimize-ultra: ## Apply ultra-constrained optimizations
+	@echo "$(BLUE)⚡ Applying optimizations for $(HARDWARE) ($(RAM_GB)GB RAM)$(RESET)"
+	@if [ "$(HARDWARE)" = "ultra_constrained" ]; then \
+		echo "Applying ultra-constrained optimizations:"; \
+		echo "  - Buffer sizes: 200 elements max"; \
+		echo "  - Float32 precision"; \
+		echo "  - Minimal logging"; \
+		echo "  - Disabled heavy features"; \
+	elif [ "$(HARDWARE)" = "constrained" ]; then \
+		echo "$(YELLOW)Hardware has $(RAM_GB)GB RAM - consider .env.optimized instead$(RESET)"; \
+	else \
+		echo "$(GREEN)Hardware has $(RAM_GB)GB RAM - can use higher performance profile$(RESET)"; \
+	fi
+
+# Development helpers
+format: ## Format code with basic tools
+	@echo "$(BLUE)🎨 Formatting code$(RESET)"
+	@if command -v black >/dev/null 2>&1; then \
+		black python/supreme_system_v5/ --line-length 100; \
+	else \
+		echo "$(YELLOW)black not installed, skipping formatting$(RESET)"; \
+	fi
+	@if command -v isort >/dev/null 2>&1; then \
+		isort python/supreme_system_v5/; \
+	else \
+		echo "$(YELLOW)isort not installed, skipping import sorting$(RESET)"; \
+	fi
+	@echo "$(GREEN)✅ Code formatted$(RESET)"
+
+lint: ## Run basic linting checks
+	@echo "$(BLUE)🔍 Running basic linting checks$(RESET)"
+	@if command -v flake8 >/dev/null 2>&1; then \
+		flake8 python/supreme_system_v5/ --max-line-length=100 --ignore=E203,W503 --max-complexity=10; \
+	else \
+		echo "$(YELLOW)flake8 not installed, skipping lint checks$(RESET)"; \
+	fi
+
+# Quick start guide
+quick-start: ## Complete quick start for new users
+	@echo "$(CYAN)Supreme System V5 - Quick Start Guide$(RESET)"
+	@echo "====================================="
+	@echo "Hardware Detected: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"
+	@echo ""
+	@echo "$(BLUE)Step 1:$(RESET) Environment validation"
+	$(MAKE) validate
+	@echo ""
+	@echo "$(BLUE)Step 2:$(RESET) Setup ultra-constrained profile"
+	$(MAKE) setup-ultra
+	@echo ""
+	@echo "$(BLUE)Step 3:$(RESET) Install dependencies"
+	$(MAKE) install-deps
+	@echo ""
+	@echo "$(BLUE)Step 4:$(RESET) Test indicator parity"
+	$(MAKE) test-parity
+	@echo ""
+	@echo "$(BLUE)Step 5:$(RESET) Quick benchmark"
+	$(MAKE) bench-light
+	@echo ""
+	@echo "$(GREEN)🚀 Ready! Next steps:$(RESET)"
+	@echo "  $(CYAN)make run-ultra-local$(RESET)  # Start paper trading"
+	@echo "  $(CYAN)make monitor$(RESET)         # Monitor resources (in another terminal)"
+	@echo "  $(CYAN)make logs$(RESET)           # View recent logs"
+	@echo "  $(CYAN)make results$(RESET)        # Check benchmark results"
+
+info: ## Show detailed system information
+	@echo "$(CYAN)Supreme System V5 - System Information$(RESET)"
+	@echo "=========================================="
+	@echo "Makefile Profile: $(PROFILE)"
+	@echo "Hardware Classification: $(HARDWARE)"
+	@echo "Target Symbol: $(SYMBOL)"
+	@echo "Test Duration: $(TEST_DURATION) minutes"
+	@echo "Benchmark Samples: $(BENCH_SAMPLES)"
+	@echo ""
+	@echo "System Specs:"
+	@echo "  Python: $$($(PYTHON) --version)"
+	@echo "  Platform: $$(uname -s -m)"
+	@echo "  CPU Cores: $(CPU_COUNT)"
+	@echo "  RAM: $(RAM_GB)GB"
+	@if command -v free >/dev/null 2>&1; then \
+		echo "  Available RAM: $$(free -h | awk 'NR==2{print $$7}' | tr -d 'i')"; \
+	fi
+	@echo "  Working Directory: $$(pwd)"
+	@echo ""
+	@echo "Resource Targets:"
+	@echo "  RAM Usage: <450MB (~47% of $(RAM_GB)GB)"
+	@echo "  CPU Usage: <85%"
+	@echo "  Latency P95: <15ms"
+	@echo "  Skip Ratio: 60-80% (event filtering efficiency)"
+	@echo ""
+	@echo "Available Targets: $$(grep -E '^[a-zA-Z_-]+:.*##' Makefile | wc -l) commands"
+
+# Emergency/troubleshooting targets
+reset: clean setup-ultra ## Reset to clean ultra-constrained state
+	@echo "$(YELLOW)🔄 Resetting to clean ultra-constrained state$(RESET)"
+	@echo "$(GREEN)✅ Reset complete - ready for fresh start$(RESET)"
+
+emergency-stop: ## Emergency stop - kill all Python processes
+	@echo "$(RED)🛑 EMERGENCY STOP - Killing all Python processes$(RESET)"
+	pkill -f python || echo "No Python processes found"
+	pkill -f supreme || echo "No Supreme System processes found"
+	@echo "$(YELLOW)All processes stopped$(RESET)"
+
+troubleshoot: ## Show troubleshooting information
+	@echo "$(CYAN)Troubleshooting Guide$(RESET)"
+	@echo "===================="
+	@echo "Hardware: $(HARDWARE) ($(CPU_COUNT) cores, $(RAM_GB)GB RAM)"
+	@echo ""
+	@echo "Common issues:"
+	@echo "1. Out of memory (>450MB usage):"
+	@echo "   - Reduce BUFFER_SIZE_LIMIT in .env"
+	@echo "   - Set LOG_LEVEL=ERROR"
+	@echo "   - Disable optional features"
+	@echo ""
+	@echo "2. High CPU usage (>85%):"
+	@echo "   - Increase SCALPING_INTERVAL_MIN"
+	@echo "   - Reduce MIN_PRICE_CHANGE_PCT"
+	@echo "   - Check for background processes"
+	@echo ""
+	@echo "3. Slow performance:"
+	@echo "   - Run 'make profile-cpu' to identify bottlenecks"
+	@echo "   - Check disk space with 'df -h'"
+	@echo "   - Monitor with 'make monitor'"
+	@echo ""
+	@echo "4. Validation failures:"
+	@echo "   - Run 'make validate' for detailed diagnostics"
+	@echo "   - Check Python version >= 3.10"
+	@echo "   - Reinstall deps with 'make install-deps'"
+
+# Show current resource usage
+usage: ## Show current resource usage
+	@echo "$(CYAN)Current Resource Usage$(RESET)"
+	@echo "====================="
+	@if command -v free >/dev/null 2>&1; then \
+		echo "Memory:"; \
+		free -h; \
+		echo ""; \
+	fi
+	@if command -v ps >/dev/null 2>&1; then \
+		echo "Top Python processes:"; \
+		ps aux --sort=-%mem | grep python | head -5; \
+		echo ""; \
+	fi
+	@if command -v df >/dev/null 2>&1; then \
+		echo "Disk usage:"; \
+		df -h | head -5; \
+	fi
