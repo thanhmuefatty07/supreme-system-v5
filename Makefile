@@ -2,7 +2,7 @@
 # Production-ready cryptocurrency trading bot automation
 # Cleaned up - no agent references, focused on core functionality
 
-.PHONY: help install test lint format backtest validate clean
+.PHONY: help install test lint format backtest validate clean perf-report
 .DEFAULT_GOAL := help
 
 # Configuration
@@ -27,8 +27,13 @@ help: ## Show help
 	@echo "  $(COLOR_GREEN)make validate$(COLOR_RESET)            Full system validation"
 	@echo "  $(COLOR_GREEN)make backtest$(COLOR_RESET)            Quick backtest ETH-USDT"
 	@echo ""
+	@echo "$(COLOR_BOLD)📊 Performance:$(COLOR_RESET)"
+	@echo "  $(COLOR_BLUE)make perf-report$(COLOR_RESET)         Generate performance report"
+	@echo "  $(COLOR_BLUE)make monitor$(COLOR_RESET)             Resource monitoring"
+	@echo "  $(COLOR_BLUE)make status$(COLOR_RESET)              System status check"
+	@echo ""
 	@echo "$(COLOR_BOLD)📊 Development:$(COLOR_RESET)"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(COLOR_CYAN)%-20s$(COLOR_RESET) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -v "perf-report\|monitor\|status" | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(COLOR_CYAN)%-20s$(COLOR_RESET) %s\n", $$1, $$2}'
 
 install: ## Install ultra-constrained dependencies
 	@echo "$(COLOR_BOLD)📦 Installing dependencies...$(COLOR_RESET)"
@@ -88,6 +93,18 @@ backtest-multi: ## Multi-symbol portfolio backtest
 	$(PYTHON) run_backtest.py --duration 60 --symbols ETH-USDT,BTC-USDT,SOL-USDT
 	@echo "$(COLOR_GREEN)✅ Multi-symbol backtest completed$(COLOR_RESET)"
 
+perf-report: ## Generate performance metrics report
+	@echo "$(COLOR_BOLD)📊 Generating performance report...$(COLOR_RESET)"
+	$(PYTHON) scripts/collect_metrics.py --report
+	@echo "$(COLOR_GREEN)✅ Performance report generated$(COLOR_RESET)"
+	@echo "$(COLOR_CYAN)View report: cat $(OUTPUT_DIR)/performance_report_*.md$(COLOR_RESET)"
+
+perf-collect: ## Collect current performance metrics
+	@echo "$(COLOR_BOLD)📊 Collecting performance metrics...$(COLOR_RESET)"
+	$(PYTHON) scripts/collect_metrics.py
+	@echo "$(COLOR_GREEN)✅ Metrics collected$(COLOR_RESET)"
+	@echo "$(COLOR_CYAN)View summary: cat $(OUTPUT_DIR)/performance_summary_*.json$(COLOR_RESET)"
+
 validate: ## Full system validation
 	@echo "$(COLOR_BOLD)🎯 Full system validation...$(COLOR_RESET)"
 	$(MAKE) install-dev
@@ -96,6 +113,12 @@ validate: ## Full system validation
 	$(MAKE) test-quick
 	$(MAKE) backtest
 	@echo "$(COLOR_GREEN)🎉 System validation completed!$(COLOR_RESET)"
+
+validate-extended: ## Extended validation with performance report
+	@echo "$(COLOR_BOLD)🎯 Extended system validation...$(COLOR_RESET)"
+	$(MAKE) validate
+	$(MAKE) perf-collect
+	@echo "$(COLOR_GREEN)🎉 Extended validation completed!$(COLOR_RESET)"
 
 quick-start: ## Complete setup and validation
 	@echo "$(COLOR_BOLD)🚀 Supreme System V5 Quick Start$(COLOR_RESET)"
