@@ -2,7 +2,7 @@
 # Agent Mode: Complete workflow automation for ETH-USDT scalping on 1GB RAM
 # Usage: make <command> for full automation
 
-.PHONY: help quick-start validate setup-ultra install-deps test-parity bench-light run-ultra-local monitor results status
+.PHONY: help quick-start validate setup-ultra install-deps test-parity bench-light run-ultra-local monitor results status deploy-production final-validation
 
 # Colors for output
 RED := \033[31m
@@ -30,10 +30,14 @@ help: ## Show all available commands (30+ automated workflows)
 	@echo "$(GREEN)🎯 QUICK START (One Command):$(RESET)"
 	@echo "  make quick-start     Complete guided setup + validation + run"
 	@echo ""
+	@echo "$(BLUE)📋 PRODUCTION DEPLOYMENT:$(RESET)"
+	@echo "  make final-validation     Ultimate system validation (REQUIRED)"
+	@echo "  make deploy-production    Full production deployment automation"
+	@echo ""
 	@echo "$(BLUE)📋 CORE WORKFLOW:$(RESET)"
 	@awk 'BEGIN {FS = ":.*##"; printf "%-20s %s\\n", "Command", "Description"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-18s %s\\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "$(YELLOW)💡 Most used: make quick-start, make run-ultra-local, make monitor$(RESET)"
+	@echo "$(YELLOW)💡 Most used: make final-validation, make deploy-production, make run-ultra-local$(RESET)"
 	@echo "$(RED)🆘 Emergency: make emergency-stop, make troubleshoot, make reset$(RESET)"
 
 quick-start: ## Complete guided setup (5 minutes) - RECOMMENDED first run
@@ -58,9 +62,9 @@ quick-start: ## Complete guided setup (5 minutes) - RECOMMENDED first run
 	@echo "$(GREEN)✅ Quick start completed! Ready for trading.$(RESET)"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  make run-ultra-local    Start paper trading"
-	@echo "  make monitor           Monitor resources (in another terminal)"
-	@echo "  make status            Check system status"
+	@echo "  make final-validation      Ultimate system validation"
+	@echo "  make deploy-production     Full production deployment"
+	@echo "  make run-ultra-local       Start paper trading"
 
 validate-production: ## Comprehensive production validation suite
 	@echo "$(BLUE)🏭 Running comprehensive production validation...$(RESET)"
@@ -69,6 +73,39 @@ validate-production: ## Comprehensive production validation suite
 	@PYTHONPATH=python $(PYTHON) scripts/production_validation.py
 	@echo ""
 	@echo "$(GREEN)✅ Production validation completed$(RESET)"
+
+final-validation: ## Ultimate system validation - REQUIRED before production
+	@echo "$(CYAN)🏆 Running FINAL system validation - Ultimate readiness test$(RESET)"
+	@echo "================================================================"
+	@echo "Features: Complete end-to-end validation with production scenarios"
+	@echo ""
+	@PYTHONPATH=python $(PYTHON) scripts/final_system_validation.py --mode standard
+	@echo ""
+	@echo "$(GREEN)✅ Final validation completed - Check results for production readiness$(RESET)"
+
+final-validation-quick: ## Quick final validation (reduced test scope)
+	@echo "$(BLUE)🏆 Running QUICK final validation...$(RESET)"
+	@PYTHONPATH=python $(PYTHON) scripts/final_system_validation.py --mode quick
+
+final-validation-comprehensive: ## Comprehensive final validation (extended tests)
+	@echo "$(RED)🏆 Running COMPREHENSIVE final validation (extended)...$(RESET)"
+	@echo "This may take 15-30 minutes"
+	@PYTHONPATH=python $(PYTHON) scripts/final_system_validation.py --mode comprehensive
+
+deploy-production: ## Full production deployment automation (AGENT MODE)
+	@echo "$(RED)🚀 AGENT MODE: Full Production Deployment Automation$(RESET)"
+	@echo "================================================================"
+	@echo "This will:"
+	@echo "  ✅ Validate all prerequisites"
+	@echo "  ✅ Setup production environment"
+	@echo "  ✅ Run comprehensive validation"
+	@echo "  ✅ Deploy monitoring stack"
+	@echo "  ✅ Create startup/emergency scripts"
+	@echo "  ✅ Generate deployment summary"
+	@echo ""
+	@chmod +x deploy_production.sh
+	@./deploy_production.sh
+	@echo "$(GREEN)✅ Production deployment automation completed$(RESET)"
 
 # ============================================================================
 # VALIDATION & SETUP
@@ -218,6 +255,56 @@ else:
 "
 
 # ============================================================================
+# ULTIMATE VALIDATION & DEPLOYMENT
+# ============================================================================
+
+final-validation: ## 🏆 Ultimate system validation - REQUIRED before production
+	@echo "$(CYAN)🏆 ULTIMATE SYSTEM VALIDATION - PRODUCTION READINESS TEST$(RESET)"
+	@echo "================================================================"
+	@echo "This comprehensive test validates:"
+	@echo "  ✅ All component integration (strategies, optimized analyzer, etc.)"
+	@echo "  ✅ Mathematical parity (≤1e-6 tolerance)"
+	@echo "  ✅ Performance benchmarks under ultra-constraints"
+	@echo "  ✅ Production trading scenarios (uptrend/downtrend/sideways)"
+	@echo "  ✅ Error handling and recovery"
+	@echo "  ✅ Memory leak detection and resource management"
+	@echo "  ✅ Complete production readiness assessment"
+	@echo ""
+	@echo "$(YELLOW)Expected duration: 5-10 minutes$(RESET)"
+	@echo ""
+	@PYTHONPATH=python $(PYTHON) scripts/final_system_validation.py --mode standard
+	@echo ""
+	@echo "$(GREEN)✅ Ultimate validation completed - Ready for deployment if all passed$(RESET)"
+
+deploy-production: ## 🚀 Full production deployment automation (AGENT MODE)
+	@echo "$(RED)🚀 AGENT MODE: FULL PRODUCTION DEPLOYMENT AUTOMATION$(RESET)"
+	@echo "================================================================"
+	@echo "$(RED)This will perform complete production deployment:$(RESET)"
+	@echo "  🔍 Prerequisites validation (Python, RAM, disk space)"
+	@echo "  ⚙️ Production environment setup"
+	@echo "  📦 Ultra-minimal dependencies installation"
+	@echo "  🧪 Comprehensive validation suite"
+	@echo "  📊 Performance benchmarking"
+	@echo "  📋 Production validation analysis"
+	@echo "  📊 Monitoring stack deployment"
+	@echo "  🚀 Production startup scripts creation"
+	@echo "  🆘 Emergency procedures setup"
+	@echo "  📋 Comprehensive deployment summary"
+	@echo ""
+	@echo "$(YELLOW)Estimated time: 10-20 minutes$(RESET)"
+	@echo "$(YELLOW)Requires: 1GB+ RAM, 2GB+ disk space$(RESET)"
+	@echo ""
+	@read -p "Type 'DEPLOY' to proceed with production deployment: " confirm; \
+	if [ "$$confirm" = "DEPLOY" ]; then \
+		echo "$(RED)🚀 Starting production deployment automation...$(RESET)"; \
+		chmod +x deploy_production.sh; \
+		./deploy_production.sh; \
+		echo "$(GREEN)✅ Production deployment completed$(RESET)"; \
+	else \
+		echo "$(GREEN)❌ Production deployment cancelled$(RESET)"; \
+	fi
+
+# ============================================================================
 # PERFORMANCE BENCHMARKING
 # ============================================================================
 
@@ -309,13 +396,14 @@ run-ultra-live: ## Start live trading (CAUTION - REAL MONEY AT RISK)
 	@echo ""
 	@echo "$(RED)🚨 REAL MONEY WILL BE AT RISK!$(RESET)"
 	@echo "$(RED)🚨 ENSURE YOU HAVE:$(RESET)"
-	@echo "   ✅ Validated system (make test-parity)"
+	@echo "   ✅ Validated system (make final-validation)"
 	@echo "   ✅ Tested configuration (make bench-light)"
 	@echo "   ✅ Proper API keys configured"
 	@echo "   ✅ Acceptable risk limits set"
+	@echo "   ✅ Emergency procedures understood"
 	@echo ""
-	@read -p "Type 'CONFIRM' to proceed with live trading: " confirm; \
-	if [ "$$confirm" = "CONFIRM" ]; then \
+	@read -p "Type 'LIVE_CONFIRMED' to proceed with live trading: " confirm; \
+	if [ "$$confirm" = "LIVE_CONFIRMED" ]; then \
 		echo "$(RED)🔥 Starting live trading...$(RESET)"; \
 		EXECUTION_MODE=live PYTHONPATH=python $(PYTHON) main.py; \
 	else \
@@ -517,16 +605,22 @@ troubleshoot: ## Comprehensive troubleshooting guide
 	@echo "   - Run: make setup-ultra"
 	@echo "   - Check: make check-config"
 	@echo ""
+	@echo "5. Deployment Issues:"
+	@echo "   - Run: make final-validation (first)"
+	@echo "   - Run: make deploy-production"
+	@echo ""
 	@echo "$(RED)🆘 Emergency Commands:$(RESET)"
-	@echo "   make emergency-stop    Kill all processes"
-	@echo "   make reset            Clean restart"
-	@echo "   make install-deps     Reinstall dependencies"
+	@echo "   make emergency-stop       Kill all processes"
+	@echo "   ./emergency_stop.sh      Emergency shutdown (if deployed)"
+	@echo "   make reset               Clean restart"
+	@echo "   make install-deps        Reinstall dependencies"
 
 emergency-stop: ## Emergency stop (kill all processes)
 	@echo "$(RED)🚨 Emergency stop - killing all processes...$(RESET)"
 	@pkill -f "python.*main.py" 2>/dev/null || echo "No main.py processes found"
 	@pkill -f "python.*supreme_system" 2>/dev/null || echo "No supreme_system processes found"
 	@pkill -f "python.*bench" 2>/dev/null || echo "No benchmark processes found"
+	@pkill -f "python.*validation" 2>/dev/null || echo "No validation processes found"
 	@echo "$(GREEN)✅ Emergency stop completed$(RESET)"
 
 info: ## Detailed system information
@@ -575,6 +669,12 @@ if Path('requirements-ultra.txt').exists():
     with open('requirements-ultra.txt') as f:
         req_lines = len([l for l in f if l.strip() and not l.startswith('#')])
     print(f'   Requirements: {req_lines} packages')
+
+print()
+print('🚀 Deployment:')
+print(f'   Production script: {\"✅ exists\" if Path(\"deploy_production.sh\").exists() else \"❌ missing\"}')
+print(f'   Startup script: {\"✅ exists\" if Path(\"start_production.sh\").exists() else \"⚠️ not deployed\"}')
+print(f'   Emergency stop: {\"✅ exists\" if Path(\"emergency_stop.sh\").exists() else \"⚠️ not deployed\"}')
 "
 
 # ============================================================================
@@ -583,7 +683,12 @@ if Path('requirements-ultra.txt').exists():
 
 test-integration: ## Integration tests for complete system
 	@echo "$(BLUE)🔗 Running integration tests...$(RESET)"
-	@PYTHONPATH=python $(PYTHON) -m pytest tests/test_integration.py -v --tb=short
+	@if [ -f tests/test_comprehensive_integration.py ]; then \
+		PYTHONPATH=python $(PYTHON) -m pytest tests/test_comprehensive_integration.py -v --tb=short; \
+	else \
+		echo "$(YELLOW)Comprehensive integration tests not found$(RESET)"; \
+		$(MAKE) test-quick; \
+	fi
 	@echo "$(GREEN)✅ Integration tests completed$(RESET)"
 
 test-smoke: ## Smoke tests (basic functionality)
@@ -772,6 +877,33 @@ format: ## Format code (black, isort if available)
 		echo "$(YELLOW)⚠️ isort not available (pip install isort)$(RESET)"; \
 	fi
 	@echo "$(GREEN)✅ Code formatting completed$(RESET)"
+
+# ============================================================================
+# PRODUCTION WORKFLOW (AGENT MODE)
+# ============================================================================
+
+production-ready: ## Complete production readiness check
+	@echo "$(CYAN)🏆 SUPREME SYSTEM V5 - PRODUCTION READINESS CHECK$(RESET)"
+	@echo "================================================================"
+	@echo "Running complete production readiness assessment..."
+	@echo ""
+	@echo "$(BLUE)Step 1: Quick validation$(RESET)"
+	@$(MAKE) validate
+	@echo ""
+	@echo "$(BLUE)Step 2: Configuration check$(RESET)"
+	@$(MAKE) check-config
+	@echo ""
+	@echo "$(BLUE)Step 3: Dependency verification$(RESET)"
+	@$(MAKE) test-quick
+	@echo ""
+	@echo "$(BLUE)Step 4: Performance benchmark$(RESET)"
+	@$(MAKE) bench-light
+	@echo ""
+	@echo "$(BLUE)Step 5: Final comprehensive validation$(RESET)"
+	@$(MAKE) final-validation
+	@echo ""
+	@echo "$(GREEN)🏆 PRODUCTION READINESS CHECK COMPLETE$(RESET)"
+	@echo "Check validation results to confirm production readiness"
 
 # Make all targets .PHONY to ensure they always run
 .PHONY: $(MAKECMDGOALS)
