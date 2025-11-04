@@ -151,46 +151,52 @@ class UltraConstrainedResourceMonitor:
         self.optimization_handlers: List[Callable] = []
         
         logger.info(f"Ultra-constrained monitor initialized: {self.limits.max_memory_mb}MB RAM, {self.limits.max_cpu_percent}% CPU")
-        
-    def add_emergency_handler(self, handler: Callable):
-        """Add emergency shutdown handler"""
-        self.emergency_handlers.append(handler)
-        
-    def add_optimization_handler(self, handler: Callable):
-        """Add optimization handler for auto-tuning"""
-        self.optimization_handlers.append(handler)
-        
-    async def start_monitoring(self):
-        """Start continuous ultra-constrained monitoring"""
-        logger.info("Starting ultra-constrained resource monitoring...")
-        self.running = True
-        
-        try:
-            while self.running:
-                # Take resource snapshot
-                snapshot = await self._take_resource_snapshot()
-                if snapshot:
-                    await self._process_snapshot(snapshot)
-                    
-                # Check for emergency conditions
-                await self._check_emergency_conditions()
-                
-                # Auto-optimization check
-                if self.auto_optimization_enabled:
-                    await self._auto_optimize_check()
-                    
-                await asyncio.sleep(self.check_interval)
-                
-        except Exception as e:
-            logger.error(f"Monitoring error: {e}")
-            raise
-        finally:
-            logger.info("Ultra-constrained monitoring stopped")
-            
-    def stop_monitoring(self):
-        """Stop resource monitoring"""
-        self.running = False
-        
+
+
+class PerformanceProfile(Enum):
+    """Performance optimization levels"""
+    MINIMAL = "minimal"        # Maximum resource conservation
+    CONSERVATIVE = "conservative"  # Balanced conservation
+    NORMAL = "normal"          # Standard performance
+    PERFORMANCE = "performance"  # Maximum performance
+
+
+# Alias for compatibility
+AdvancedResourceMonitor = UltraConstrainedResourceMonitor
+
+@dataclass
+class ResourceThreshold:
+    """Resource usage thresholds for monitoring"""
+    memory_warning_mb: float = 300.0
+    memory_critical_mb: float = 400.0
+    cpu_warning_percent: float = 70.0
+    cpu_critical_percent: float = 85.0
+    latency_warning_ms: float = 10.0
+    latency_critical_ms: float = 50.0
+
+@dataclass
+class OptimizationResult:
+    """Result of an optimization operation"""
+    optimization_type: str
+    applied: bool = False
+    memory_saved_mb: float = 0.0
+    cpu_reduced_percent: float = 0.0
+    timestamp: float = field(default_factory=time.time)
+    description: str = ""
+
+@dataclass
+class ResourceMetrics:
+    """Resource metrics for monitoring"""
+    memory_used_mb: float = 0.0
+    memory_percent: float = 0.0
+    cpu_percent: float = 0.0
+    latency_ms: float = 0.0
+    timestamp: float = field(default_factory=time.time)
+
+
+class UltraConstrainedResourceMonitor:
+    """Ultra-constrained resource monitor for 1GB RAM deployment"""
+
     async def _take_resource_snapshot(self) -> Optional[ResourceSnapshot]:
         """Take comprehensive resource snapshot"""
         try:
@@ -642,6 +648,52 @@ async def demo_ultra_constrained_monitor():
     print("✅ Ultra-Constrained Resource Monitor Demo Complete")
     print("   System ready for 1GB RAM production deployment!")
     
+
+async def demo_resource_monitor():
+    """Demonstrate ultra-constrained resource monitoring capabilities."""
+    print("📊 SUPREME SYSTEM V5 - Ultra-Constrained Resource Monitor Demo")
+    print("=" * 65)
+
+    # Initialize ultra-constrained monitor
+    config = {
+        'max_memory_mb': 450.0,
+        'max_cpu_percent': 85.0,
+        'check_interval': 5.0,
+        'emergency_shutdown_enabled': True,
+        'auto_optimization_enabled': True,
+        'gc_enabled': True
+    }
+
+    monitor = UltraConstrainedResourceMonitor(config)
+
+    print("🔄 Starting ultra-constrained monitoring...")
+    print("   Target: 450MB RAM, 85% CPU limit")
+    print()
+
+    # Start monitoring
+    monitoring_task = asyncio.create_task(monitor.start_monitoring())
+
+    # Let it run for a short demo
+    await asyncio.sleep(10)
+
+    # Stop monitoring
+    monitor.stop_monitoring()
+    monitoring_task.cancel()
+
+    try:
+        await monitoring_task
+    except asyncio.CancelledError:
+        pass
+
+    print()
+    print("✅ Ultra-Constrained Resource Monitor Demo Complete")
+    print("   System ready for 1GB RAM production deployment!")
+
+
+def demo_resource_monitor_sync():
+    """Synchronous wrapper for demo function."""
+    asyncio.run(demo_resource_monitor())
+
 
 if __name__ == "__main__":
     asyncio.run(demo_ultra_constrained_monitor())

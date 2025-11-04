@@ -222,7 +222,7 @@ class OptimizedTechnicalAnalyzer:
             'updates_processed': self.update_count,
             'events_filtered': self.event_skip_count,
             'total_events': total_events,
-            'filter_efficiency': analyzer_stats['efficiency_pct'],
+            'filter_efficiency': analyzer_stats['skip_ratio'],
             'skip_ratio': analyzer_stats['skip_ratio'],
 
             # Advanced performance metrics
@@ -239,7 +239,7 @@ class OptimizedTechnicalAnalyzer:
             'last_update_time': self.last_update_time,
 
             # Optimization effectiveness
-            'cpu_reduction_estimate': analyzer_stats['efficiency_pct'] * 0.8,  # Estimated 80% of filtering efficiency
+            'cpu_reduction_estimate': analyzer_stats['skip_ratio'] * 0.8,  # Estimated 80% of filtering efficiency
             'memory_efficiency': self.price_history.is_full(),  # True if using fixed memory
             'ultra_optimization_active': self._cache_enabled and self.event_processor._config.get('min_price_change_pct', 0) < 0.001
         }

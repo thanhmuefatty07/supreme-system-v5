@@ -62,6 +62,10 @@ class CircularBuffer:
         """Check if buffer contains maximum elements."""
         return self._is_full
 
+    def __len__(self) -> int:
+        """Return current number of elements in buffer."""
+        return self._size if self._is_full else self._index
+
     def clear(self) -> None:
         """Reset buffer state."""
         self._index = 0
