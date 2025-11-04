@@ -1,5 +1,5 @@
 # Supreme System V5 - Git Ignore Rules
-# World's First Neuromorphic Trading System
+# Production-ready cryptocurrency trading bot
 
 # Python
 __pycache__/
@@ -42,6 +42,7 @@ pyvenv.cfg
 .vim/
 *.sublime-project
 *.sublime-workspace
+.cursor/
 
 # OS Generated
 .DS_Store
@@ -62,6 +63,7 @@ logs/
 cov.xml
 *.cover
 .hypothesis/
+htmlcov/
 
 # Data Files
 *.csv
@@ -76,82 +78,13 @@ data/processed/
 data/cache/
 data/temp/
 
-# Model Files
-*.pth
-*.pt
-*.ckpt
-*.safetensors
-models/weights/
-models/checkpoints/
-checkpoints/
-
-# Neuromorphic & Hardware
-*.bit
-*.ltx
-*.xpr
-*.xdc
-hardware/build/
-fpga/build/
-fpga/cache/
-neuromorphic/cache/
-
-# Ultra-Low Latency
-latency_logs/
-performance_cache/
-benchmark_results/
-
-# Performance & Profiling
-*.prof
-profiling/
-benchmarks/results/
-perf.data*
-*.perf
-
-# Quantum Computing
-qiskit_cache/
-quantum/temp/
-*.qobj
-
-# Configuration (sensitive)
-.env
-.env.local
-.env.production
-.env.staging
-config/secrets/
-config/production/
-
-# Hardware configurations (potentially sensitive)
-hardware/production/
-quantum/credentials/
-fpga/licenses/
-fpga/keys/
-
-# Temporary files
-tmp/
-temp/
-.cache/
-.temp/
-*.tmp
-*.temp
-
-# Documentation builds
-docs/_build/
-docs/.doctrees/
-site/
-
-# Distribution / packaging
-.Python
-build/
-dist/
-*.egg-info/
-
 # Testing
 .tox/
 .nox/
-.coverage
 .pytest_cache/
 cover/
 .hypothesis/
+test_output*.txt
 
 # Jupyter Notebook
 .ipynb_checkpoints/
@@ -174,40 +107,34 @@ ipython_config.py
 *.rar
 *.7z
 
-# IDE specific
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
 # mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-.idea/
-
-# Supreme System V5 Specific
-supreme_v5_cache/
+# Supreme System V5 Specific - Core Functionality
 trading_logs/
 market_data_cache/
 backtest_results/
 live_trading_logs/
-run_artifacts/
+
+# Run Artifacts - Block Large Files
+run_artifacts/*.json
+run_artifacts/*.csv
+run_artifacts/*.log
+run_artifacts/benchmarks/
+run_artifacts/security/
+run_artifacts/agents/
+run_artifacts/test-results.xml
+run_artifacts/coverage.xml
+
+# Configuration (sensitive)
+.env
+.env.local
+.env.production
+.env.staging
+config/secrets/
+config/production/
 
 # Financial Data (sensitive)
 api_keys.json
@@ -224,28 +151,46 @@ monitoring/data/
 kubernetes/secrets/
 docker/production/
 deployment/production/
+deployment_logs/
 
-# CI/CD
-.github/workflows/production.yml
+# Distribution / packaging
+*.egg-info/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+.temp/
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Performance & Profiling
+*.prof
+profiling/
+perf.data*
+*.perf
+
+# Model Files (if any ML components)
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+models/weights/
+models/checkpoints/
+checkpoints/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+site/
 
 # Node.js (if any frontend tools)
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# MacOS
-.AppleDouble
-.LSOverride
-
-# Windows
-ehthumbs.db
-desktop.ini
-
-# Linux
-*~
-
-# Backup files
-*.bak
-*.backup
-*.orig
