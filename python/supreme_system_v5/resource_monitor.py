@@ -14,6 +14,7 @@ Features:
 
 import asyncio
 import gc
+import json
 import logging
 import os
 import psutil
@@ -43,6 +44,46 @@ class OptimizationLevel(Enum):
     MODERATE = 2    # Disable non-critical features
     AGGRESSIVE = 3  # Minimal operation mode
     EMERGENCY = 4   # Emergency shutdown
+
+
+class PerformanceProfile(Enum):
+    """Performance optimization levels"""
+    MINIMAL = "minimal"        # Maximum resource conservation
+    CONSERVATIVE = "conservative"  # Balanced conservation
+    NORMAL = "normal"          # Standard performance
+    PERFORMANCE = "performance"  # Maximum performance
+
+
+@dataclass
+class ResourceThreshold:
+    """Resource usage thresholds for monitoring"""
+    memory_warning_mb: float = 300.0
+    memory_critical_mb: float = 400.0
+    cpu_warning_percent: float = 70.0
+    cpu_critical_percent: float = 85.0
+    latency_warning_ms: float = 10.0
+    latency_critical_ms: float = 50.0
+
+
+@dataclass
+class OptimizationResult:
+    """Result of an optimization operation"""
+    optimization_type: str
+    applied: bool = False
+    memory_saved_mb: float = 0.0
+    cpu_reduced_percent: float = 0.0
+    timestamp: float = field(default_factory=time.time)
+    description: str = ""
+
+
+@dataclass
+class ResourceMetrics:
+    """Resource metrics for monitoring"""
+    memory_used_mb: float = 0.0
+    memory_percent: float = 0.0
+    cpu_percent: float = 0.0
+    latency_ms: float = 0.0
+    timestamp: float = field(default_factory=time.time)
 
 
 @dataclass
@@ -151,52 +192,55 @@ class UltraConstrainedResourceMonitor:
         self.optimization_handlers: List[Callable] = []
         
         logger.info(f"Ultra-constrained monitor initialized: {self.limits.max_memory_mb}MB RAM, {self.limits.max_cpu_percent}% CPU")
-
-
-class PerformanceProfile(Enum):
-    """Performance optimization levels"""
-    MINIMAL = "minimal"        # Maximum resource conservation
-    CONSERVATIVE = "conservative"  # Balanced conservation
-    NORMAL = "normal"          # Standard performance
-    PERFORMANCE = "performance"  # Maximum performance
-
-
-# Alias for compatibility
-AdvancedResourceMonitor = UltraConstrainedResourceMonitor
-
-@dataclass
-class ResourceThreshold:
-    """Resource usage thresholds for monitoring"""
-    memory_warning_mb: float = 300.0
-    memory_critical_mb: float = 400.0
-    cpu_warning_percent: float = 70.0
-    cpu_critical_percent: float = 85.0
-    latency_warning_ms: float = 10.0
-    latency_critical_ms: float = 50.0
-
-@dataclass
-class OptimizationResult:
-    """Result of an optimization operation"""
-    optimization_type: str
-    applied: bool = False
-    memory_saved_mb: float = 0.0
-    cpu_reduced_percent: float = 0.0
-    timestamp: float = field(default_factory=time.time)
-    description: str = ""
-
-@dataclass
-class ResourceMetrics:
-    """Resource metrics for monitoring"""
-    memory_used_mb: float = 0.0
-    memory_percent: float = 0.0
-    cpu_percent: float = 0.0
-    latency_ms: float = 0.0
-    timestamp: float = field(default_factory=time.time)
-
-
-class UltraConstrainedResourceMonitor:
-    """Ultra-constrained resource monitor for 1GB RAM deployment"""
-
+        
+    def add_emergency_handler(self, handler: Callable):
+        """Add emergency shutdown handler"""
+        self.emergency_handlers.append(handler)
+        
+    def add_optimization_handler(self, handler: Callable):
+        """Add optimization handler"""
+        self.optimization_handlers.append(handler)
+        
+    async def start_monitoring(self) -> Dict[str, Any]:
+        """Start ultra-constrained resource monitoring"""
+        if self.running:
+            return {"status": "already_running", "message": "Monitor already active"}
+            
+        self.running = True
+        self.start_time = time.time()
+        
+        logger.info("Starting ultra-constrained resource monitoring...")
+        
+        try:
+            while self.running:
+                # Take resource snapshot
+                snapshot = await self._take_resource_snapshot()
+                if snapshot:
+                    await self._process_snapshot(snapshot)
+                    
+                    # Check for emergency conditions
+                    await self._check_emergency_conditions()
+                    
+                    # Auto-optimization check
+                    if self.auto_optimization_enabled:
+                        await self._auto_optimize_check()
+                        
+                # Wait for next check
+                await asyncio.sleep(self.check_interval)
+                
+        except Exception as e:
+            logger.error(f"Resource monitoring error: {e}")
+            return {"status": "error", "error": str(e)}
+        finally:
+            self.running = False
+            
+        return {"status": "stopped", "uptime_seconds": time.time() - self.start_time}
+        
+    def stop_monitoring(self):
+        """Stop resource monitoring"""
+        self.running = False
+        logger.info("Ultra-constrained resource monitoring stopped")
+        
     async def _take_resource_snapshot(self) -> Optional[ResourceSnapshot]:
         """Take comprehensive resource snapshot"""
         try:
@@ -544,15 +588,20 @@ class UltraConstrainedResourceMonitor:
         }
         
         try:
-            import json
             with open(report_path, 'w') as f:
                 json.dump(report, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to export emergency report: {e}")
             
         return report_path
-        
-        
+
+
+# Compatibility aliases
+AdvancedResourceMonitor = UltraConstrainedResourceMonitor
+SystemResourceMonitor = UltraConstrainedResourceMonitor
+ResourceMonitor = UltraConstrainedResourceMonitor
+
+
 async def demo_ultra_constrained_monitor():
     """Demo ultra-constrained resource monitoring"""
     print("🔍 Supreme System V5 - Ultra-Constrained Resource Monitor Demo")
