@@ -4,6 +4,8 @@ Real-time market data and order execution
 Agent Mode: Complete exchange ecosystem with MEXC, Binance, OKX
 """
 
+from typing import Dict, List, Any
+
 # Exchange connector imports with error handling
 try:
     from .okx_connector import OKXConnector
@@ -24,7 +26,28 @@ except ImportError:
     MEXC_AVAILABLE = False
 
 # Base exchange interface
-from .base import BaseExchangeConnector, ExchangeConfig
+try:
+    from .base import BaseExchangeConnector
+    # Also try alternative name
+    BaseExchange = BaseExchangeConnector
+except ImportError:
+    try:
+        from .base import BaseExchange
+        BaseExchangeConnector = BaseExchange
+    except ImportError:
+        # Fallback - create basic base class
+        class BaseExchangeConnector:
+            def __init__(self, config):
+                self.config = config
+                pass
+        BaseExchange = BaseExchangeConnector
+
+# Configuration class
+class ExchangeConfig:
+    """Exchange configuration container"""
+    def __init__(self, config_dict: Dict[str, Any]):
+        for key, value in config_dict.items():
+            setattr(self, key, value)
 
 # Exchange factory function
 def create_exchange_connector(exchange_name: str, config: Dict[str, Any]):
@@ -63,6 +86,7 @@ EXCHANGE_STATUS = {
 
 __all__ = [
     "BaseExchangeConnector",
+    "BaseExchange", 
     "ExchangeConfig",
     "OKXConnector",
     "BinanceConnector", 
