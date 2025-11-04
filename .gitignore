@@ -119,14 +119,7 @@ backtest_results/
 live_trading_logs/
 
 # Run Artifacts - Block Large Files
-run_artifacts/*.json
-run_artifacts/*.csv
-run_artifacts/*.log
-run_artifacts/benchmarks/
-run_artifacts/security/
-run_artifacts/agents/
-run_artifacts/test-results.xml
-run_artifacts/coverage.xml
+run_artifacts/*
 
 # Configuration (sensitive)
 .env
@@ -194,3 +187,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Dashboard (optional dev)
+dashboard/__pycache__/
+dashboard/*.log
