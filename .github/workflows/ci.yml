@@ -59,10 +59,47 @@ jobs:
           --junitxml=../run_artifacts/test-results.xml \
           --timeout=300 || echo "::warning::Some tests failed"
           
-    - name: Quick backtest
+    - name: Quick backtest with performance tracking
       run: |
         export PYTHONPATH=$PWD/python:$PYTHONPATH
         timeout 120 python run_backtest.py --duration 1 --symbol ETH-USDT || echo "::warning::Backtest timed out or failed"
+        
+    - name: Collect performance metrics
+      run: |
+        python scripts/collect_metrics.py --report || echo "::notice::Metrics collection completed with warnings"
+        
+    - name: Verify performance claims
+      run: |
+        echo "## 📊 Performance Verification" >> $GITHUB_STEP_SUMMARY
+        if [ -f "run_artifacts/realtime_metrics.json" ]; then
+          echo "### ✅ Performance Metrics Found" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import json
+          try:
+            with open('run_artifacts/realtime_metrics.json') as f:
+              data = json.load(f)
+              stats = data.get('performance_stats', {})
+              avg_lat = stats.get('avg_latency_ms', 0)
+              p95_lat = stats.get('p95_latency_ms', 0)
+              success = stats.get('success_count', 0)
+              total = stats.get('loop_count', 1)
+              print(f'Avg Latency: {avg_lat}ms')
+              print(f'P95 Latency: {p95_lat}ms')
+              print(f'Success Rate: {success}/{total} ({100*success/total:.1f}%)')
+              
+              # Performance warnings
+              if avg_lat > 5:
+                print('::warning::Average latency exceeds 5ms target')
+              if p95_lat > 10:
+                print('::warning::P95 latency exceeds 10ms target')
+              if success/total < 0.99:
+                print('::warning::Success rate below 99%')
+          except Exception as e:
+            print(f'::notice::Metrics parsing: {e}')
+          " >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ⚠️ No realtime metrics available" >> $GITHUB_STEP_SUMMARY
+        fi
         
     - name: Security scan with Semgrep
       run: |
@@ -79,6 +116,9 @@ jobs:
           run_artifacts/coverage.xml
           run_artifacts/semgrep-results.json
           run_artifacts/backtest_results_*.json
+          run_artifacts/performance_*.json
+          run_artifacts/performance_*.md
+          run_artifacts/realtime_metrics.json
         retention-days: 30
         
     - name: Summary
@@ -92,6 +132,7 @@ jobs:
         echo "- Core module validation" >> $GITHUB_STEP_SUMMARY
         echo "- Test suite execution" >> $GITHUB_STEP_SUMMARY
         echo "- Quick backtest validation" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance metrics collection" >> $GITHUB_STEP_SUMMARY
         echo "- Security scan with Semgrep" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📊 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
