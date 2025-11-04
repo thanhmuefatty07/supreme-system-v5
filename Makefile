@@ -62,6 +62,14 @@ quick-start: ## Complete guided setup (5 minutes) - RECOMMENDED first run
 	@echo "  make monitor           Monitor resources (in another terminal)"
 	@echo "  make status            Check system status"
 
+validate-production: ## Comprehensive production validation suite
+	@echo "$(BLUE)🏭 Running comprehensive production validation...$(RESET)"
+	@echo "Features: Dependencies, Parity, Benchmarks, Integration"
+	@echo ""
+	@PYTHONPATH=python $(PYTHON) scripts/production_validation.py
+	@echo ""
+	@echo "$(GREEN)✅ Production validation completed$(RESET)"
+
 # ============================================================================
 # VALIDATION & SETUP
 # ============================================================================
@@ -572,29 +580,6 @@ if Path('requirements-ultra.txt').exists():
 # ============================================================================
 # TESTING WORKFLOWS
 # ============================================================================
-
-test-parity: ## Test mathematical parity (EMA/RSI/MACD ≤1e-6 tolerance)
-	@echo "$(BLUE)🧪 Testing mathematical parity (≤1e-6 tolerance)...$(RESET)"
-	@if [ -f tests/test_parity_indicators.py ]; then \
-		PYTHONPATH=python $(PYTHON) -m pytest tests/test_parity_indicators.py -v --tb=short; \
-	else \
-		echo "$(YELLOW)⚠️ Parity tests not found, running basic validation$(RESET)"; \
-		PYTHONPATH=python $(PYTHON) -c "
-import sys
-sys.path.insert(0, 'python')
-try:
-    from supreme_system_v5.strategies import ScalpingStrategy
-    print('✅ ScalpingStrategy import successful')
-    config = {'symbol': 'ETH-USDT', 'ema_period': 14, 'rsi_period': 14}
-    strategy = ScalpingStrategy(config)
-    print('✅ Strategy initialization successful')
-    print('✅ Basic validation passed')
-except Exception as e:
-    print(f'❌ Validation failed: {e}')
-    exit(1)
-		"; \
-	fi
-	@echo "$(GREEN)✅ Parity validation completed$(RESET)"
 
 test-integration: ## Integration tests for complete system
 	@echo "$(BLUE)🔗 Running integration tests...$(RESET)"
