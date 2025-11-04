@@ -1,11 +1,11 @@
 [build-system]
-requires = ["maturin>=1.4,<2.0"]
-build-backend = "maturin"
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "supreme-system-v5"
 version = "5.0.0"
-description = "Hybrid Python+Rust High-Performance Futures Trading System"
+description = "Ultra-constrained Python trading system (ETH-USDT scalping)"
 authors = [{name = "Supreme Trading Team", email = "team@supreme-system.com"}]
 requires-python = ">=3.11"
 readme = "README.md"
@@ -15,40 +15,25 @@ classifiers = [
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Rust",
     "Topic :: Office/Business :: Financial :: Investment",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-keywords = ["trading", "quantitative", "finance", "rust", "high-performance", "scalping", "futures"]
+keywords = ["trading", "quantitative", "finance", "scalping", "futures"]
 
-# ULTRA SFL: Optimized dependencies for i3-4GB systems
 dependencies = [
-    # Core computational (minimal footprint)
     "numpy>=1.24.0,<2.0.0",
     "polars>=0.20.0,<1.0.0",
-    
-    # Async networking (lightweight)
     "aiohttp>=3.9.0,<4.0.0",
     "websockets>=12.0,<13.0.0",
-    "aioredis>=2.0.0,<3.0.0",
-    "async-timeout>=4.0.0,<5.0.0",
-    
-    # API framework (minimal)
     "fastapi>=0.104.0,<1.0.0",
     "uvicorn[standard]>=0.24.0,<1.0.0",
     "pydantic>=2.5.0,<3.0.0",
-    
-    # Technical analysis (pure Python)
     "ta>=0.10.2,<0.11.0",
     "finta>=1.3,<2.0.0",
-    
-    # Monitoring (minimal)
     "prometheus-client>=0.17.0,<0.18.0",
-    "loguru>=0.7.2,<0.8.0", 
+    "loguru>=0.7.2,<0.8.0",
     "rich>=13.7.0,<14.0.0",
     "psutil>=5.9.0,<6.0.0",
-    
-    # Configuration
     "python-dotenv>=1.0.0,<2.0.0",
     "click>=8.1.7,<9.0.0",
     "python-dateutil>=2.8.2,<3.0.0",
@@ -69,59 +54,39 @@ dev = [
     "pre-commit>=3.5.0,<4.0.0",
     "bandit>=1.7.5,<2.0.0",
 ]
-build = [
-    "maturin>=1.4,<2.0",
-    "build>=1.0.0,<2.0.0",
-]
 exchange = [
     "ccxt>=4.1.64,<5.0.0",
     "yfinance>=0.2.24,<1.0.0",
-]
-ai = [
-    # Only for 8GB+ systems
-    "scikit-learn>=1.3.0,<2.0.0",
-    "torch>=2.1.0,<3.0.0",
 ]
 
 [project.scripts]
 supreme-system = "supreme_system_v5.cli:main"
 supreme-backtest = "supreme_system_v5.backtest:main"
 
-# ================================
-# ULTRA SFL LAYER 1: BLACK CONFIG
-# Single source of truth - no script wrapper
-# ================================
 [tool.black]
 line-length = 88
 target-version = ["py311"]
-include = '\.pyi?$'
-# ULTRA SFL: Clean exclude pattern (no escape sequence issues)
+include = '\\.pyi?$'
 exclude = '''
 (
-    /(
-        \.git
-      | \.venv
+    /( 
+        \\.git
+      | \\.venv
       | venv
       | __pycache__
-      | \.pytest_cache
+      | \\.pytest_cache
       | target
       | build
       | dist
-      | src/[^/]*\.py$
+      | src/[^/]*\\.py$
     )/
-    | src/[^/]*\.py$
+    | src/[^/]*\\.py$
 )
 '''
 
-# ================================
-# ULTRA SFL LAYER 2: RUFF CONFIG
-# Comprehensive linting - no custom script
-# ================================
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-
-# ULTRA SFL: Exclude pattern without escape sequence issues
 exclude = [
     ".git/**",
     "__pycache__/**",
@@ -130,112 +95,34 @@ exclude = [
     "target/**",
     "build/**",
     "dist/**",
-    "src/*.py",     # Legacy Python files in src/
-    "src/**/*.py",  # All Python files in src subdirs
+    "src/*.py",
+    "src/**/*.py",
 ]
 
-# ULTRA SFL: Enterprise-grade rule selection
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "F",   # Pyflakes
-    "W",   # pycodestyle warnings
-    "C90", # mccabe complexity
-    "I",   # isort
-    "N",   # pep8-naming
-    "UP",  # pyupgrade
-    "YTT", # flake8-2020
-    "S",   # bandit security
-    "BLE", # flake8-blind-except
-    "FBT", # flake8-boolean-trap
-    "B",   # flake8-bugbear
-    "A",   # flake8-builtins
-    "COM", # flake8-commas
-    "C4",  # flake8-comprehensions
-    "DTZ", # flake8-datetimez
-    "T10", # flake8-debugger
-    "EM",  # flake8-errmsg
-    "EXE", # flake8-executable
-    "FA",  # flake8-future-annotations
-    "ISC", # flake8-implicit-str-concat
-    "ICN", # flake8-import-conventions
-    "G",   # flake8-logging-format
-    "INP", # flake8-no-pep420
-    "PIE", # flake8-pie
-    "T20", # flake8-print
-    "PYI", # flake8-pyi
-    "PT",  # flake8-pytest-style
-    "Q",   # flake8-quotes
-    "RSE", # flake8-raise
-    "RET", # flake8-return
-    "SLF", # flake8-self
-    "SLOT", # flake8-slots
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TCH", # flake8-type-checking
-    "INT", # flake8-gettext
-    "ARG", # flake8-unused-arguments
-    "PTH", # flake8-use-pathlib
-    "TD",  # flake8-todos
-    "FIX", # flake8-fixme
-    "PGH", # pygrep-hooks
-    "PL",  # Pylint
-    "TRY", # tryceratops
-    "FLY", # flynt
-    "NPY", # NumPy-specific
-    "PERF", # Perflint
-]
+select = ["E","F","W","C90","I","N","UP","YTT","S","BLE","FBT","B","A","COM","C4","DTZ","T10","EM","EXE","FA","ISC","ICN","G","INP","PIE","T20","PYI","PT","Q","RSE","RET","SLF","SLOT","SIM","TID","TCH","INT","ARG","PTH","TD","FIX","PGH","PL","TRY","FLY","NPY","PERF"]
+ignore = ["S101","PLR2004","T201","S603","S607","F401"]
+fixable = ["ALL"]
+unfixable = ["F401","F841"]
 
 [tool.ruff.lint.isort]
 profile = "black"
 
-# ULTRA SFL: Minimal ignores - only absolutely necessary
-ignore = [
-    "S101",   # Allow assert statements in tests
-    "PLR2004", # Allow magic numbers in config
-    "T201",   # Allow print in CLI tools
-    "S603",   # Allow subprocess (necessary for system integration)
-    "S607",   # Allow subprocess with shell (build tools)
-    "F401",   # Allow unused imports in __init__.py
-]
-
-# ULTRA SFL: Auto-fix where safe
-fixable = ["ALL"]
-unfixable = ["F401", "F841"]  # Don't auto-remove imports/variables
-
-# ULTRA SFL: Per-file exceptions
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "PLR2004", "S106", "ARG001"]
-"scripts/**" = ["T201", "S603", "S607", "PLR2004"]
-"__init__.py" = ["F401", "F403"]
-"conftest.py" = ["F401", "F403"]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 10
-
-# ================================
-# ULTRA SFL LAYER 3: ISORT CONFIG
-# ================================
 [tool.isort]
 profile = "black"
 line_length = 88
 multi_line_output = 3
 include_trailing_comma = true
-force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-# ULTRA SFL: Skip legacy src/ Python files
 skip = ["src"]
 known_first_party = ["supreme_system_v5"]
 known_third_party = [
-    "numpy", "polars", "aiohttp", "fastapi", "pydantic",
-    "websockets", "uvicorn", "ta", "finta", "prometheus_client", 
-    "loguru", "rich", "psutil", "click", "dotenv"
+    "numpy","polars","aiohttp","fastapi","pydantic",
+    "websockets","uvicorn","ta","finta","prometheus_client",
+    "loguru","rich","psutil","click","dotenv"
 ]
 
-# ================================
-# ULTRA SFL LAYER 4: TESTING
-# ================================
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [
@@ -253,9 +140,8 @@ testpaths = ["tests"]
 markers = [
     "unit: Unit tests (fast)",
     "integration: Integration tests (may be slow)",
-    "smoke: Smoke tests (basic functionality)", 
+    "smoke: Smoke tests (basic functionality)",
     "performance: Performance benchmarks",
-    "rust: Tests requiring Rust engine",
     "exchange: Tests requiring exchange connectivity",
 ]
 filterwarnings = [
@@ -265,14 +151,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = ["python/supreme_system_v5"]
-omit = [
-    "tests/*",
-    "scripts/*", 
-    "src/*",
-    "*/__init__.py",
-    "*/conftest.py",
-    "*/.venv/*",
-]
+omit = ["tests/*","scripts/*","src/*","*/__init__.py","*/conftest.py","*/.venv/*"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -286,9 +165,6 @@ exclude_lines = [
     "@abstractmethod",
 ]
 
-# ================================
-# ULTRA SFL LAYER 5: TYPE CHECKING
-# ================================
 [tool.mypy]
 python_version = "3.11"
 strict = false
@@ -296,26 +172,4 @@ warn_return_any = true
 warn_unused_configs = true
 no_implicit_reexport = true
 show_error_codes = true
-exclude = [
-    "^src/.*\\.py$",
-    "^build/",
-    "^dist/",
-    "^target/",
-]
-
-# ================================
-# ULTRA SFL LAYER 6: SECURITY
-# ================================
-[tool.bandit]
-exclude_dirs = ["tests", "src"]
-skips = ["B101", "B601", "B602"]  # Allow assert, shell usage in dev tools
-
-# ================================
-# MATURIN BUILD CONFIG
-# ================================
-[tool.maturin]
-features = ["pyo3/extension-module"]
-module-name = "supreme_engine_rs"
-python-source = "python"
-bindings = "pyo3"
-compatibility = "linux"
+exclude = ["^src/.*\\.py$","^build/","^dist/","^target/"]
