@@ -29,6 +29,16 @@ python-dotenv>=1.0.0,<2.0.0
 ccxt>=4.0.0,<5.0.0
 
 # ============================================================================
+# CACHE & DATABASE CONNECTIVITY (REQUIRED FOR data_fabric)
+# ============================================================================
+
+# PostgreSQL async connector - REQUIRED by cache.py
+asyncpg>=0.28.0,<1.0.0
+
+# Redis connector - REQUIRED by cache.py
+redis>=5.0.0,<6.0.0
+
+# ============================================================================
 # MONITORING & OBSERVABILITY (LIGHTWEIGHT)
 # ============================================================================
 
@@ -86,11 +96,6 @@ memory-profiler>=0.61.0,<1.0.0
 # plotly>=5.15.0  # DISABLED - Heavy dependency
 # dash>=2.11.0  # DISABLED - Heavy dashboard
 
-# Database connectors (minimal setup uses files)
-# sqlalchemy>=2.0.0  # DISABLED - Database overhead
-# psycopg2-binary>=2.9.0  # DISABLED - PostgreSQL overhead
-# redis>=4.6.0  # DISABLED - Redis overhead
-
 # Multiple data providers (keep only 2)
 # yfinance>=0.2.0  # DISABLED - Keep only Binance+CoinGecko
 # alpha-vantage>=2.3.0  # DISABLED
@@ -116,5 +121,8 @@ memory-profiler>=0.61.0,<1.0.0
 #   pip install -r requirements-ultra.txt
 #   pip install black isort flake8 memory-profiler
 #
-# Expected total size: ~200MB (+polars) vs ~1.5GB for full requirements
-# RAM usage: ~150–250MB for imports in CI (ultra-constrained runtime still ~8–10MB)
+# Expected total size: ~250MB (+polars +asyncpg +redis) vs ~1.5GB for full requirements
+# RAM usage: ~180–300MB for imports in CI (ultra-constrained runtime still ~8–10MB)
+# 
+# FIXED: Added asyncpg and redis dependencies required by data_fabric/cache.py
+# These are essential for the cache layer and cannot be excluded in ultra-constrained mode
