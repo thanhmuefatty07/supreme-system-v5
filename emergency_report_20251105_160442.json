@@ -1,0 +1,220 @@
+{
+  "emergency_timestamp": "2025-11-05T16:04:42.641151",
+  "emergency_reason": "resource_critical",
+  "system_status": {
+    "status": "emergency",
+    "optimization_level": 3,
+    "timestamp": 1762333482.275887,
+    "uptime_seconds": 1024.4193320274353,
+    "resources": {
+      "process_memory_mb": 9.3,
+      "system_memory_percent": 91.8,
+      "cpu_percent": 100.0,
+      "process_cpu_percent": 0.1,
+      "available_memory_mb": 324.5,
+      "process_threads": 5,
+      "gc_objects": 67709
+    },
+    "limits": {
+      "max_memory_mb": 450,
+      "max_cpu_percent": 85.0,
+      "warning_memory_mb": 350,
+      "critical_memory_mb": 420
+    },
+    "violations": {
+      "memory_exceeded": false,
+      "cpu_exceeded": true,
+      "emergency_conditions": true
+    },
+    "targets_met": {
+      "memory_target": true,
+      "cpu_target": true,
+      "uptime_target": false
+    }
+  },
+  "performance_summary": {
+    "deployment_type": "ultra_constrained",
+    "target_specs": {
+      "ram_budget_mb": 450,
+      "cpu_limit_percent": 85.0,
+      "hardware_target": "1GB_RAM_2CPU"
+    },
+    "performance_metrics": {
+      "uptime_hours": 0.28,
+      "total_measurements": 35,
+      "avg_memory_mb": 53.2,
+      "avg_cpu_percent": 28.4,
+      "peak_memory_mb": 71.9,
+      "peak_cpu_percent": 100.0
+    },
+    "efficiency_metrics": {
+      "memory_efficiency_percent": 100,
+      "cpu_efficiency_percent": 100,
+      "uptime_stability": 1.185670523179902
+    },
+    "violation_tracking": {
+      "memory_violations": 0,
+      "cpu_violations": 1,
+      "emergency_activations": 1,
+      "optimizations_applied": 2
+    },
+    "target_achievement": {
+      "memory_target_met": true,
+      "cpu_target_met": true,
+      "overall_success": true
+    }
+  },
+  "recent_snapshots": [
+    {
+      "timestamp": 1762332909.8865235,
+      "memory_mb": 41.6,
+      "cpu_percent": 24.0,
+      "threads": 5,
+      "gc_objects": 67979
+    },
+    {
+      "timestamp": 1762332939.9970503,
+      "memory_mb": 41.6,
+      "cpu_percent": 30.8,
+      "threads": 5,
+      "gc_objects": 67980
+    },
+    {
+      "timestamp": 1762332970.107409,
+      "memory_mb": 41.6,
+      "cpu_percent": 23.1,
+      "threads": 5,
+      "gc_objects": 67981
+    },
+    {
+      "timestamp": 1762333000.2409084,
+      "memory_mb": 41.6,
+      "cpu_percent": 4.2,
+      "threads": 5,
+      "gc_objects": 67982
+    },
+    {
+      "timestamp": 1762333030.359964,
+      "memory_mb": 41.6,
+      "cpu_percent": 13.8,
+      "threads": 5,
+      "gc_objects": 67983
+    },
+    {
+      "timestamp": 1762333060.462353,
+      "memory_mb": 41.6,
+      "cpu_percent": 70.8,
+      "threads": 7,
+      "gc_objects": 67984
+    },
+    {
+      "timestamp": 1762333090.6619143,
+      "memory_mb": 62.5,
+      "cpu_percent": 8.0,
+      "threads": 7,
+      "gc_objects": 67697
+    },
+    {
+      "timestamp": 1762333120.7719486,
+      "memory_mb": 53.7,
+      "cpu_percent": 0.0,
+      "threads": 7,
+      "gc_objects": 67698
+    },
+    {
+      "timestamp": 1762333150.885869,
+      "memory_mb": 53.6,
+      "cpu_percent": 63.0,
+      "threads": 5,
+      "gc_objects": 67699
+    },
+    {
+      "timestamp": 1762333181.0012865,
+      "memory_mb": 53.7,
+      "cpu_percent": 14.3,
+      "threads": 5,
+      "gc_objects": 67700
+    },
+    {
+      "timestamp": 1762333211.1145709,
+      "memory_mb": 49.3,
+      "cpu_percent": 0.0,
+      "threads": 5,
+      "gc_objects": 67701
+    },
+    {
+      "timestamp": 1762333241.229028,
+      "memory_mb": 49.4,
+      "cpu_percent": 50.0,
+      "threads": 5,
+      "gc_objects": 67702
+    },
+    {
+      "timestamp": 1762333271.3539224,
+      "memory_mb": 35.7,
+      "cpu_percent": 80.8,
+      "threads": 5,
+      "gc_objects": 67703
+    },
+    {
+      "timestamp": 1762333301.5329347,
+      "memory_mb": 43.9,
+      "cpu_percent": 32.1,
+      "threads": 5,
+      "gc_objects": 67703
+    },
+    {
+      "timestamp": 1762333331.6640983,
+      "memory_mb": 43.9,
+      "cpu_percent": 36.0,
+      "threads": 5,
+      "gc_objects": 67704
+    },
+    {
+      "timestamp": 1762333361.7878046,
+      "memory_mb": 43.9,
+      "cpu_percent": 64.0,
+      "threads": 5,
+      "gc_objects": 67705
+    },
+    {
+      "timestamp": 1762333391.9028196,
+      "memory_mb": 43.9,
+      "cpu_percent": 50.0,
+      "threads": 5,
+      "gc_objects": 67706
+    },
+    {
+      "timestamp": 1762333422.0230381,
+      "memory_mb": 44.0,
+      "cpu_percent": 29.2,
+      "threads": 5,
+      "gc_objects": 67707
+    },
+    {
+      "timestamp": 1762333452.1484573,
+      "memory_mb": 44.0,
+      "cpu_percent": 29.2,
+      "threads": 5,
+      "gc_objects": 67708
+    },
+    {
+      "timestamp": 1762333482.275887,
+      "memory_mb": 9.3,
+      "cpu_percent": 100.0,
+      "threads": 5,
+      "gc_objects": 67709
+    }
+  ],
+  "configuration": {
+    "limits": {
+      "max_memory_mb": 450,
+      "max_cpu_percent": 85.0
+    },
+    "monitoring": {
+      "check_interval": 30,
+      "emergency_shutdown_enabled": true,
+      "auto_optimization_enabled": true
+    }
+  }
+}

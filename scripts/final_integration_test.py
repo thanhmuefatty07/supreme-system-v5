@@ -467,23 +467,23 @@ class SupremeSystemIntegrationTest:
         print(f"Overall Status: {status_emoji} {summary['overall_status']}")
         print(f"Success Rate: {summary['success_rate']*100:.1f}% ({summary['passed_tests']}/{summary['total_tests']} tests)")
         print(f"Total Execution Time: {summary['total_execution_time']:.2f}s")
-        print(".1f"
-        if summary['critical_failures']:
-            print(f"❌ Critical Failures: {len(summary['critical_failures'])}")
-            for failure in summary['critical_failures']:
+        print(f"Memory Usage: {summary.get('memory_usage', 0):.1f}MB")
+        if report['critical_failures']:
+            print(f"❌ Critical Failures: {len(report['critical_failures'])}")
+            for failure in report['critical_failures']:
                 print(f"   • {failure}")
 
-        print("
-📊 PERFORMANCE BREAKDOWN:"        perf_breakdown = report['performance_breakdown']
+        print("\n📊 PERFORMANCE BREAKDOWN:")
+        perf_breakdown = report['performance_breakdown']
         for component, score in perf_breakdown.items():
             status = "✅" if score >= 90 else "⚠️" if score >= 80 else "❌"
-            print(".1f"
-        print("
-💡 RECOMMENDATIONS:"        for rec in report['recommendations']:
+            print(f"   {status} {component}: {score:.1f}%")
+        print("\n💡 RECOMMENDATIONS:")
+        for rec in report['recommendations']:
             print(f"   • {rec}")
 
-        print("
-🏆 VERDICT:"        if summary['overall_status'] == 'PASSED' and summary['success_rate'] >= 0.95:
+        print("\n🏆 VERDICT:")
+        if summary['overall_status'] == 'PASSED' and summary['success_rate'] >= 0.95:
             print("   🎖️ SUPREME SYSTEM V5 - PRODUCTION READY!")
             print("   All components optimized and integrated successfully.")
             print("   Ready for immediate deployment with maximum reliability.")
