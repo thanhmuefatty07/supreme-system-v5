@@ -1,0 +1,48 @@
+name: Supreme System V5 - Post-Phase 2 Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      validation_type:
+        description: 'Validation type'
+        required: false
+        default: 'comprehensive'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies (ultra-constrained)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-ultra.txt
+
+    - name: Run validation sequence
+      run: |
+        make validate
+        make test-quick
+        make backtest
+        make perf-collect
+
+    - name: Upload validation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-results
+        path: |
+          run_artifacts/**/*
+        if-no-files-found: warn
+
+    - name: Generate performance report (optional)
+      run: |
+        make perf-report || echo "Report generation skipped"
+      continue-on-error: true
