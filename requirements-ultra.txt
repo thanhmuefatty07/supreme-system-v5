@@ -13,6 +13,7 @@ asyncio-throttle>=1.0.2
 # Data processing (minimal versions)
 numpy>=1.24.0,<2.0.0
 pandas>=2.0.0,<3.0.0
+polars>=0.20.0,<1.0.0
 
 # HTTP/WebSocket (lightweight)
 aiohttp>=3.8.0,<4.0.0
@@ -83,8 +84,7 @@ memory-profiler>=0.61.0,<1.0.0
 # Advanced visualization (disabled)
 # matplotlib>=3.7.0  # DISABLED - Heavy dependency
 # plotly>=5.15.0  # DISABLED - Heavy dependency
-# dash>=2.11.0  # DISABLED - Heavy dependency
-# streamlit>=1.25.0  # DISABLED - Heavy dashboard
+# dash>=2.11.0  # DISABLED - Heavy dashboard
 
 # Database connectors (minimal setup uses files)
 # sqlalchemy>=2.0.0  # DISABLED - Database overhead
@@ -116,5 +116,5 @@ memory-profiler>=0.61.0,<1.0.0
 #   pip install -r requirements-ultra.txt
 #   pip install black isort flake8 memory-profiler
 #
-# Expected total size: ~200MB (vs ~1.5GB for full requirements.txt)
-# RAM usage: ~150MB for imports (vs ~400MB+ for full stack)
+# Expected total size: ~200MB (+polars) vs ~1.5GB for full requirements
+# RAM usage: ~150–250MB for imports in CI (ultra-constrained runtime still ~8–10MB)
