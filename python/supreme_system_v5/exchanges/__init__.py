@@ -27,20 +27,15 @@ except ImportError:
 
 # Base exchange interface
 try:
-    from .base import BaseExchangeConnector
-    # Also try alternative name
-    BaseExchange = BaseExchangeConnector
+    from .base import BaseExchange
+    BaseExchangeConnector = BaseExchange
 except ImportError:
-    try:
-        from .base import BaseExchange
-        BaseExchangeConnector = BaseExchange
-    except ImportError:
-        # Fallback - create basic base class
-        class BaseExchangeConnector:
-            def __init__(self, config):
-                self.config = config
-                pass
-        BaseExchange = BaseExchangeConnector
+    # Fallback - create basic base class
+    class BaseExchangeConnector:
+        def __init__(self, config):
+            self.config = config
+            pass
+    BaseExchange = BaseExchangeConnector
 
 # Configuration class
 class ExchangeConfig:
