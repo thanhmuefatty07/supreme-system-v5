@@ -1,0 +1,95 @@
+# ==============================================================================
+# PROFESSIONAL TESTING ENVIRONMENT DOCKERFILE
+# Supreme System V5 - Realistic Testing Container
+# ==============================================================================
+#
+# Optimized testing environment for:
+# - i3 8th Gen simulation
+# - 4GB RAM constraint testing
+# - SIMD optimization validation
+# - Performance benchmarking
+#
+# Build: docker build -f docker/Dockerfile.testing -t supreme-v5-testing .
+# Run: docker run --memory=4g --cpus=4 supreme-v5-testing
+#
+# ==============================================================================
+
+FROM ubuntu:22.04
+
+# Set environment variables for optimization
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONMALLOC=malloc
+ENV NUMPY_NUM_THREADS=4
+ENV OMP_NUM_THREADS=4
+ENV POLARS_MAX_THREADS=4
+ENV RUST_BACKTRACE=1
+ENV CARGO_TERM_COLOR=always
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    wget \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    pkg-config \
+    libssl-dev \
+    htop \
+    iotop \
+    sysstat \
+    valgrind \
+    perf-tools-unstable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust with i3 8th Gen optimization
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup component add clippy rustfmt
+RUN rustup target add x86_64-unknown-linux-gnu
+
+# Set Rust compilation flags for i3 8th Gen
+ENV RUSTFLAGS="-C target-cpu=skylake -C target-features=+avx2,+fma,+sse4.2 -C opt-level=3"
+
+# Create application directory
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Create virtual environment and install Python dependencies
+RUN python3 -m venv venv_supreme_v5
+RUN . venv_supreme_v5/bin/activate && \
+    pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Build Rust components
+RUN cd rust/supreme_core && \
+    cargo build --release --features max-performance
+
+# Build Python extensions  
+RUN . venv_supreme_v5/bin/activate && \
+    cd python && \
+    python setup.py build_ext --inplace
+
+# Create testing scripts
+RUN chmod +x scripts/*.sh
+
+# Set memory limits (4GB container limit)
+RUN echo 'vm.overcommit_memory=1' >> /etc/sysctl.conf
+RUN echo 'vm.swappiness=10' >> /etc/sysctl.conf
+
+# Create test data directory
+RUN mkdir -p test_data testing_results
+
+# Copy testing environment
+COPY testing_environment/ testing_environment/
+RUN chmod +x testing_environment/*.py
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD . venv_supreme_v5/bin/activate && python3 -c "import psutil; print('Memory:', psutil.virtual_memory().percent, '%')"
+
+# Default command
+CMD ["./scripts/run_comprehensive_tests.sh"]
