@@ -9,7 +9,7 @@ import os
 import gc
 import importlib
 import functools
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, Tuple
 import logging
 from contextlib import contextmanager
 
@@ -411,13 +411,13 @@ def calculate_indicators_memory_optimized(prices: list, volume: list = None) -> 
         price_array = np.array(prices, dtype=np.float32)
         
         # EMA 14
-        ema_14 = _calculate_ema_optimized(np, price_array, 14)
+        ema_14 = _calculate_ema_optimized(price_array, 14)
         
         # RSI 14
-        rsi_14 = _calculate_rsi_optimized(np, price_array, 14)
+        rsi_14 = _calculate_rsi_optimized(price_array, 14)
         
         # MACD
-        macd_line, signal_line = _calculate_macd_optimized(np, price_array)
+        macd_line, signal_line = _calculate_macd_optimized(price_array)
         
         # Convert back to lists and cleanup
         result = {
@@ -433,20 +433,22 @@ def calculate_indicators_memory_optimized(prices: list, volume: list = None) -> 
         return result
 
 
-def _calculate_ema_optimized(np, prices: np.ndarray, period: int) -> np.ndarray:
+def _calculate_ema_optimized(prices, period: int):
     """Memory-optimized EMA calculation"""
+    import numpy as np
     alpha = np.float32(2.0 / (period + 1))
     ema = np.zeros_like(prices, dtype=np.float32)
     ema[0] = prices[0]
-    
+
     for i in range(1, len(prices)):
         ema[i] = alpha * prices[i] + (1 - alpha) * ema[i-1]
-    
+
     return ema
 
 
-def _calculate_rsi_optimized(np, prices: np.ndarray, period: int) -> np.ndarray:
+def _calculate_rsi_optimized(prices, period: int):
     """Memory-optimized RSI calculation"""
+    import numpy as np
     deltas = np.diff(prices).astype(np.float32)
     gains = np.where(deltas > 0, deltas, 0)
     losses = np.where(deltas < 0, -deltas, 0)
@@ -468,13 +470,14 @@ def _calculate_rsi_optimized(np, prices: np.ndarray, period: int) -> np.ndarray:
     return rsi
 
 
-def _calculate_macd_optimized(np, prices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _calculate_macd_optimized(prices) -> Tuple:
     """Memory-optimized MACD calculation"""
-    ema_12 = _calculate_ema_optimized(np, prices, 12)
-    ema_26 = _calculate_ema_optimized(np, prices, 26)
-    
+    import numpy as np
+    ema_12 = _calculate_ema_optimized(prices, 12)
+    ema_26 = _calculate_ema_optimized(prices, 26)
+
     macd_line = ema_12 - ema_26
-    signal_line = _calculate_ema_optimized(np, macd_line, 9)
+    signal_line = _calculate_ema_optimized(macd_line, 9)
     
     # Cleanup intermediate arrays
     del ema_12, ema_26
