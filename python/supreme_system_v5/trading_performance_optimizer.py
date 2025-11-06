@@ -537,10 +537,10 @@ class TradingPerformanceOptimizer:
                 'signals_generated': len(signals)
             }
         
-        return self._calculate_performance_metrics(trades, initial_balance, balance, peak_balance)
+        return self._calculate_performance_metrics(trades, initial_balance, balance, peak_balance, len(signals))
     
     def _calculate_performance_metrics(self, trades: List[Dict], initial_balance: float,
-                                     final_balance: float, peak_balance: float) -> Dict[str, Any]:
+                                     final_balance: float, peak_balance: float, signals_count: int) -> Dict[str, Any]:
         """Calculate comprehensive performance metrics"""
         
         winning_trades = [t for t in trades if t['win']]
@@ -623,7 +623,7 @@ class TradingPerformanceOptimizer:
                 'achieved_sharpe': sharpe_ratio,
                 'sharpe_gap': sharpe_ratio - self.targets.sharpe_ratio
             },
-            'signals_generated': len(signals),
+            'signals_generated': signals_count,
             'optimization_success': overall_success
         }
 
