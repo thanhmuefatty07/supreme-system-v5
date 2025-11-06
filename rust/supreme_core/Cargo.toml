@@ -1,90 +1,279 @@
 [package]
 name = "supreme_core"
-version = "0.1.0"
-edition = "2021"
+version = "2.0.0-quantum"
 authors = ["Supreme System V5 Team"]
-description = "Ultra-constrained high-performance trading engine core"
+edition = "2021"
+description = "Quantum-Enhanced Supreme Trading System Core Engine - Revolutionary Architecture"
 license = "MIT"
+repository = "https://github.com/thanhmuefatty07/supreme-system-v5"
+keywords = ["trading", "quantum", "finance", "simd", "zero-copy"]
+categories = ["algorithms", "science", "simulation"]
 
 [lib]
 name = "supreme_core"
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib", "rlib"]
+
+# ==============================================================================
+# QUANTUM-ENHANCED DEPENDENCIES - REVOLUTIONARY UPGRADE
+# ==============================================================================
 
 [dependencies]
-# Core performance dependencies
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
-futures = "0.3"
+# QUANTUM CORE SIMULATION (Feature-gated for safety)
+quantum-rs = { version = "0.4", optional = true }  # Quantum circuit simulation
+qiskit-sim = { version = "0.3", optional = true }  # IBM Qiskit compatibility
+quantum-simulator = { version = "0.2", optional = true }  # Local quantum sim
+quantum-monte-carlo = { version = "0.1", optional = true }  # QMC algorithms
 
-# Mathematical and statistical operations
+# APACHE ARROW ZERO-COPY REVOLUTION
+arrow2 = { version = "0.21", features = ["compute", "io_parquet", "io_json", "io_csv"] }
+polars = { version = "0.41", features = ["lazy", "temporal", "strings", "dtype-datetime"] }
+parquet2 = "0.19"  # Ultra-fast columnar format
+arrow-buffer = "52.0"  # Arrow buffer utilities
+zerocopy = "0.7"  # Zero-copy serialization framework
+
+# ADVANCED SIMD & VECTORIZATION
+wide = "0.7"  # SIMD abstractions for AVX2
+simba = "0.8"  # SIMD mathematical operations
 num-traits = "0.2"
 num-complex = "0.4"
-ndarray = { version = "0.15", features = ["serde"] }
+ndarray = { version = "0.15", features = ["rayon", "serde", "blas"] }
+rustfft = "6.2"  # Quantum-optimized FFT
 
-# High-performance computing
-rayon = "1.7"  # Parallel processing
-simdeez = "1.0"  # SIMD optimizations
+# HIGH-PERFORMANCE MEMORY MANAGEMENT
+memory-pool = "0.1"  # Custom memory pools
+ring-buffer = "0.3"  # Lock-free ring buffers
+memmap2 = "0.9"  # Memory-mapped files
+bumpalo = "3.14"  # Bump allocation
+parking_lot = "0.12"  # Fast synchronization
+smallvec = "1.11"  # Stack-allocated vectors
+hashbrown = "0.14"  # High-performance HashMap
 
-# Memory management and optimization
-bytes = "1.4"
-memmap2 = "0.7"  # Memory-mapped files
+# ASYNC & PARALLEL PROCESSING
+tokio = { version = "1.35", features = ["full", "tracing"] }
+futures = "0.3"
+rayon = "1.8"  # Data parallelism
+crossbeam = "0.8"  # Lock-free data structures
+flume = "0.11"  # Multi-producer, multi-consumer channels
 
-# Networking and API connectivity
-reqwest = { version = "0.11", features = ["json", "stream"] }
-tungstenite = "0.20"  # WebSocket client
-tokio-tungstenite = "0.20"
+# PYTHON FFI & INTEGRATION
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py311"] }
+numpy = "0.21"  # NumPy integration
+pyo3-asyncio = "0.21"  # Async Python integration
 
-# Date and time handling
+# SERIALIZATION & DATA FORMATS
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+bincode = "1.3"  # Fast binary serialization
+rmp-serde = "1.1"  # MessagePack serialization
+cbor4ii = "0.3"  # CBOR serialization
+
+# NETWORKING & REAL-TIME DATA
+reqwest = { version = "0.11", features = ["json", "stream", "gzip"] }
+tungstenite = "0.21"  # WebSocket implementation
+tokio-tungstenite = "0.21"
+hyper = { version = "1.0", features = ["full"] }
+tower = "0.4"  # Service abstractions
+
+# FINANCIAL & MATHEMATICAL LIBRARIES
+statrs = "0.16"  # Statistical distributions
+ta = "0.5"  # Technical analysis indicators
+rust_decimal = { version = "1.33", features = ["serde-float", "maths"] }
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.8"  # Timezone handling
 
-# Logging (minimal for performance)
+# CRYPTOGRAPHY & SECURITY
+sha2 = "0.10"  # SHA-256 hashing
+blake3 = "1.5"  # BLAKE3 hashing (faster)
+aes-gcm = "0.10"  # AES encryption
+rand = "0.8"  # Random number generation
+rand_chacha = "0.3"  # ChaCha PRNG
+
+# UTILITIES
+once_cell = "1.19"  # Lazy initialization
+lazy_static = "1.4"  # Static initialization
 log = "0.4"
 env_logger = "0.10"
+anyhow = "1.0"  # Error handling
+thiserror = "1.0"  # Error derivation
+clap = { version = "4.4", features = ["derive"] }  # CLI parsing
 
-# Python FFI bindings
-pyo3 = { version = "0.20", features = ["extension-module"] }
-numpy = "0.20"  # NumPy integration
-
-# Error handling
-anyhow = "1.0"
-thiserror = "1.0"
-
-# Configuration
-config = "0.13"
-
-# Hashing for whale detection
-sha2 = "0.10"
-blake3 = "1.4"
-
-# JSON processing optimization
-simd-json = "0.13"
-
-# Memory allocator (performance)
-jemalloc-sys = { version = "0.5", optional = true }
+# PERFORMANCE PROFILING & MONITORING
+perf-event = { version = "0.4", optional = true }
+jemallocator = { version = "0.5", optional = true }
 mimalloc = { version = "0.1", optional = true }
+tracy-client = { version = "0.15", optional = true }  # Profiler integration
 
-# Optional features for different allocators
+# JSON OPTIMIZATION
+simd-json = "0.13"  # SIMD-optimized JSON parsing
+sonic-rs = "0.3"  # Ultra-fast JSON library
+
+# ==============================================================================
+# REVOLUTIONARY FEATURE FLAGS
+# ==============================================================================
+
 [features]
-default = ["jemalloc"]
-jemalloc = ["jemalloc-sys"]
-mimalloc = ["mimalloc"]
-simd = ["simdeez"]
+default = [
+    "arrow-integration",
+    "simd-optimization", 
+    "memory-pools",
+    "zero-copy",
+    "performance-monitoring"
+]
 
-# Build optimizations
+# CORE QUANTUM FEATURES
+quantum-core = ["quantum-rs", "quantum-simulator"]
+quantum-simulation = ["qiskit-sim", "quantum-monte-carlo"]
+quantum-full = ["quantum-core", "quantum-simulation"]
+quantum-experimental = ["quantum-full", "quantum-test"]
+
+# HIGH-PERFORMANCE FEATURES
+arrow-integration = ["arrow2", "polars", "parquet2"]
+simd-optimization = ["wide", "simba", "rustfft"]
+memory-pools = ["memory-pool", "ring-buffer", "bumpalo"]
+zero-copy = ["zerocopy", "memmap2", "arrow-buffer"]
+
+# DEVELOPMENT & PROFILING
+performance-monitoring = ["perf-event", "tracy-client"]
+max-performance = ["simd-optimization", "zero-copy", "memory-pools", "jemallocator"]
+dev-tools = ["env_logger", "clap"]
+
+# ALLOCATOR OPTIONS
+jemalloc = ["jemallocator"]
+mimalloc-allocator = ["mimalloc"]
+
+# ==============================================================================
+# QUANTUM-OPTIMIZED BUILD PROFILES
+# ==============================================================================
+
 [profile.release]
 opt-level = 3          # Maximum optimization
-lto = true            # Link-time optimization  
-codegen-units = 1     # Single codegen unit for max optimization
-panic = "abort"       # Smaller binary size
+lto = "fat"           # Fat link-time optimization
+codegen-units = 1     # Single codegen unit for max performance
+panic = "abort"       # Smaller binary, faster execution
 strip = true          # Remove debug symbols
+overflow-checks = false  # Disable overflow checks in release
 
-# Development profile with some optimization
+# QUANTUM-SPECIFIC OPTIMIZATIONS
+[profile.release.package."*"]
+opt-level = 3
+
+[profile.release.package.quantum-rs]
+opt-level = 3
+debug-assertions = false
+
+# DEVELOPMENT WITH OPTIMIZATION
 [profile.dev]
-opt-level = 1         # Some optimization for development
-debug = true         # Keep debug info
+opt-level = 1         # Basic optimization for faster dev builds
+debug = true
+overflow-checks = true
 
-# Target-specific optimizations for i3 8th gen
+# QUANTUM DEV PROFILE
+[profile.quantum-dev]
+inherits = "dev"
+opt-level = 2
+[profile.quantum-dev.package."quantum-*"]
+opt-level = 3
+
+# ==============================================================================
+# QUANTUM BUILD CONFIGURATION
+# ==============================================================================
+
 [build]
-target-cpu = "native"  # Optimize for target CPU
-target-features = "+sse4.2,+avx,+avx2"  # Enable SIMD features for 8th gen i3
+# i3 8th Gen SIMD optimizations (Skylake architecture)
+target-features = ["+sse4.2", "+avx", "+avx2", "+fma", "+popcnt"]
+target-cpu = "skylake"  # i3 8th Gen specific
+
+# ==============================================================================
+# DEV DEPENDENCIES & TESTING
+# ==============================================================================
+
+[dev-dependencies]
+# BENCHMARKING
+criterion = { version = "0.5", features = ["html_reports", "csv_output"] }
+divan = "0.1"  # Additional benchmarking
+
+# TESTING FRAMEWORKS
+tokio-test = "0.4"  # Async testing
+proptest = "1.4"  # Property-based testing
+quickcheck = "1.0"  # QuickCheck testing
+rstest = "0.18"  # Parameterized testing
+
+# QUANTUM TESTING
+quantum-test = { version = "0.1", optional = true }
+
+# MEMORY TESTING
+valgrind = { version = "0.2", optional = true }
+
+# ==============================================================================
+# BENCHMARKS
+# ==============================================================================
+
+[[bench]]
+name = "quantum_monte_carlo"
+harness = false
+required-features = ["quantum-simulation"]
+
+[[bench]]
+name = "simd_indicators"
+harness = false
+required-features = ["simd-optimization"]
+
+[[bench]]
+name = "memory_pools"
+harness = false
+required-features = ["memory-pools"]
+
+[[bench]]
+name = "arrow_zero_copy"
+harness = false
+required-features = ["arrow-integration"]
+
+[[bench]]
+name = "quantum_hybrid_system"
+harness = false
+required-features = ["quantum-full"]
+
+# ==============================================================================
+# METADATA CONFIGURATION
+# ==============================================================================
+
+[package.metadata]
+# BUILD DEPENDENCIES
+build-dependencies = [
+    "cc",        # C compiler for SIMD intrinsics
+    "bindgen",   # FFI bindings generation
+    "cmake",     # For quantum libraries
+]
+
+# MEMORY OPTIMIZATION CONFIG
+[package.metadata.memory]
+budget-mb = 30  # 30MB allocation for Rust core
+pool-config = [
+    { size = 64, count = 1000, alignment = 64 },     # Small allocations (SIMD-aligned)
+    { size = 256, count = 500, alignment = 64 },     # Medium allocations
+    { size = 1024, count = 200, alignment = 64 },    # Large allocations
+    { size = 4096, count = 50, alignment = 64 },     # Very large allocations
+]
+
+# SIMD OPTIMIZATION CONFIG
+[package.metadata.simd]
+target-features = ["+avx2", "+fma", "+sse4.2", "+popcnt"]
+target-cpu = "skylake"  # i3 8th Gen architecture
+vectorization = true
+loop-unrolling = true
+
+# QUANTUM CONFIGURATION
+[package.metadata.quantum]
+qubits = 16  # Quantum circuit size
+simulator = "quantum-rs"  # Default quantum backend
+error-correction = true  # Enable quantum error correction
+coherence-time = 1000  # Milliseconds
+entanglement-depth = 4  # Maximum entanglement depth
+quantum-memory-mb = 5  # Memory reserved for quantum state
+
+# PERFORMANCE TARGETS
+[package.metadata.performance]
+latency-target-us = 100  # 100 microseconds
+throughput-target = 10000  # Events per second
+memory-target-mb = 30  # Memory usage target
+cpu-utilization-target = 0.85  # 85% CPU utilization
