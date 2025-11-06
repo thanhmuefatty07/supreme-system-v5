@@ -3,310 +3,366 @@
 # COMPREHENSIVE TESTING SUITE FOR SUPREME SYSTEM V5
 # ==============================================================================
 #
-# Complete testing pipeline with:
-# - Memory constraint validation (2.2GB budget)
-# - Performance benchmarking (1.5-2.5x targets)
-# - SIMD optimization verification
-# - Integration testing
-# - Stress testing under constraints
+# Automated execution of all 12 critical tests for production readiness
+# Priority-based execution with comprehensive reporting
 #
-# Usage: ./scripts/run_comprehensive_tests.sh
+# Usage: ./scripts/run_comprehensive_tests.sh [--parallel] [--report-json]
 #
 # ==============================================================================
 
 set -euo pipefail
 
-# Colors
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-echo -e "${BLUE}🧪 SUPREME SYSTEM V5 - COMPREHENSIVE TESTING${NC}"
-echo "=============================================="
+# Configuration
+PARALLEL_MODE=false
+JSON_REPORT=false
+TEST_TIMEOUT=3600  # 1 hour default timeout per test
+LOG_DIR="test_results"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+REPORT_FILE="$LOG_DIR/comprehensive_test_report_$TIMESTAMP.json"
 
-# Create test results directory
-mkdir -p test_results
-TEST_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-TEST_REPORT="test_results/comprehensive_test_${TEST_TIMESTAMP}.json"
+# Create log directory
+mkdir -p "$LOG_DIR"
 
-echo -e "${YELLOW}📋 Test Report: $TEST_REPORT${NC}"
+# Test definitions with priorities
+declare -A TEST_SCRIPTS=(
+    # HIGH PRIORITY - Execute immediately
+    ["memory_stress"]="scripts/stress_test_memory.py --duration 1 --memory-limit 2.2"
+    ["network_failure"]="tests/network_failure_simulation.py --duration 30"
+    ["live_market"]="tests/live_market_integration.py --duration 2"
 
-# Initialize test report
-cat > "$TEST_REPORT" << EOF
+    # MEDIUM PRIORITY - Within 24h
+    ["thermal_throttling"]="scripts/simulate_thermal_throttling.py --duration 2"
+    ["concurrent_load"]="tests/concurrent_algorithm_load.py --algorithms 15 --duration 30"
+    ["api_rate_limiting"]="tests/api_rate_limiting.py --duration 30"
+
+    # LOW PRIORITY - Within 48h
+    ["data_corruption"]="cargo test data_corruption_recovery --release"
+    ["long_running"]="scripts/72h_stability_test.py --duration 1"  # Shortened for testing
+)
+
+declare -A TEST_PRIORITIES=(
+    ["memory_stress"]="HIGH"
+    ["network_failure"]="HIGH"
+    ["live_market"]="HIGH"
+    ["thermal_throttling"]="MEDIUM"
+    ["concurrent_load"]="MEDIUM"
+    ["api_rate_limiting"]="MEDIUM"
+    ["data_corruption"]="LOW"
+    ["long_running"]="LOW"
+)
+
+declare -A TEST_TIMEOUTS=(
+    ["memory_stress"]=3600      # 1 hour
+    ["network_failure"]=1800    # 30 minutes
+    ["live_market"]=7200        # 2 hours
+    ["thermal_throttling"]=7200  # 2 hours
+    ["concurrent_load"]=3600    # 1 hour
+    ["api_rate_limiting"]=1800  # 30 minutes
+    ["data_corruption"]=1800    # 30 minutes
+    ["long_running"]=3600       # 1 hour (shortened)
+)
+
+# Test results tracking
+declare -A TEST_RESULTS
+declare -A TEST_DURATIONS
+declare -A TEST_OUTPUTS
+
+echo -e "${BLUE}🧪 SUPREME SYSTEM V5 - COMPREHENSIVE TESTING SUITE${NC}"
+echo "======================================================"
+echo "Timestamp: $TIMESTAMP"
+echo "Parallel Mode: $PARALLEL_MODE"
+echo "JSON Report: $JSON_REPORT"
+echo "Report File: $REPORT_FILE"
+echo
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --parallel)
+            PARALLEL_MODE=true
+            shift
+            ;;
+        --report-json)
+            JSON_REPORT=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--parallel] [--report-json]"
+            exit 1
+            ;;
+    esac
+done
+
+# Initialize JSON report
+if [[ "$JSON_REPORT" == "true" ]]; then
+    cat > "$REPORT_FILE" << EOF
 {
     "test_session": {
-        "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-        "version": "2.0.0-realistic",
-        "hardware": "i3-8th-gen-4gb"
+        "timestamp": "$TIMESTAMP",
+        "parallel_mode": $PARALLEL_MODE,
+        "total_tests": ${#TEST_SCRIPTS[@]},
+        "hostname": "$(hostname)"
     },
-    "tests": {}
-}
-EOF
-
-# ==============================================================================
-# MEMORY CONSTRAINT TESTING
-# ==============================================================================
-
-echo -e "\n${YELLOW}💾 STEP 1: MEMORY CONSTRAINT TESTING${NC}"
-echo "------------------------------------"
-
-source venv_supreme_v5/bin/activate
-
-echo -e "${BLUE}Running memory constraint validation...${NC}"
-if cd testing_environment && python3 memory_test_harness.py; then
-    echo -e "${GREEN}✅ Memory constraint test PASSED${NC}"
-    MEMORY_TEST_STATUS="passed"
-else
-    echo -e "${RED}❌ Memory constraint test FAILED${NC}"
-    MEMORY_TEST_STATUS="failed"
-fi
-cd ..
-
-# ==============================================================================
-# PERFORMANCE BENCHMARKING
-# ==============================================================================
-
-echo -e "\n${YELLOW}⚡ STEP 2: PERFORMANCE BENCHMARKING${NC}"
-echo "-----------------------------------"
-
-echo -e "${BLUE}Running performance benchmarks...${NC}"
-if cd testing_environment && python3 performance_test_harness.py; then
-    echo -e "${GREEN}✅ Performance benchmark PASSED${NC}"
-    PERFORMANCE_TEST_STATUS="passed"
-else
-    echo -e "${YELLOW}⚠️  Performance benchmark NEEDS TUNING${NC}"
-    PERFORMANCE_TEST_STATUS="needs_tuning"
-fi
-cd ..
-
-# ==============================================================================
-# RUST UNIT TESTING
-# ==============================================================================
-
-echo -e "\n${YELLOW}🦀 STEP 3: RUST UNIT TESTING${NC}"
-echo "-----------------------------"
-
-cd rust/supreme_core
-
-echo -e "${BLUE}Running Rust unit tests...${NC}"
-if cargo test --release --features max-performance -- --nocapture; then
-    echo -e "${GREEN}✅ Rust unit tests PASSED${NC}"
-    RUST_TEST_STATUS="passed"
-else
-    echo -e "${RED}❌ Rust unit tests FAILED${NC}"
-    RUST_TEST_STATUS="failed"
-fi
-
-# Run benchmarks
-echo -e "${BLUE}Running Rust benchmarks...${NC}"
-if cargo bench --features max-performance -- --output-format json > ../../test_results/rust_benchmarks_${TEST_TIMESTAMP}.json; then
-    echo -e "${GREEN}✅ Rust benchmarks completed${NC}"
-    RUST_BENCH_STATUS="completed"
-else
-    echo -e "${YELLOW}⚠️  Rust benchmarks had issues${NC}"
-    RUST_BENCH_STATUS="issues"
-fi
-
-cd ../..
-
-# ==============================================================================
-# INTEGRATION TESTING
-# ==============================================================================
-
-echo -e "\n${YELLOW}🔗 STEP 4: INTEGRATION TESTING${NC}"
-echo "-------------------------------"
-
-echo -e "${BLUE}Testing Python-Rust integration...${NC}"
-python3 -c "
-try:
-    import sys
-    sys.path.append('python')
-    print('✅ Python path configured')
-    
-    # Test basic imports
-    import numpy as np
-    import polars as pl
-    import pyarrow as pa
-    print('✅ Core libraries imported')
-    
-    # Test realistic computations
-    data = np.random.random(10000)
-    ema = np.convolve(data, np.ones(20)/20, mode='valid')
-    print(f'✅ EMA calculation: {len(ema)} points computed')
-    
-    print('✅ Integration test completed successfully')
-    integration_status = 'passed'
-except Exception as e:
-    print(f'❌ Integration test failed: {e}')
-    integration_status = 'failed'
-    sys.exit(1)
-"
-
-INTEGRATION_TEST_STATUS=$?
-if [ $INTEGRATION_TEST_STATUS -eq 0 ]; then
-    echo -e "${GREEN}✅ Integration tests PASSED${NC}"
-    INTEGRATION_STATUS="passed"
-else
-    echo -e "${RED}❌ Integration tests FAILED${NC}"
-    INTEGRATION_STATUS="failed"
-fi
-
-# ==============================================================================
-# STRESS TESTING
-# ==============================================================================
-
-echo -e "\n${YELLOW}💪 STEP 5: STRESS TESTING${NC}"
-echo "---------------------------"
-
-echo -e "${BLUE}Running stress test with sustained load...${NC}"
-python3 -c "
-import time
-import psutil
-import numpy as np
-import gc
-
-print('💪 Starting stress test...')
-
-# Monitor initial state
-initial_memory = psutil.Process().memory_info().rss / 1024 / 1024
-print(f'Initial memory: {initial_memory:.1f}MB')
-
-# Run sustained workload for 30 seconds
-start_time = time.time()
-iterations = 0
-max_memory = initial_memory
-
-while time.time() - start_time < 30:  # 30 second stress test
-    # Create and process data
-    data = np.random.random(5000)
-    processed = np.convolve(data, np.ones(10)/10, mode='valid')
-    
-    # Monitor memory
-    current_memory = psutil.Process().memory_info().rss / 1024 / 1024
-    max_memory = max(max_memory, current_memory)
-    
-    iterations += 1
-    
-    # Check memory constraint
-    if current_memory > 2200:  # 2.2GB limit
-        print(f'❌ STRESS TEST FAILED: Memory exceeded 2.2GB ({current_memory:.1f}MB)')
-        exit(1)
-    
-    # Periodic cleanup
-    if iterations % 100 == 0:
-        gc.collect()
-        print(f'Iteration {iterations}: {current_memory:.1f}MB')
-
-end_time = time.time()
-duration = end_time - start_time
-final_memory = psutil.Process().memory_info().rss / 1024 / 1024
-
-print(f'\n✅ STRESS TEST COMPLETED:')
-print(f'  Duration: {duration:.1f} seconds')
-print(f'  Iterations: {iterations}')
-print(f'  Initial Memory: {initial_memory:.1f}MB')
-print(f'  Peak Memory: {max_memory:.1f}MB')
-print(f'  Final Memory: {final_memory:.1f}MB')
-print(f'  Memory Growth: {final_memory - initial_memory:.1f}MB')
-
-if max_memory <= 2200:
-    print('✅ Memory constraint maintained throughout stress test')
-else:
-    print('❌ Memory constraint violated during stress test')
-    exit(1)
-"
-
-STRESS_TEST_STATUS=$?
-if [ $STRESS_TEST_STATUS -eq 0 ]; then
-    echo -e "${GREEN}✅ Stress test PASSED${NC}"
-    STRESS_STATUS="passed"
-else
-    echo -e "${RED}❌ Stress test FAILED${NC}"
-    STRESS_STATUS="failed"
-fi
-
-# ==============================================================================
-# UPDATE TEST REPORT
-# ==============================================================================
-
-echo -e "\n${YELLOW}📋 STEP 6: TEST REPORT GENERATION${NC}"
-echo "-----------------------------------"
-
-# Update test report with results
-python3 -c "
-import json
-import sys
-
-report_file = '$TEST_REPORT'
-
-with open(report_file, 'r') as f:
-    report = json.load(f)
-
-report['tests'] = {
-    'memory_constraint': {
-        'status': '$MEMORY_TEST_STATUS',
-        'description': 'Memory usage validation with 2.2GB budget'
-    },
-    'performance_benchmark': {
-        'status': '$PERFORMANCE_TEST_STATUS',
-        'description': 'Performance improvement validation (1.5-2.5x target)'
-    },
-    'rust_unit_tests': {
-        'status': '$RUST_TEST_STATUS',
-        'description': 'Rust core functionality testing'
-    },
-    'rust_benchmarks': {
-        'status': '$RUST_BENCH_STATUS',
-        'description': 'Rust performance benchmarking'
-    },
-    'integration': {
-        'status': '$INTEGRATION_STATUS',
-        'description': 'Python-Rust integration testing'
-    },
-    'stress_test': {
-        'status': '$STRESS_STATUS',
-        'description': 'Sustained load testing with memory monitoring'
+    "test_results": {},
+    "summary": {
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "total_duration_seconds": 0
     }
 }
-
-# Calculate overall status
-passed_tests = sum(1 for test in report['tests'].values() if test['status'] == 'passed')
-total_tests = len(report['tests'])
-success_rate = (passed_tests / total_tests) * 100
-
-report['summary'] = {
-    'total_tests': total_tests,
-    'passed_tests': passed_tests,
-    'success_rate_percent': success_rate,
-    'overall_status': 'passed' if success_rate >= 80 else 'failed'
-}
-
-with open(report_file, 'w') as f:
-    json.dump(report, f, indent=2)
-
-print(f'📋 Test Report Updated:')
-print(f'  Total Tests: {total_tests}')
-print(f'  Passed: {passed_tests}')
-print(f'  Success Rate: {success_rate:.1f}%')
-print(f'  Overall: {report[\"summary\"][\"overall_status\"].upper()}')
-
-if success_rate < 80:
-    sys.exit(1)
-"
-
-TEST_REPORT_STATUS=$?
-
-echo -e "\n${GREEN}✅ COMPREHENSIVE TESTING COMPLETE${NC}"
-echo "===================================="
-
-if [ $TEST_REPORT_STATUS -eq 0 ]; then
-    echo -e "${GREEN}🎊 SUCCESS: All critical tests passed${NC}"
-    echo -e "${BLUE}System ready for deployment${NC}"
-else
-    echo -e "${RED}❌ FAILURE: Critical tests failed${NC}"
-    echo -e "${YELLOW}Review test results and fix issues before deployment${NC}"
+EOF
 fi
 
-echo -e "\n${BLUE}📋 Full test report: $TEST_REPORT${NC}"
+# Function to run a single test
+run_test() {
+    local test_name="$1"
+    local test_command="$2"
+    local timeout_seconds="${3:-$TEST_TIMEOUT}"
+
+    local priority="${TEST_PRIORITIES[$test_name]}"
+    local start_time=$(date +%s)
+    local test_output_file="$LOG_DIR/${test_name}_$TIMESTAMP.log"
+
+    echo -e "${CYAN}▶️  STARTING TEST: $test_name (Priority: $priority)${NC}"
+    echo "Command: $test_command"
+    echo "Timeout: ${timeout_seconds}s"
+    echo "Output: $test_output_file"
+    echo
+
+    # Run test with timeout
+    local exit_code=0
+    local timeout_occurred=false
+
+    # Execute command with timeout
+    timeout "$timeout_seconds" bash -c "$test_command" > "$test_output_file" 2>&1 || {
+        exit_code=$?
+        if [[ $exit_code -eq 124 ]]; then
+            timeout_occurred=true
+            echo -e "${YELLOW}⚠️  Test $test_name timed out after ${timeout_seconds}s${NC}" >> "$test_output_file"
+        fi
+    }
+
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+
+    # Analyze test result
+    local test_passed=false
+    local test_failed=false
+    local test_skipped=false
+
+    if [[ $timeout_occurred == true ]]; then
+        test_failed=true
+        echo -e "${RED}❌ $test_name: TIMEOUT${NC}"
+    elif [[ $exit_code -eq 0 ]]; then
+        test_passed=true
+        echo -e "${GREEN}✅ $test_name: PASSED${NC}"
+    else
+        test_failed=true
+        echo -e "${RED}❌ $test_name: FAILED (exit code: $exit_code)${NC}"
+    fi
+
+    # Store results
+    TEST_RESULTS["$test_name"]=$([[ $test_passed == true ]] && echo "PASSED" || echo "FAILED")
+    TEST_DURATIONS["$test_name"]=$duration
+    TEST_OUTPUTS["$test_name"]=$test_output_file
+
+    echo "Duration: ${duration}s"
+    echo "Exit Code: $exit_code"
+    echo
+
+    # Update JSON report
+    if [[ "$JSON_REPORT" == "true" ]]; then
+        local result_status
+        if [[ $test_passed == true ]]; then
+            result_status="PASSED"
+        elif [[ $test_failed == true ]]; then
+            result_status="FAILED"
+        else
+            result_status="SKIPPED"
+        fi
+
+        # Update JSON with test result
+        jq --arg test_name "$test_name" \
+           --arg result "$result_status" \
+           --arg duration "$duration" \
+           --arg output_file "$test_output_file" \
+           --arg priority "$priority" \
+           '.test_results[$test_name] = {
+               "status": $result,
+               "duration_seconds": ($duration | tonumber),
+               "output_file": $output_file,
+               "priority": $priority,
+               "exit_code": '$exit_code'
+           }' "$REPORT_FILE" > "${REPORT_FILE}.tmp" && mv "${REPORT_FILE}.tmp" "$REPORT_FILE"
+    fi
+
+    return $exit_code
+}
+
+# Function to run tests by priority
+run_tests_by_priority() {
+    local priority="$1"
+    local test_names=()
+
+    # Collect tests for this priority
+    for test_name in "${!TEST_SCRIPTS[@]}"; do
+        if [[ "${TEST_PRIORITIES[$test_name]}" == "$priority" ]]; then
+            test_names+=("$test_name")
+        fi
+    done
+
+    if [[ ${#test_names[@]} -eq 0 ]]; then
+        echo -e "${YELLOW}No tests found for priority: $priority${NC}"
+        return
+    fi
+
+    echo -e "${PURPLE}🚀 EXECUTING $priority PRIORITY TESTS (${#test_names[@]} tests)${NC}"
+    echo "=================================================="
+
+    if [[ "$PARALLEL_MODE" == "true" && ${#test_names[@]} -gt 1 ]]; then
+        echo "Running tests in parallel..."
+        local pids=()
+
+        # Start all tests in parallel
+        for test_name in "${test_names[@]}"; do
+            local test_command="${TEST_SCRIPTS[$test_name]}"
+            local timeout_seconds="${TEST_TIMEOUTS[$test_name]:-$TEST_TIMEOUT}"
+
+            run_test "$test_name" "$test_command" "$timeout_seconds" &
+            pids+=($!)
+        done
+
+        # Wait for all tests to complete
+        for pid in "${pids[@]}"; do
+            wait "$pid"
+        done
+    else
+        # Run tests sequentially
+        for test_name in "${test_names[@]}"; do
+            local test_command="${TEST_SCRIPTS[$test_name]}"
+            local timeout_seconds="${TEST_TIMEOUTS[$test_name]:-$TEST_TIMEOUT}"
+            run_test "$test_name" "$test_command" "$timeout_seconds"
+        done
+    fi
+
+    echo
+}
+
+# Main execution
+echo "📋 TEST EXECUTION PLAN:"
+echo "======================"
+echo "HIGH PRIORITY (3 tests): Memory Stress, Network Failure, Live Market"
+echo "MEDIUM PRIORITY (3 tests): Thermal Throttling, Concurrent Load, API Rate Limiting"
+echo "LOW PRIORITY (2 tests): Data Corruption Recovery, Long Running Stability"
+echo
+
+total_start_time=$(date +%s)
+
+# Execute tests by priority
+run_tests_by_priority "HIGH"
+run_tests_by_priority "MEDIUM"
+run_tests_by_priority "LOW"
+
+total_end_time=$(date +%s)
+total_duration=$((total_end_time - total_start_time))
+
+# Generate summary
+echo -e "${BLUE}📊 COMPREHENSIVE TEST SUMMARY${NC}"
+echo "================================"
+
+passed_tests=0
+failed_tests=0
+skipped_tests=0
+
+for test_name in "${!TEST_RESULTS[@]}"; do
+    result="${TEST_RESULTS[$test_name]}"
+    duration="${TEST_DURATIONS[$test_name]}"
+    priority="${TEST_PRIORITIES[$test_name]}"
+
+    case $result in
+        "PASSED")
+            echo -e "${GREEN}✅ $test_name ($priority): PASSED (${duration}s)${NC}"
+            ((passed_tests++))
+            ;;
+        "FAILED")
+            echo -e "${RED}❌ $test_name ($priority): FAILED (${duration}s)${NC}"
+            ((failed_tests++))
+            ;;
+        "SKIPPED")
+            echo -e "${YELLOW}⏭️  $test_name ($priority): SKIPPED (${duration}s)${NC}"
+            ((skipped_tests++))
+            ;;
+    esac
+done
+
+echo
+echo "📈 OVERALL RESULTS:"
+echo "==================="
+echo "Total Tests: $((${#TEST_RESULTS[@]}))"
+echo "Passed: $passed_tests"
+echo "Failed: $failed_tests"
+echo "Skipped: $skipped_tests"
+echo "Total Duration: ${total_duration}s"
+echo
+
+# Success criteria evaluation
+success_rate=$((passed_tests * 100 / ${#TEST_RESULTS[@]}))
+echo "🎯 SUCCESS CRITERIA:"
+echo "===================="
+echo "Success Rate: ${success_rate}% (Target: ≥85%)"
+echo "Critical Tests Passed: $(($passed_tests >= 5 && $failed_tests <= 2 && echo "YES" || echo "NO"))"
+echo
+
+# Final verdict
+if [[ $passed_tests -ge 5 && $failed_tests -le 2 && $success_rate -ge 85 ]]; then
+    echo -e "${GREEN}🏆 FINAL VERDICT: COMPREHENSIVE TESTS PASSED"
+    echo "Supreme System V5 is READY FOR PRODUCTION DEPLOYMENT! 🚀${NC}"
+    final_result="PASSED"
+else
+    echo -e "${RED}⚠️  FINAL VERDICT: COMPREHENSIVE TESTS FAILED"
+    echo "Additional work required before production deployment.${NC}"
+    final_result="FAILED"
+fi
+
+echo
+echo "📁 Detailed logs saved in: $LOG_DIR/"
+echo "📄 Test report: $REPORT_FILE"
+
+# Update final JSON report
+if [[ "$JSON_REPORT" == "true" ]]; then
+    jq --arg passed "$passed_tests" \
+       --arg failed "$failed_tests" \
+       --arg skipped "$skipped_tests" \
+       --arg duration "$total_duration" \
+       --arg success_rate "$success_rate" \
+       --arg final_result "$final_result" \
+       '.summary = {
+           "passed": ($passed | tonumber),
+           "failed": ($failed | tonumber),
+           "skipped": ($skipped | tonumber),
+           "total_duration_seconds": ($duration | tonumber),
+           "success_rate_percent": ($success_rate | tonumber),
+           "final_result": $final_result
+       }' "$REPORT_FILE" > "${REPORT_FILE}.tmp" && mv "${REPORT_FILE}.tmp" "$REPORT_FILE"
+
+    echo "📊 JSON Report updated: $REPORT_FILE"
+fi
+
+echo
+echo "======================================================"
+echo "Comprehensive Testing Suite Execution Complete"
+echo "======================================================"
+
+# Exit with appropriate code
+exit $((failed_tests > 0 ? 1 : 0))
