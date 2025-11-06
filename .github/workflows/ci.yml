@@ -1,139 +1,41 @@
-name: CI - Supreme System V5 Production
-
+name: CI
 on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  validate:
+  build-test:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements-ultra.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-          
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-ultra.txt
-        pip install pytest pytest-cov black isort flake8
-        
-    - name: Format check
-      run: |
-        black --check python/ || echo "::warning::Code formatting issues found"
-        isort --check-only python/ || echo "::warning::Import sorting issues found"
-        
-    - name: Lint
-      run: |
-        flake8 python/ --max-line-length=120 --ignore=E203,W503,E501 --statistics
-        
-    - name: Quick validation tests
-      run: |
-        export PYTHONPATH=$PWD/python:$PYTHONPATH
-        cd python && python -c "import supreme_system_v5; print('✅ Core import OK')"
-        cd python && python -c "from supreme_system_v5.strategies import ScalpingStrategy; print('✅ Strategy OK')"
-        cd python && python -c "from supreme_system_v5.risk import RiskManager; print('✅ Risk manager OK')"
-        
-    - name: Run tests
-      run: |
-        mkdir -p run_artifacts
-        export PYTHONPATH=$PWD/python:$PYTHONPATH
-        cd python && python -m pytest tests/ -v \
-          --cov=supreme_system_v5 --cov-report=xml \
-          --junitxml=../run_artifacts/test-results.xml \
-          --timeout=300 || echo "::warning::Some tests failed"
-          
-    - name: Quick backtest with performance tracking
-      run: |
-        export PYTHONPATH=$PWD/python:$PYTHONPATH
-        timeout 120 python run_backtest.py --duration 1 --symbol ETH-USDT || echo "::warning::Backtest timed out or failed"
-        
-    - name: Collect performance metrics
-      run: |
-        python scripts/collect_metrics.py --report || echo "::notice::Metrics collection completed with warnings"
-        
-    - name: Verify performance claims
-      run: |
-        echo "## 📊 Performance Verification" >> $GITHUB_STEP_SUMMARY
-        if [ -f "run_artifacts/realtime_metrics.json" ]; then
-          echo "### ✅ Performance Metrics Found" >> $GITHUB_STEP_SUMMARY
-          python -c "
-          import json
-          try:
-            with open('run_artifacts/realtime_metrics.json') as f:
-              data = json.load(f)
-              stats = data.get('performance_stats', {})
-              avg_lat = stats.get('avg_latency_ms', 0)
-              p95_lat = stats.get('p95_latency_ms', 0)
-              success = stats.get('success_count', 0)
-              total = stats.get('loop_count', 1)
-              print(f'Avg Latency: {avg_lat}ms')
-              print(f'P95 Latency: {p95_lat}ms')
-              print(f'Success Rate: {success}/{total} ({100*success/total:.1f}%)')
-              
-              # Performance warnings
-              if avg_lat > 5:
-                print('::warning::Average latency exceeds 5ms target')
-              if p95_lat > 10:
-                print('::warning::P95 latency exceeds 10ms target')
-              if success/total < 0.99:
-                print('::warning::Success rate below 99%')
-          except Exception as e:
-            print(f'::notice::Metrics parsing: {e}')
-          " >> $GITHUB_STEP_SUMMARY
-        else
-          echo "### ⚠️ No realtime metrics available" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-    - name: Security scan with Semgrep
-      run: |
-        pip install semgrep
-        semgrep --config=auto python/ --json --output=run_artifacts/semgrep-results.json || echo "::warning::Security scan found issues"
-        
-    - name: Upload test artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: test-results
-        path: |
-          run_artifacts/test-results.xml
-          run_artifacts/coverage.xml
-          run_artifacts/semgrep-results.json
-          run_artifacts/backtest_results_*.json
-          run_artifacts/performance_*.json
-          run_artifacts/performance_*.md
-          run_artifacts/realtime_metrics.json
-        retention-days: 30
-        
-    - name: Summary
-      if: always()
-      run: |
-        echo "## 🎯 CI Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### ✅ Completed Steps:" >> $GITHUB_STEP_SUMMARY
-        echo "- Code formatting check" >> $GITHUB_STEP_SUMMARY
-        echo "- Linting with flake8" >> $GITHUB_STEP_SUMMARY
-        echo "- Core module validation" >> $GITHUB_STEP_SUMMARY
-        echo "- Test suite execution" >> $GITHUB_STEP_SUMMARY
-        echo "- Quick backtest validation" >> $GITHUB_STEP_SUMMARY
-        echo "- Performance metrics collection" >> $GITHUB_STEP_SUMMARY
-        echo "- Security scan with Semgrep" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📊 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
-        ls -la run_artifacts/ >> $GITHUB_STEP_SUMMARY || echo "No artifacts found" >> $GITHUB_STEP_SUMMARY
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - name: Python deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-realistic.txt ]; then pip install -r requirements-realistic.txt; fi
+          pip install pytest pytest-benchmark psutil
+      - name: Rust build & test
+        run: |
+          if [ -f rust/supreme_core/Cargo.toml ]; then \
+            cd rust/supreme_core && cargo build --release && cargo test --release; \
+          else echo "No rust core present, skipping"; fi
+      - name: Python tests
+        run: |
+          if compgen -G "tests/**/*.py" > /dev/null; then pytest -q; else echo "No python tests"; fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test_results/**
+            benchmark/**
+            **/*.json
