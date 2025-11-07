@@ -11,15 +11,19 @@ class EnhancedTrendFollowingAgent(TrendFollowingAgent):
         position_size = risk_amount / current_price
         return int(position_size)
     
-    def generate_trade_signal(self, market_data, portfolio_value):
+    def generate_trade_signal(self, market_data, portfolio_value, symbol=None):
         """Generate enhanced trade signal với position sizing"""
         base_signal = self.analyze_market(market_data)
         if base_signal in ["BUY", "SELL"]:
-            current_price = market_data['Close'].iloc[-1]
+            # Handle MultiIndex columns from yfinance
+            if isinstance(market_data.columns, pd.MultiIndex):
+                current_price = market_data[('Close', symbol or 'AAPL')].iloc[-1]
+            else:
+                current_price = market_data['Close'].iloc[-1] if 'Close' in market_data.columns else market_data.iloc[-1]
             position_size = self.calculate_position_size(portfolio_value, current_price)
             return {
                 "action": base_signal,
-                "symbol": "AAPL",
+                "symbol": symbol or "AAPL",
                 "quantity": position_size,
                 "price": current_price,
                 "timestamp": datetime.now()

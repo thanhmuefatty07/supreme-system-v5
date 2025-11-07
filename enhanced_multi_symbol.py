@@ -37,7 +37,7 @@ def launch_enhanced_multi_symbol_system():
             print("=" * 50)
             for i, rank in enumerate(rankings, 1):
                 print(f"{i}. {rank['agent_id']:20} {rank['return_percent']:6.2f}% "
-                      f"(${rank['final_value']:8.2f}) - {rank.get('total_trades', 0)} trades")
+                      f"(${rank['portfolio_value']:8.2f}) - {rank.get('total_trades', 0)} trades")
             print("\n📊 PERFORMANCE ANALYSIS")
             best_agent = rankings[0]
             worst_agent = rankings[-1]

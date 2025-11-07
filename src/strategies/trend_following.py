@@ -1,6 +1,7 @@
 from src.agents.base_agent import BaseTradingAgent
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 class TrendFollowingAgent(BaseTradingAgent):
     """
@@ -40,3 +41,22 @@ class TrendFollowingAgent(BaseTradingAgent):
             return "SELL"
         else:
             return "HOLD"
+
+    def generate_trade_signal(self, market_data, portfolio_value, symbol=None):
+        """Generate trade signal với position sizing"""
+        base_signal = self.analyze_market(market_data)
+        if base_signal in ["BUY", "SELL"]:
+            # Handle MultiIndex columns from yfinance
+            if isinstance(market_data.columns, pd.MultiIndex):
+                current_price = market_data[('Close', symbol or 'AAPL')].iloc[-1]
+            else:
+                current_price = market_data['Close'].iloc[-1] if 'Close' in market_data.columns else market_data.iloc[-1]
+            position_size = int((portfolio_value * 0.02) / current_price)
+            return {
+                "action": base_signal,
+                "symbol": symbol or "AAPL",
+                "quantity": position_size,
+                "price": current_price,
+                "timestamp": datetime.now()
+            }
+        return None

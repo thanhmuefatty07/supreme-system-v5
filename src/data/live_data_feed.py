@@ -27,6 +27,10 @@ class LiveDataFeed:
         """Lấy historical data cho backtesting"""
         try:
             data = yf.download(symbol, period=period, progress=False)
+            # Handle MultiIndex columns from yfinance
+            if isinstance(data.columns, pd.MultiIndex):
+                # Flatten MultiIndex columns
+                data.columns = data.columns.droplevel(1) if data.columns.nlevels > 1 else data.columns
             return data
         except Exception as e:
             print(f"Historical data error for {symbol}: {e}")
