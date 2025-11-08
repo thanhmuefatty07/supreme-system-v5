@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-11-08T09:16:46.875527",
+  "results": {
+    "Trend": {
+      "clean_accuracy": 0.975,
+      "adversarial_accuracy": 0.975,
+      "robustness_drop": 0.0,
+      "status": "ROBUST"
+    },
+    "Momentum": {
+      "clean_accuracy": 0.97,
+      "adversarial_accuracy": 0.97,
+      "robustness_drop": 0.0,
+      "status": "ROBUST"
+    },
+    "MeanReversion": {
+      "clean_accuracy": 0.97,
+      "adversarial_accuracy": 0.97,
+      "robustness_drop": 0.0,
+      "status": "ROBUST"
+    },
+    "Breakout": {
+      "clean_accuracy": 0.965,
+      "adversarial_accuracy": 0.965,
+      "robustness_drop": 0.0,
+      "status": "ROBUST"
+    }
+  },
+  "overall_status": "PASS"
+}

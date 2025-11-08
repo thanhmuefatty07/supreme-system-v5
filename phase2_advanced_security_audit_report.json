@@ -1,0 +1,176 @@
+{
+  "phase": "Phase 2 - Advanced Adversarial Testing",
+  "timestamp": "2025-11-08T09:27:08.721606",
+  "framework": "IBM ART + TensorFlow",
+  "attacks_tested": [
+    "PGD",
+    "Carlini-L2"
+  ],
+  "results": {
+    "Trend": {
+      "attack": "PGD",
+      "clean_accuracy": 0.97,
+      "pgd_results": {
+        "eps_0.01": {
+          "epsilon": 0.01,
+          "adversarial_accuracy": 0.97,
+          "robustness_drop": 0.0,
+          "avg_perturbation": 0.010000004433095455,
+          "attack_time": 5.3962132930755615
+        },
+        "eps_0.05": {
+          "epsilon": 0.05,
+          "adversarial_accuracy": 0.95,
+          "robustness_drop": 0.020000000000000018,
+          "avg_perturbation": 0.050000015646219254,
+          "attack_time": 5.094515562057495
+        },
+        "eps_0.1": {
+          "epsilon": 0.1,
+          "adversarial_accuracy": 0.92,
+          "robustness_drop": 0.04999999999999993,
+          "avg_perturbation": 0.10000001639127731,
+          "attack_time": 5.215888500213623
+        }
+      },
+      "overall_status": "\u2705 ROBUST (all \u03b5)",
+      "cw_results": {
+        "clean_accuracy": 0.94,
+        "adversarial_accuracy": 0.47,
+        "robustness_drop": 0.47,
+        "avg_l2_perturbation": 0.2877937853336334,
+        "attack_time": 293.376718044281,
+        "status": "\u274c VULNERABLE"
+      }
+    },
+    "Momentum": {
+      "attack": "PGD",
+      "clean_accuracy": 0.97,
+      "pgd_results": {
+        "eps_0.01": {
+          "epsilon": 0.01,
+          "adversarial_accuracy": 0.975,
+          "robustness_drop": -0.0050000000000000044,
+          "avg_perturbation": 0.01000000350177288,
+          "attack_time": 5.4513349533081055
+        },
+        "eps_0.05": {
+          "epsilon": 0.05,
+          "adversarial_accuracy": 0.97,
+          "robustness_drop": 0.0,
+          "avg_perturbation": 0.05000000819563866,
+          "attack_time": 5.099858999252319
+        },
+        "eps_0.1": {
+          "epsilon": 0.1,
+          "adversarial_accuracy": 0.915,
+          "robustness_drop": 0.05499999999999994,
+          "avg_perturbation": 0.10000001639127731,
+          "attack_time": 5.236028671264648
+        }
+      },
+      "overall_status": "\u2705 ROBUST (all \u03b5)",
+      "cw_results": {
+        "clean_accuracy": 0.95,
+        "adversarial_accuracy": 0.48,
+        "robustness_drop": 0.47,
+        "avg_l2_perturbation": 0.25436678528785706,
+        "attack_time": 290.0924882888794,
+        "status": "\u274c VULNERABLE"
+      }
+    },
+    "MeanReversion": {
+      "attack": "PGD",
+      "clean_accuracy": 0.975,
+      "pgd_results": {
+        "eps_0.01": {
+          "epsilon": 0.01,
+          "adversarial_accuracy": 0.965,
+          "robustness_drop": 0.010000000000000009,
+          "avg_perturbation": 0.010000004433095455,
+          "attack_time": 5.114151477813721
+        },
+        "eps_0.05": {
+          "epsilon": 0.05,
+          "adversarial_accuracy": 0.94,
+          "robustness_drop": 0.03500000000000003,
+          "avg_perturbation": 0.05000000819563866,
+          "attack_time": 5.626527309417725
+        },
+        "eps_0.1": {
+          "epsilon": 0.1,
+          "adversarial_accuracy": 0.91,
+          "robustness_drop": 0.06499999999999995,
+          "avg_perturbation": 0.10000001639127731,
+          "attack_time": 5.505207300186157
+        }
+      },
+      "overall_status": "\u2705 ROBUST (all \u03b5)",
+      "cw_results": {
+        "clean_accuracy": 0.96,
+        "adversarial_accuracy": 0.48,
+        "robustness_drop": 0.48,
+        "avg_l2_perturbation": 0.24046286940574646,
+        "attack_time": 291.0012984275818,
+        "status": "\u274c VULNERABLE"
+      }
+    },
+    "Breakout": {
+      "attack": "PGD",
+      "clean_accuracy": 0.955,
+      "pgd_results": {
+        "eps_0.01": {
+          "epsilon": 0.01,
+          "adversarial_accuracy": 0.955,
+          "robustness_drop": 0.0,
+          "avg_perturbation": 0.01000000350177288,
+          "attack_time": 5.098261117935181
+        },
+        "eps_0.05": {
+          "epsilon": 0.05,
+          "adversarial_accuracy": 0.93,
+          "robustness_drop": 0.02499999999999991,
+          "avg_perturbation": 0.050000015646219254,
+          "attack_time": 5.20753812789917
+        },
+        "eps_0.1": {
+          "epsilon": 0.1,
+          "adversarial_accuracy": 0.905,
+          "robustness_drop": 0.04999999999999993,
+          "avg_perturbation": 0.10000001639127731,
+          "attack_time": 5.096956014633179
+        }
+      },
+      "overall_status": "\u2705 ROBUST (all \u03b5)",
+      "cw_results": {
+        "clean_accuracy": 0.96,
+        "adversarial_accuracy": 0.44,
+        "robustness_drop": 0.52,
+        "avg_l2_perturbation": 0.27574196457862854,
+        "attack_time": 292.1974594593048,
+        "status": "\u274c VULNERABLE"
+      }
+    }
+  },
+  "overall_robustness_rate": 1.0,
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Implement defensive mechanisms",
+      "techniques": [
+        "Feature squeezing",
+        "Input transformation",
+        "Gradient masking"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Test with black-box attacks",
+      "techniques": [
+        "ZOO attack",
+        "Boundary attack",
+        "HopSkipJump"
+      ]
+    }
+  ]
+}
