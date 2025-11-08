@@ -1,0 +1,163 @@
+{
+  "timestamp": "2025-11-08T19:10:05.934781",
+  "testing_data": {
+    "daily_data": {
+      "day": 1,
+      "date": "2025-11-08",
+      "testing_summary": {
+        "day": 1,
+        "timestamp": "2025-11-08 17:43:19.449639",
+        "paper_trading": {
+          "BTCUSDT_5000": {
+            "initial_capital": 5000,
+            "final_capital": 5109.725943237822,
+            "total_profit": 109.72594323782232,
+            "roi_percent": 2.1945188647564464,
+            "total_trades": 100,
+            "winning_trades": 21,
+            "losing_trades": 29,
+            "win_rate": 21.0,
+            "max_drawdown_percent": 11.439903362291576,
+            "sharpe_ratio": 0.8620244644632125,
+            "symbol": "BTC/USDT",
+            "timestamp": "2025-11-08 17:43:22.015772"
+          },
+          "BTCUSDT_10000": {
+            "initial_capital": 10000,
+            "final_capital": 10219.451886475645,
+            "total_profit": 219.45188647564464,
+            "roi_percent": 2.1945188647564464,
+            "total_trades": 100,
+            "winning_trades": 21,
+            "losing_trades": 29,
+            "win_rate": 21.0,
+            "max_drawdown_percent": 11.439903362291576,
+            "sharpe_ratio": 0.8620244644632125,
+            "symbol": "BTC/USDT",
+            "timestamp": "2025-11-08 17:43:25.595283"
+          },
+          "ETHUSDT_5000": {
+            "initial_capital": 5000,
+            "final_capital": 4995.410149049616,
+            "total_profit": -4.589850950384061,
+            "roi_percent": -0.09179701900768122,
+            "total_trades": 100,
+            "winning_trades": 19,
+            "losing_trades": 31,
+            "win_rate": 19.0,
+            "max_drawdown_percent": 12.037880428296301,
+            "sharpe_ratio": 0.833752690274395,
+            "symbol": "ETH/USDT",
+            "timestamp": "2025-11-08 17:43:28.144635"
+          },
+          "ETHUSDT_10000": {
+            "initial_capital": 10000,
+            "final_capital": 9990.820298099232,
+            "total_profit": -9.179701900768123,
+            "roi_percent": -0.09179701900768122,
+            "total_trades": 100,
+            "winning_trades": 19,
+            "losing_trades": 31,
+            "win_rate": 19.0,
+            "max_drawdown_percent": 12.037880428296301,
+            "sharpe_ratio": 0.833752690274395,
+            "symbol": "ETH/USDT",
+            "timestamp": "2025-11-08 17:43:30.620878"
+          }
+        },
+        "security_validation": {
+          "timestamp": "2025-11-08 17:43:33.032440",
+          "tests": {
+            "gradient_analysis": true,
+            "signal_validation": true,
+            "model_robustness": true,
+            "anomaly_detection": true,
+            "kill_switch_response": true,
+            "data_integrity": true
+          },
+          "overall_status": "PASS",
+          "details": "All security tests completed successfully"
+        },
+        "performance_metrics": {
+          "total_trades": 400,
+          "total_profit": 315.4082768623148,
+          "overall_roi_percent": 1.0513609228743825,
+          "average_win_rate": 20.0,
+          "average_sharpe_ratio": 0.8478885773688037,
+          "security_score": "PASS"
+        }
+      },
+      "system_status": "CONTINUOUS_TESTING_ACTIVE",
+      "days_remaining": 6,
+      "transition_ready": false
+    },
+    "final_data": {
+      "testing_period": {
+        "start": "2025-11-08T16:16:51.295272",
+        "end": "2025-11-08T17:31:42.943057",
+        "duration_days": 0,
+        "duration_hours": 1.2476799402777778
+      },
+      "summary_statistics": {
+        "total_sessions": 2,
+        "total_security_tests": 1,
+        "total_alerts": 2,
+        "average_return": 0.04800584489321336,
+        "median_return": 0.04800584489321336,
+        "average_win_rate": 0.5,
+        "average_drawdown": 0.1337030260333581,
+        "max_drawdown": 0.1337030260333581
+      },
+      "security_summary": {
+        "total_tests_passed": 5,
+        "total_tests_run": 5,
+        "overall_pass_rate": 1.0
+      },
+      "recommendation": {
+        "verdict": "CONDITIONALLY READY",
+        "details": "System shows positive results but requires careful monitoring during initial user trading.",
+        "metrics": {
+          "average_return": 0.04800584489321336,
+          "average_win_rate": 0.5,
+          "max_drawdown": 0.1337030260333581
+        }
+      }
+    },
+    "security_logs": [
+      {
+        "timestamp": "2025-11-08 17:43:33.032440",
+        "tests": {
+          "gradient_analysis": true,
+          "signal_validation": true,
+          "model_robustness": true,
+          "anomaly_detection": true,
+          "kill_switch_response": true,
+          "data_integrity": true
+        },
+        "overall_status": "PASS",
+        "details": "All security tests completed successfully"
+      }
+    ],
+    "trading_performance": {
+      "total_trades": 400,
+      "total_profit": 315.4082768623148,
+      "average_roi": 1.0513609228743825,
+      "average_win_rate": 20.0,
+      "symbols": {}
+    },
+    "last_updated": "2025-11-08T19:10:05.838575"
+  },
+  "health_metrics": {
+    "overall_score": 76,
+    "trading_health": 60,
+    "security_health": 100.0,
+    "performance_health": 60,
+    "recommendations": [
+      "[CHART] Optimize trading strategy parameters",
+      "[PERFORMANCE] Improve system performance and stability",
+      "[OK] System performing well, minor optimizations needed"
+    ]
+  },
+  "alerts": [],
+  "monitoring_uptime": "0:00:00.111982"
+}

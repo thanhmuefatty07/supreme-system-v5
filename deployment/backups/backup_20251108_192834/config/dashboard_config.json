@@ -1,0 +1,65 @@
+{
+  "title": "Supreme System V5 - Limited Production Monitor",
+  "refresh_rate": 30,
+  "panels": [
+    {
+      "name": "Financial Overview",
+      "metrics": [
+        "Total P&L",
+        "Daily P&L",
+        "Win Rate",
+        "Sharpe Ratio"
+      ],
+      "alerts": [
+        "Daily Loss Limit",
+        "Total Loss Limit"
+      ]
+    },
+    {
+      "name": "Trading Activity",
+      "metrics": [
+        "Active Trades",
+        "Daily Trade Count",
+        "Avg Trade Size"
+      ],
+      "charts": [
+        "Trade History",
+        "Performance by Strategy"
+      ]
+    },
+    {
+      "name": "Security Status",
+      "metrics": [
+        "Anomaly Score",
+        "Adversarial Detection",
+        "System Health"
+      ],
+      "alerts": [
+        "Security Threats",
+        "System Anomalies"
+      ]
+    },
+    {
+      "name": "System Resources",
+      "metrics": [
+        "CPU Usage",
+        "Memory Usage",
+        "Network Status"
+      ],
+      "alerts": [
+        "Resource Limits",
+        "Connectivity Issues"
+      ]
+    }
+  ],
+  "alert_config": {
+    "email_alerts": true,
+    "telegram_alerts": true,
+    "alert_levels": [
+      "INFO",
+      "WARNING",
+      "CRITICAL"
+    ],
+    "quiet_hours": "22:00-06:00"
+  }
+}
