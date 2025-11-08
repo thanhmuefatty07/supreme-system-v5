@@ -1,193 +1,63 @@
-# Supreme System V5 - Git Ignore Rules
-# Production-ready cryptocurrency trading bot
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-PYTHONPATH
-
-# Virtual Environment
+# Virtual environments
 venv/
+venv_security/
 env/
 ENV/
-.venv/
-.env/
-pyvenv.cfg
 
-# IDE & Editors
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-.vim/
-*.sublime-project
-*.sublime-workspace
-.cursor/
 
-# OS Generated
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs & Debug
+# Logs
 *.log
 logs/
-*.out
-*.err
-.pytest_cache/
-.coverage
-cov.xml
-*.cover
-.hypothesis/
-htmlcov/
-
-# Data Files
-*.csv
-*.pkl
-*.pickle
-*.h5
-*.hdf5
-*.parquet
-*.feather
-data/raw/
-data/processed/
-data/cache/
-data/temp/
-
-# Testing
-.tox/
-.nox/
-.pytest_cache/
-cover/
-.hypothesis/
-test_output*.txt
-
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# IPython
-profile_default/
-ipython_config.py
-
-# Docker
-.dockerignore
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Archives
-*.zip
-*.tar.gz
-*.rar
-*.7z
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Supreme System V5 Specific - Core Functionality
-trading_logs/
-market_data_cache/
-backtest_results/
-live_trading_logs/
-
-# Run Artifacts - Block Large Files
-run_artifacts/*
-
-# Configuration (sensitive)
-.env
-.env.local
-.env.production
-.env.staging
-config/secrets/
-config/production/
-
-# Financial Data (sensitive)
-api_keys.json
-trading_credentials/
-broker_config/
-exchange_keys/
-
-# Performance monitoring
-grafana/data/
-prometheus/data/
-monitoring/data/
-
-# Deployment
-kubernetes/secrets/
-docker/production/
-deployment/production/
-deployment_logs/
-
-# Distribution / packaging
-*.egg-info/
 
 # Temporary files
-tmp/
-temp/
-.cache/
-.temp/
 *.tmp
 *.temp
 
-# Backup files
-*.bak
-*.backup
-*.orig
+# Jupyter
+.ipynb_checkpoints/
 
-# Performance & Profiling
-*.prof
-profiling/
-perf.data*
-*.perf
+# TensorFlow
+checkpoint
+checkpoints/
+logs/
+tensorboard/
 
-# Model Files (if any ML components)
+# PyTorch
 *.pth
 *.pt
-*.ckpt
-*.safetensors
-models/weights/
-models/checkpoints/
-checkpoints/
 
 # Documentation builds
 docs/_build/
-docs/.doctrees/
-site/
 
-# Node.js (if any frontend tools)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Test results
+test_results/
+*.json.bak
 
-# Dashboard (optional dev)
-dashboard/__pycache__/
-dashboard/*.log
+# Environment variables
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite3
+
+# Coverage reports
+.coverage
+htmlcov/
