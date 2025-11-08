@@ -1,0 +1,47 @@
+{
+  "timestamp": "20251105_154647",
+  "system_info": {
+    "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "platform": "win32",
+    "cpu_count": 4,
+    "memory_total_gb": 3.859691619873047
+  },
+  "startup_profiling": {
+    "import_time_ms": 2427.0240000005288,
+    "instantiation_time_ms": 0.2888000017264858,
+    "total_startup_ms": 2427.3128000022552
+  },
+  "market_data_profiling": {
+    "iterations": 1000,
+    "mean_latency_ms": 0.0006515000277431682,
+    "median_latency_ms": 0.0006000009307172149,
+    "p95_latency_ms": 0.000700001692166552,
+    "p99_latency_ms": 0.000800002453615889,
+    "min_latency_ms": 0.0005000001692678779,
+    "max_latency_ms": 0.01059999704011716,
+    "std_dev_ms": 0.0005166475171065549
+  },
+  "memory_profiling": {
+    "tracemalloc_current_mb": 0.005939483642578125,
+    "tracemalloc_peak_mb": 0.011623382568359375,
+    "process_memory_mb": 68.9375,
+    "memory_efficiency_pct": 51.09944207417132
+  },
+  "cpu_profiling": {
+    "monitoring_duration_s": 10,
+    "samples_collected": 98,
+    "avg_cpu_pct": 0.0,
+    "max_cpu_pct": 0.0,
+    "p95_cpu_pct": 0.0
+  },
+  "performance_assessment": {
+    "requirements_met": false,
+    "warnings": [
+      "Memory usage 68.9MB exceeds 15MB target"
+    ],
+    "critical_issues": [
+      "Memory budget violation: 68.9MB > 15MB"
+    ],
+    "overall_status": "FAIL"
+  }
+}

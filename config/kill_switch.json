@@ -1,0 +1,55 @@
+{
+  "triggers": {
+    "financial": [
+      "Daily loss > $400 (80% of limit)",
+      "Total loss > $2,000",
+      "5 consecutive losing trades",
+      "Single trade loss > $200"
+    ],
+    "security": [
+      "Detected adversarial pattern (confidence > 95%)",
+      "Signal anomaly > 3 standard deviations",
+      "System performance degradation > 20%",
+      "Unauthorized access attempt"
+    ],
+    "operational": [
+      "Network connectivity issues > 5 minutes",
+      "Exchange API failures > 3 attempts",
+      "Data feed disruptions > 10 minutes",
+      "System resource usage > 95%"
+    ],
+    "market_conditions": [
+      "Extreme volatility (price change > 10% in 5 min)",
+      "Market manipulation indicators",
+      "Exchange maintenance windows"
+    ]
+  },
+  "actions": {
+    "stage_1_warning": "Send alert + log detailed information",
+    "stage_2_reduce": "Reduce position sizes by 50% + increase monitoring",
+    "stage_3_pause": "Pause new trade entries + close 50% positions",
+    "stage_4_shutdown": "Close all open positions + complete system shutdown"
+  },
+  "recovery": {
+    "manual_reactivation": "Required after stage 3+ shutdown",
+    "investigation_period": "Minimum 4 hours for stage 4",
+    "gradual_restart": "25% \u2192 50% \u2192 75% \u2192 100% capacity over 2 hours",
+    "security_audit": "Required before reactivation"
+  },
+  "notification_system": {
+    "immediate_alerts": [
+      "SMS",
+      "Email",
+      "Telegram"
+    ],
+    "detailed_reports": [
+      "Email",
+      "Dashboard"
+    ],
+    "escalation_contacts": [
+      "Primary",
+      "Secondary",
+      "Security Team"
+    ]
+  }
+}

@@ -1,0 +1,690 @@
+{
+  "metadata": {
+    "symbol": "ETH-USDT",
+    "num_tests": 30,
+    "test_duration_hours": 4.0,
+    "baseline_config": {
+      "symbol": "ETH-USDT",
+      "position_size_pct": 0.02,
+      "stop_loss_pct": 0.01,
+      "take_profit_pct": 0.02,
+      "ema_period": 14,
+      "rsi_period": 14,
+      "macd_fast": 12,
+      "macd_slow": 26,
+      "macd_signal": 9
+    },
+    "enhanced_config": {
+      "symbol": "ETH-USDT",
+      "position_size_pct": 0.015,
+      "stop_loss_pct": 0.008,
+      "take_profit_pct": 0.012,
+      "ema_period": 14,
+      "rsi_period": 14,
+      "macd_fast": 12,
+      "macd_slow": 26,
+      "macd_signal": 9
+    },
+    "timestamp": "2025-11-05T14:40:09.297391"
+  },
+  "baseline_results": [
+    {
+      "test_id": "baseline_1",
+      "total_trades": 114,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_2",
+      "total_trades": 101,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_3",
+      "total_trades": 104,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_4",
+      "total_trades": 121,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_5",
+      "total_trades": 80,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_6",
+      "total_trades": 119,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_7",
+      "total_trades": 129,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_8",
+      "total_trades": 139,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_9",
+      "total_trades": 134,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_10",
+      "total_trades": 116,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_11",
+      "total_trades": 110,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_12",
+      "total_trades": 37,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_13",
+      "total_trades": 88,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_14",
+      "total_trades": 156,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_15",
+      "total_trades": 81,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_16",
+      "total_trades": 146,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_17",
+      "total_trades": 136,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_18",
+      "total_trades": 76,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_19",
+      "total_trades": 111,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_20",
+      "total_trades": 94,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_21",
+      "total_trades": 103,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_22",
+      "total_trades": 78,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_23",
+      "total_trades": 95,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_24",
+      "total_trades": 94,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_25",
+      "total_trades": 82,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_26",
+      "total_trades": 80,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_27",
+      "total_trades": 100,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_28",
+      "total_trades": 129,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_29",
+      "total_trades": 77,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "baseline_30",
+      "total_trades": 152,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    }
+  ],
+  "enhanced_results": [
+    {
+      "test_id": "enhanced_1",
+      "total_trades": 120,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_2",
+      "total_trades": 73,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_3",
+      "total_trades": 150,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_4",
+      "total_trades": 55,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_5",
+      "total_trades": 152,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_6",
+      "total_trades": 40,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_7",
+      "total_trades": 53,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_8",
+      "total_trades": 82,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_9",
+      "total_trades": 102,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_10",
+      "total_trades": 167,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_11",
+      "total_trades": 92,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_12",
+      "total_trades": 152,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_13",
+      "total_trades": 102,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_14",
+      "total_trades": 109,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_15",
+      "total_trades": 122,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_16",
+      "total_trades": 114,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_17",
+      "total_trades": 141,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_18",
+      "total_trades": 95,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_19",
+      "total_trades": 129,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_20",
+      "total_trades": 106,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_21",
+      "total_trades": 107,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_22",
+      "total_trades": 36,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_23",
+      "total_trades": 90,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_24",
+      "total_trades": 107,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_25",
+      "total_trades": 75,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_26",
+      "total_trades": 59,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_27",
+      "total_trades": 65,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_28",
+      "total_trades": 48,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_29",
+      "total_trades": 86,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    },
+    {
+      "test_id": "enhanced_30",
+      "total_trades": 112,
+      "win_rate": 0.0,
+      "total_pnl": 0,
+      "avg_trade_pnl": 0.0,
+      "sharpe_ratio": 0,
+      "max_drawdown": 0,
+      "final_value": 10000.0
+    }
+  ],
+  "analysis": {
+    "baseline_avg": {
+      "win_rate": 0.0,
+      "sharpe_ratio": 0,
+      "total_pnl": 0,
+      "total_trades": 106.06666666666666
+    },
+    "enhanced_avg": {
+      "win_rate": 0.0,
+      "sharpe_ratio": 0,
+      "total_pnl": 0,
+      "total_trades": 98.03333333333333
+    },
+    "statistical_tests": {
+      "win_rate": {
+        "t_statistic": 0.0,
+        "p_value": 1.0,
+        "significant": false,
+        "improvement": 0.0
+      },
+      "sharpe_ratio": {
+        "t_statistic": 0.0,
+        "p_value": 1.0,
+        "significant": false,
+        "improvement": 0
+      },
+      "total_pnl": {
+        "t_statistic": 0.0,
+        "p_value": 1.0,
+        "significant": false,
+        "improvement": 0
+      }
+    },
+    "confidence_intervals": {
+      "baseline_win_rate": {
+        "mean": 0.0,
+        "lower": 0.0,
+        "upper": 0.0
+      },
+      "enhanced_win_rate": {
+        "mean": 0.0,
+        "lower": 0.0,
+        "upper": 0.0
+      },
+      "baseline_sharpe": {
+        "mean": 0,
+        "lower": 0.0,
+        "upper": 0.0
+      },
+      "enhanced_sharpe": {
+        "mean": 0,
+        "lower": 0.0,
+        "upper": 0.0
+      }
+    }
+  }
+}

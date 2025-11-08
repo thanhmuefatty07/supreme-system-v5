@@ -1,0 +1,10 @@
+{
+  "status": "SUCCESS",
+  "runtime_seconds": 120.00510787963867,
+  "updates_processed": 1088,
+  "signals_generated": 0,
+  "signal_rate": 0.0,
+  "avg_processing_ms": 0.012412316145989333,
+  "final_price": 4147.399055137562,
+  "price_change_pct": 18.497115861073198
+}

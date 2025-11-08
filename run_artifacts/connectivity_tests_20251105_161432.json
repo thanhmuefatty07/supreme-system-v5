@@ -1,0 +1,342 @@
+[
+  {
+    "name": "binance_connection_basic",
+    "description": "Basic connection establishment to binance",
+    "test_type": "connection",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": false
+    },
+    "error": null
+  },
+  {
+    "name": "binance_connection_auth",
+    "description": "Authenticated connection to binance",
+    "test_type": "connection",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": true
+    },
+    "error": null
+  },
+  {
+    "name": "binance_market_data_stream",
+    "description": "Market data WebSocket stream from binance",
+    "test_type": "market_data",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "stream_established": true,
+      "data_received": true,
+      "symbol": "ETHUSDT"
+    },
+    "error": null
+  },
+  {
+    "name": "binance_market_data_rest",
+    "description": "Market data REST API from binance",
+    "test_type": "market_data",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "ticker_retrieved": true,
+      "symbol": "ETHUSDT",
+      "price": 45000
+    },
+    "error": null
+  },
+  {
+    "name": "binance_trading_limits",
+    "description": "Trading limits query from binance",
+    "test_type": "trading",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "limits_retrieved": true,
+      "limits_count": 1
+    },
+    "error": null
+  },
+  {
+    "name": "binance_account_info",
+    "description": "Account information query from binance",
+    "test_type": "account",
+    "exchange": "binance",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "account_info_retrieved": false,
+      "auth_error": true,
+      "expected_error": true
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_connection_basic",
+    "description": "Basic connection establishment to coinbase",
+    "test_type": "connection",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": false
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_connection_auth",
+    "description": "Authenticated connection to coinbase",
+    "test_type": "connection",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": true
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_market_data_stream",
+    "description": "Market data WebSocket stream from coinbase",
+    "test_type": "market_data",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "stream_established": true,
+      "data_received": true,
+      "symbol": "ETH-USD"
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_market_data_rest",
+    "description": "Market data REST API from coinbase",
+    "test_type": "market_data",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "ticker_retrieved": true,
+      "symbol": "ETH-USD",
+      "price": 45000
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_trading_limits",
+    "description": "Trading limits query from coinbase",
+    "test_type": "trading",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "limits_retrieved": true,
+      "limits_count": 1
+    },
+    "error": null
+  },
+  {
+    "name": "coinbase_account_info",
+    "description": "Account information query from coinbase",
+    "test_type": "account",
+    "exchange": "coinbase",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "account_info_retrieved": false,
+      "auth_error": true,
+      "expected_error": true
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_connection_basic",
+    "description": "Basic connection establishment to kraken",
+    "test_type": "connection",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": false
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_connection_auth",
+    "description": "Authenticated connection to kraken",
+    "test_type": "connection",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": true
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_market_data_stream",
+    "description": "Market data WebSocket stream from kraken",
+    "test_type": "market_data",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "stream_established": true,
+      "data_received": true,
+      "symbol": "ETH/USD"
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_market_data_rest",
+    "description": "Market data REST API from kraken",
+    "test_type": "market_data",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "ticker_retrieved": true,
+      "symbol": "ETH/USD",
+      "price": 45000
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_trading_limits",
+    "description": "Trading limits query from kraken",
+    "test_type": "trading",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "limits_retrieved": true,
+      "limits_count": 1
+    },
+    "error": null
+  },
+  {
+    "name": "kraken_account_info",
+    "description": "Account information query from kraken",
+    "test_type": "account",
+    "exchange": "kraken",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "account_info_retrieved": false,
+      "auth_error": true,
+      "expected_error": true
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_connection_basic",
+    "description": "Basic connection establishment to kucoin",
+    "test_type": "connection",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": false
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_connection_auth",
+    "description": "Authenticated connection to kucoin",
+    "test_type": "connection",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "connection_established": true,
+      "auth_required": true
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_market_data_stream",
+    "description": "Market data WebSocket stream from kucoin",
+    "test_type": "market_data",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "stream_established": true,
+      "data_received": true,
+      "symbol": "ETH-USDT"
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_market_data_rest",
+    "description": "Market data REST API from kucoin",
+    "test_type": "market_data",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "latency_ms": 0.0,
+      "ticker_retrieved": true,
+      "symbol": "ETH-USDT",
+      "price": 45000
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_trading_limits",
+    "description": "Trading limits query from kucoin",
+    "test_type": "trading",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "limits_retrieved": true,
+      "limits_count": 1
+    },
+    "error": null
+  },
+  {
+    "name": "kucoin_account_info",
+    "description": "Account information query from kucoin",
+    "test_type": "account",
+    "exchange": "kucoin",
+    "duration": 0.0,
+    "success": true,
+    "result": {
+      "account_info_retrieved": false,
+      "auth_error": true,
+      "expected_error": true
+    },
+    "error": null
+  }
+]

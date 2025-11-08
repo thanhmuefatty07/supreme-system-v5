@@ -1,0 +1,66 @@
+{
+  "option_b_metadata": {
+    "execution_time": "2025-11-06T11:13:00.211707",
+    "duration_hours": 6.0,
+    "memory_budget_mb": 100.0,
+    "optimization_type": "trading_performance_first"
+  },
+  "memory_performance": {
+    "initial_memory_mb": 100.0,
+    "final_memory_mb": 100.45703125,
+    "memory_increase_mb": 0.45703125,
+    "budget_compliance": false,
+    "memory_efficiency": "over_budget"
+  },
+  "trading_performance": {
+    "total_trades": 12,
+    "winning_trades": 6,
+    "win_rate": 0.5,
+    "profit_factor": 49.05070144135956,
+    "avg_trade_pnl": 22.103950197898484,
+    "total_pnl": 265.2474023747818,
+    "sharpe_ratio": 6.0760852858765,
+    "max_drawdown": 0.0002868937322259862,
+    "final_balance": 10265.247402374782
+  },
+  "recovery_analysis": {
+    "win_rate_recovery": 0.725689404934688,
+    "sharpe_recovery": 2.45995355703502,
+    "profit_factor_recovery": 25.025868082326305,
+    "avg_pnl_recovery": 2.2717317777901833
+  },
+  "targets_assessment": {
+    "targets_met": {
+      "win_rate_target": false,
+      "sharpe_target": "True",
+      "profit_factor_target": "True",
+      "drawdown_target": "True"
+    },
+    "targets_met_count": "3",
+    "overall_success": "True",
+    "success_rate": 0.75
+  },
+  "historical_comparison": {
+    "historical_win_rate": 0.689,
+    "achieved_win_rate": 0.5,
+    "win_rate_gap": -0.18899999999999995,
+    "historical_sharpe": 2.47,
+    "achieved_sharpe": 6.0760852858765,
+    "sharpe_gap": 3.6060852858765
+  },
+  "optimization_results": {
+    "signals_generated": 231,
+    "optimization_success": "True",
+    "performance_vs_historical": {
+      "win_rate_ratio": 0.725689404934688,
+      "sharpe_ratio": 2.45995355703502
+    }
+  },
+  "overall_assessment": {
+    "trading_performance_success": "True",
+    "memory_budget_success": false,
+    "statistical_significance_success": false,
+    "overall_success": true,
+    "ready_for_phase_3": true
+  }
+}

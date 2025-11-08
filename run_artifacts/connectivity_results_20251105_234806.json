@@ -1,0 +1,64 @@
+{
+  "total_tests": 6,
+  "successful_tests": 6,
+  "failed_tests": 0,
+  "exchange_results": {
+    "binance": {
+      "tests_run": 6,
+      "tests_passed": 6,
+      "tests_failed": 0,
+      "success_rate": 1.0,
+      "avg_latency_ms": 0.0
+    }
+  },
+  "test_type_results": {
+    "connection": {
+      "tests_run": 2,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "success_rate": 1.0
+    },
+    "market_data": {
+      "tests_run": 2,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "success_rate": 1.0
+    },
+    "trading": {
+      "tests_run": 1,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "success_rate": 1.0
+    },
+    "account": {
+      "tests_run": 1,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "success_rate": 1.0
+    }
+  },
+  "metrics": {
+    "total_operations": 6,
+    "success_rate": 1.0,
+    "failure_rate": 0.0,
+    "connection_attempts": 0,
+    "reconnection_count": 0,
+    "rate_limit_hits": 0,
+    "error_distribution": {},
+    "latency_mean_ms": 0.0,
+    "latency_median_ms": 0.0,
+    "latency_p95_ms": 0.0,
+    "latency_p99_ms": 0.0,
+    "latency_min_ms": 0.0,
+    "latency_max_ms": 0.0
+  },
+  "validation_results": {
+    "overall_success_rate": 1.0,
+    "meets_minimum_success_rate": true,
+    "all_exchanges_connected": true,
+    "market_data_functional": true,
+    "connectivity_validation_passed": true
+  },
+  "failed_tests_detail": [],
+  "recommendations": []
+}

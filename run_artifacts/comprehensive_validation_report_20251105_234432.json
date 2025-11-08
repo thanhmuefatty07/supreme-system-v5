@@ -1,0 +1,73 @@
+{
+  "validation_metadata": {
+    "timestamp": "2025-11-05T23:44:32.173678",
+    "total_duration_hours": 0.004237658888888889,
+    "validator_version": "unified_testing_orchestrator_v1.0",
+    "validation_type": "comprehensive_production_validation"
+  },
+  "test_summary": {
+    "total_tests": 5,
+    "passed_tests": 0,
+    "failed_tests": 5,
+    "success_rate": 0.0,
+    "overall_status": "FAILED"
+  },
+  "performance_validation": {
+    "baselines_met": false,
+    "latency_validated": false,
+    "memory_validated": false
+  },
+  "statistical_validation": {
+    "confidence_level": 0.95,
+    "p_value": 1.0,
+    "statistically_significant": false
+  },
+  "test_results": [
+    {
+      "name": "performance_profiler.py",
+      "status": "FAILED",
+      "duration_minutes": 0.005981949965159098,
+      "key_metrics": {},
+      "error": "Traceback (most recent call last):\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\performance_profiler.py\", line 399, in <module>\r\n    main()\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\performance_profiler.py\", line 363, in main\r\n    print(\"\\U0001f680 Supreme System V5 - Ultra-Constrained Performance Profiler\")\r\n  File \"C:\\Users\\ADMIN\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\encodings\\cp1252.py\", line 19, in encode\r\n    return codecs.charmap_encode(input,self.errors,encoding_table)[0]\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nUnicodeEncodeError: 'charmap' codec can't encode character '\\U0001f680' in position 0: character maps to <undefined>\r\n"
+    },
+    {
+      "name": "realtime_backtest_validator.py",
+      "status": "FAILED",
+      "duration_minutes": 0.0570525050163269,
+      "key_metrics": {},
+      "error": "2025-11-05 23:44:18.065 | WARNING  | supreme_system_v5.core:<module>:28 - \\u26a0\\ufe0f Rust engine not available, using Python fallback\r\nusage: realtime_backtest_validator.py [-h] [--duration DURATION]\r\n                                      [--symbol SYMBOL]\r\n                                      [--output-dir OUTPUT_DIR]\r\nrealtime_backtest_validator.py: error: unrecognized arguments: --statistical-validation\r\n"
+    },
+    {
+      "name": "statistical_validation.py",
+      "status": "FAILED",
+      "duration_minutes": 0.00962847073872884,
+      "key_metrics": {},
+      "error": "usage: statistical_validation.py [-h] --input INPUT [--baseline BASELINE]\r\n                                 [--confidence CONFIDENCE]\r\n                                 [--output-dir OUTPUT_DIR]\r\nstatistical_validation.py: error: the following arguments are required: --input\r\n"
+    },
+    {
+      "name": "exchange_connectivity_tests.py",
+      "status": "FAILED",
+      "duration_minutes": 0.13056533734003703,
+      "key_metrics": {},
+      "error": "2025-11-05 23:44:22.228 | WARNING  | supreme_system_v5.core:<module>:28 - \\u26a0\\ufe0f Rust engine not available, using Python fallback\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\exchange_connectivity_tests.py\", line 726, in <module>\r\n    asyncio.run(main())\r\n  File \"C:\\Users\\ADMIN\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\runners.py\", line 190, in run\r\n    return runner.run(main)\r\n           ^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\ADMIN\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\runners.py\", line 118, in run\r\n    return self._loop.run_until_complete(task)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\ADMIN\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\base_events.py\", line 654, in run_until_complete\r\n    return future.result()\r\n           ^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\exchange_connectivity_tests.py\", line 682, in main\r\n    results = await validator.run_connectivity_validation()\r\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\exchange_connectivity_tests.py\", line 295, in run_connectivity_validation\r\n    print(\"\\U0001f680 SUPREME SYSTEM V5 - EXCHANGE CONNECTIVITY SMOKE TESTS\")\r\n  File \"C:\\Users\\ADMIN\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\encodings\\cp1252.py\", line 19, in encode\r\n    return codecs.charmap_encode(input,self.errors,encoding_table)[0]\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nUnicodeEncodeError: 'charmap' codec can't encode character '\\U0001f680' in position 0: character maps to <undefined>\r\n"
+    },
+    {
+      "name": "degradation_validator.py",
+      "status": "FAILED",
+      "duration_minutes": 0.05099780162175496,
+      "key_metrics": {},
+      "error": "2025-11-05 23:44:29.810 | WARNING  | supreme_system_v5.core:<module>:28 - \\u26a0\\ufe0f Rust engine not available, using Python fallback\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\ADMIN\\supreme-system-v5\\scripts\\degradation_validator.py\", line 41, in <module>\r\n    from scripts.realtime_backtest_validator import RealTimePerformanceMonitor\r\nModuleNotFoundError: No module named 'scripts'\r\n"
+    }
+  ],
+  "configuration": {
+    "realtime_backtest_duration_minutes": 90,
+    "stress_test_duration_hours": 0.0,
+    "performance_baselines": {
+      "latency_ms": 0.02,
+      "memory_mb": 15.0,
+      "cpu_percent": 85.0,
+      "win_rate": 0.689,
+      "sharpe_ratio": 2.47
+    }
+  }
+}

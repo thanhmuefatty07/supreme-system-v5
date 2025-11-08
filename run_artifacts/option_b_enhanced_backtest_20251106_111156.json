@@ -1,0 +1,5 @@
+{
+  "error": "backtest_execution_failed",
+  "message": "name 'signals' is not defined",
+  "memory_usage_mb": 100.53515625
+}
