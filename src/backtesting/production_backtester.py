@@ -1,0 +1,728 @@
+#!/usr/bin/env python3
+"""
+Supreme System V5 - Production Backtesting Engine
+
+Enterprise-grade backtesting with walk-forward analysis, monte carlo simulation,
+and comprehensive performance metrics for production deployment readiness.
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Dict, List, Optional, Any, Tuple, Union
+from datetime import datetime, timedelta
+from pathlib import Path
+import logging
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import json
+import warnings
+
+from ..strategies.base_strategy import BaseStrategy
+from ..risk.advanced_risk_manager import AdvancedRiskManager
+
+
+class BacktestPosition:
+    """Represents a backtest position."""
+
+    def __init__(self, symbol: str, entry_time: datetime, entry_price: float,
+                 quantity: float, side: str):
+        self.symbol = symbol
+        self.entry_time = entry_time
+        self.entry_price = entry_price
+        self.quantity = quantity
+        self.side = side  # 'LONG' or 'SHORT'
+
+        self.exit_time: Optional[datetime] = None
+        self.exit_price: Optional[float] = None
+        self.stop_loss: Optional[float] = None
+        self.take_profit: Optional[float] = None
+        self.unrealized_pnl = 0.0
+        self.realized_pnl = 0.0
+        self.fees = 0.0
+        self.status = 'OPEN'  # 'OPEN', 'CLOSED', 'STOPPED'
+
+    def update_price(self, current_price: float) -> None:
+        """Update position with new price."""
+        if self.status != 'OPEN':
+            return
+
+        if self.side == 'LONG':
+            self.unrealized_pnl = (current_price - self.entry_price) * self.quantity
+        else:  # SHORT
+            self.unrealized_pnl = (self.entry_price - current_price) * self.quantity
+
+    def close_position(self, exit_time: datetime, exit_price: float,
+                      reason: str = 'MANUAL') -> None:
+        """Close position."""
+        self.exit_time = exit_time
+        self.exit_price = exit_price
+        self.status = 'CLOSED'
+
+        # Calculate realized P&L
+        if self.side == 'LONG':
+            self.realized_pnl = (exit_price - self.entry_price) * self.quantity
+        else:
+            self.realized_pnl = (self.entry_price - exit_price) * self.quantity
+
+        # Calculate fees (0.1% per trade)
+        self.fees = abs(self.realized_pnl) * 0.001
+
+        # Adjust P&L for fees
+        self.realized_pnl -= self.fees
+
+    def check_stop_conditions(self, current_price: float) -> Optional[str]:
+        """Check if stop loss or take profit triggered."""
+        if not self.stop_loss and not self.take_profit:
+            return None
+
+        if self.side == 'LONG':
+            if self.stop_loss and current_price <= self.stop_loss:
+                return 'STOP_LOSS'
+            if self.take_profit and current_price >= self.take_profit:
+                return 'TAKE_PROFIT'
+        else:  # SHORT
+            if self.stop_loss and current_price >= self.stop_loss:
+                return 'STOP_LOSS'
+            if self.take_profit and current_price <= self.take_profit:
+                return 'TAKE_PROFIT'
+
+        return None
+
+
+class BacktestResult:
+    """Comprehensive backtest result container."""
+
+    def __init__(self, strategy_name: str, symbol: str):
+        self.strategy_name = strategy_name
+        self.symbol = symbol
+        self.start_date: Optional[datetime] = None
+        self.end_date: Optional[datetime] = None
+
+        # Performance metrics
+        self.total_trades = 0
+        self.winning_trades = 0
+        self.losing_trades = 0
+        self.win_rate = 0.0
+        self.avg_win = 0.0
+        self.avg_loss = 0.0
+        self.largest_win = 0.0
+        self.largest_loss = 0.0
+        self.total_pnl = 0.0
+        self.total_fees = 0.0
+        self.net_pnl = 0.0
+
+        # Risk metrics
+        self.max_drawdown = 0.0
+        self.max_drawdown_pct = 0.0
+        self.sharpe_ratio = 0.0
+        self.sortino_ratio = 0.0
+        self.calmar_ratio = 0.0
+        self.volatility = 0.0
+
+        # Returns
+        self.daily_returns: List[float] = []
+        self.cumulative_returns: List[float] = []
+        self.annualized_return = 0.0
+
+        # Detailed data
+        self.trades: List[Dict[str, Any]] = []
+        self.equity_curve: List[float] = []
+        self.drawdowns: List[float] = []
+
+        # Strategy parameters
+        self.parameters: Dict[str, Any] = {}
+
+    def calculate_metrics(self) -> None:
+        """Calculate comprehensive performance metrics."""
+        if not self.trades:
+            return
+
+        # Basic trade metrics
+        self.total_trades = len(self.trades)
+        self.winning_trades = len([t for t in self.trades if t['pnl'] > 0])
+        self.losing_trades = self.total_trades - self.winning_trades
+        self.win_rate = self.winning_trades / self.total_trades if self.total_trades > 0 else 0
+
+        # P&L metrics
+        pnl_values = [t['pnl'] for t in self.trades]
+        winning_pnl = [p for p in pnl_values if p > 0]
+        losing_pnl = [p for p in pnl_values if p < 0]
+
+        if winning_pnl:
+            self.avg_win = np.mean(winning_pnl)
+            self.largest_win = max(winning_pnl)
+
+        if losing_pnl:
+            self.avg_loss = np.mean(losing_pnl)
+            self.largest_loss = min(losing_pnl)
+
+        self.total_pnl = sum(pnl_values)
+        self.total_fees = sum(t.get('fees', 0) for t in self.trades)
+        self.net_pnl = self.total_pnl - self.total_fees
+
+        # Risk metrics
+        if self.equity_curve:
+            self._calculate_risk_metrics()
+
+    def _calculate_risk_metrics(self) -> None:
+        """Calculate risk and return metrics."""
+        equity = np.array(self.equity_curve)
+
+        # Returns
+        returns = np.diff(equity) / equity[:-1]
+        self.daily_returns = returns.tolist()
+
+        # Cumulative returns
+        self.cumulative_returns = (np.cumprod(1 + returns) - 1).tolist()
+
+        # Annualized return (assuming daily data)
+        if len(returns) > 0:
+            total_return = self.cumulative_returns[-1] if self.cumulative_returns else 0
+            days = len(self.equity_curve)
+            if days > 1:
+                self.annualized_return = (1 + total_return) ** (252 / days) - 1
+
+        # Volatility
+        if len(returns) > 1:
+            self.volatility = np.std(returns) * np.sqrt(252)  # Annualized
+
+        # Sharpe ratio
+        if self.volatility > 0 and len(returns) > 1:
+            risk_free_rate = 0.02  # 2% annual
+            excess_returns = returns - risk_free_rate/252
+            self.sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252)
+
+        # Sortino ratio (downside deviation)
+        if len(returns) > 1:
+            downside_returns = returns[returns < 0]
+            if len(downside_returns) > 0:
+                downside_deviation = np.std(downside_returns) * np.sqrt(252)
+                if downside_deviation > 0:
+                    self.sortino_ratio = np.mean(excess_returns) / downside_deviation
+
+        # Maximum drawdown
+        if len(equity) > 1:
+            peak = np.maximum.accumulate(equity)
+            drawdowns = (equity - peak) / peak
+            self.max_drawdown_pct = np.min(drawdowns)
+            self.max_drawdown = np.min(equity - peak)
+
+            self.drawdowns = drawdowns.tolist()
+
+        # Calmar ratio
+        if self.max_drawdown_pct < 0 and self.annualized_return > 0:
+            self.calmar_ratio = self.annualized_return / abs(self.max_drawdown_pct)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return {
+            'strategy_name': self.strategy_name,
+            'symbol': self.symbol,
+            'period': {
+                'start': self.start_date.isoformat() if self.start_date else None,
+                'end': self.end_date.isoformat() if self.end_date else None
+            },
+            'performance': {
+                'total_trades': self.total_trades,
+                'win_rate': self.win_rate,
+                'avg_win': self.avg_win,
+                'avg_loss': self.avg_loss,
+                'largest_win': self.largest_win,
+                'largest_loss': self.largest_loss,
+                'total_pnl': self.total_pnl,
+                'net_pnl': self.net_pnl,
+                'total_fees': self.total_fees
+            },
+            'risk': {
+                'max_drawdown': self.max_drawdown,
+                'max_drawdown_pct': self.max_drawdown_pct,
+                'volatility': self.volatility,
+                'sharpe_ratio': self.sharpe_ratio,
+                'sortino_ratio': self.sortino_ratio,
+                'calmar_ratio': self.calmar_ratio
+            },
+            'returns': {
+                'annualized_return': self.annualized_return,
+                'daily_returns': self.daily_returns[:100],  # First 100 for brevity
+                'cumulative_returns': self.cumulative_returns[-1] if self.cumulative_returns else 0
+            },
+            'trades': self.trades[-50:],  # Last 50 trades
+            'parameters': self.parameters
+        }
+
+
+class ProductionBacktester:
+    """
+    Production-grade backtesting engine with advanced features.
+
+    Features:
+    - Walk-forward analysis
+    - Monte Carlo simulation
+    - Multi-strategy comparison
+    - Risk-adjusted performance metrics
+    - Parallel processing
+    - Production readiness validation
+    """
+
+    def __init__(self, initial_capital: float = 10000):
+        self.initial_capital = initial_capital
+        self.logger = logging.getLogger(__name__)
+
+        # Risk management
+        self.risk_manager = AdvancedRiskManager(initial_capital)
+
+        # Backtest settings
+        self.transaction_fee = 0.001  # 0.1%
+        self.slippage = 0.0005  # 0.05%
+
+        # Walk-forward analysis settings
+        self.walk_forward_window = 252  # 1 year training
+        self.walk_forward_step = 21     # 1 month step
+
+    def run_backtest(
+        self,
+        strategy: BaseStrategy,
+        data: pd.DataFrame,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        use_walk_forward: bool = False
+    ) -> BacktestResult:
+        """
+        Run comprehensive backtest.
+
+        Args:
+            strategy: Trading strategy to test
+            data: OHLCV data
+            symbol: Trading symbol
+            start_date: Backtest start date
+            end_date: Backtest end date
+            use_walk_forward: Whether to use walk-forward analysis
+
+        Returns:
+            Comprehensive backtest results
+        """
+        result = BacktestResult(strategy.name, symbol)
+
+        # Filter data by date range
+        filtered_data = self._filter_data_by_date(data, start_date, end_date)
+
+        if filtered_data.empty:
+            self.logger.warning(f"No data available for {symbol}")
+            return result
+
+        result.start_date = filtered_data.index[0].to_pydatetime()
+        result.end_date = filtered_data.index[-1].to_pydatetime()
+        result.parameters = strategy.get_parameters()
+
+        if use_walk_forward:
+            return self._run_walk_forward_backtest(strategy, filtered_data, result)
+        else:
+            return self._run_single_backtest(strategy, filtered_data, result)
+
+    def _run_single_backtest(
+        self,
+        strategy: BaseStrategy,
+        data: pd.DataFrame,
+        result: BacktestResult
+    ) -> BacktestResult:
+        """Run single-period backtest."""
+        capital = self.initial_capital
+        positions: Dict[str, BacktestPosition] = {}
+        equity_curve = [capital]
+
+        for i, (timestamp, row) in enumerate(data.iterrows()):
+            current_price = row['close']
+
+            # Update existing positions
+            closed_positions = []
+            for pos_symbol, position in positions.items():
+                position.update_price(current_price)
+
+                # Check stop conditions
+                stop_reason = position.check_stop_conditions(current_price)
+                if stop_reason:
+                    position.close_position(timestamp.to_pydatetime(), current_price, stop_reason)
+                    capital += position.realized_pnl
+                    result.trades.append({
+                        'entry_time': position.entry_time,
+                        'exit_time': position.exit_time,
+                        'symbol': position.symbol,
+                        'side': position.side,
+                        'entry_price': position.entry_price,
+                        'exit_price': position.exit_price,
+                        'quantity': position.quantity,
+                        'pnl': position.realized_pnl,
+                        'fees': position.fees,
+                        'reason': stop_reason
+                    })
+                    closed_positions.append(pos_symbol)
+
+            # Remove closed positions
+            for symbol in closed_positions:
+                del positions[symbol]
+
+            # Generate new signal
+            signal_data = data.iloc[:i+1]  # Data up to current point
+            signal = strategy.generate_signal(signal_data)
+
+            # Execute signal
+            if signal != 0:
+                # Risk assessment
+                risk_assessment = self.risk_manager.assess_trade_risk(
+                    symbol=result.symbol,
+                    signal=signal,
+                    price=current_price,
+                    confidence=1.0,
+                    market_data=signal_data
+                )
+
+                if risk_assessment['approved']:
+                    position_size = risk_assessment['recommended_size']
+
+                    if position_size > 0:
+                        # Apply slippage
+                        execution_price = current_price * (1 + self.slippage if signal == 1 else 1 - self.slippage)
+
+                        # Create position
+                        side = 'LONG' if signal == 1 else 'SHORT'
+                        position = BacktestPosition(
+                            symbol=result.symbol,
+                            entry_time=timestamp.to_pydatetime(),
+                            entry_price=execution_price,
+                            quantity=position_size,
+                            side=side
+                        )
+
+                        # Set stop loss and take profit
+                        sl_pct = self.risk_manager.risk_manager.stop_loss_pct
+                        tp_pct = self.risk_manager.risk_manager.take_profit_pct
+
+                        if side == 'LONG':
+                            position.stop_loss = execution_price * (1 - sl_pct)
+                            position.take_profit = execution_price * (1 + tp_pct)
+                        else:
+                            position.stop_loss = execution_price * (1 + sl_pct)
+                            position.take_profit = execution_price * (1 - tp_pct)
+
+                        positions[result.symbol] = position
+                        capital -= position_size * execution_price  # Deduct capital
+
+            # Update equity curve
+            positions_value = sum(pos.unrealized_pnl for pos in positions.values())
+            total_equity = capital + positions_value
+            equity_curve.append(total_equity)
+
+            # Update portfolio
+            self.risk_manager.update_portfolio(
+                {sym: {'quantity': pos.quantity, 'current_price': current_price}
+                 for sym, pos in positions.items()},
+                capital
+            )
+
+        # Close remaining positions at end
+        final_price = data.iloc[-1]['close']
+        for position in positions.values():
+            position.close_position(result.end_date, final_price, 'END_OF_PERIOD')
+            capital += position.realized_pnl
+            result.trades.append({
+                'entry_time': position.entry_time,
+                'exit_time': position.exit_time,
+                'symbol': position.symbol,
+                'side': position.side,
+                'entry_price': position.entry_price,
+                'exit_price': position.exit_price,
+                'quantity': position.quantity,
+                'pnl': position.realized_pnl,
+                'fees': position.fees,
+                'reason': 'END_OF_PERIOD'
+            })
+
+        result.equity_curve = equity_curve
+        result.calculate_metrics()
+
+        return result
+
+    def _run_walk_forward_backtest(
+        self,
+        strategy: BaseStrategy,
+        data: pd.DataFrame,
+        result: BacktestResult
+    ) -> BacktestResult:
+        """Run walk-forward backtest with rolling window."""
+        results = []
+
+        # Split data into walk-forward windows
+        total_periods = len(data)
+        step = self.walk_forward_step
+
+        for start_idx in range(0, total_periods - self.walk_forward_window, step):
+            end_idx = start_idx + self.walk_forward_window
+            test_end_idx = min(end_idx + step, total_periods)
+
+            if test_end_idx > total_periods:
+                break
+
+            # Training data
+            train_data = data.iloc[start_idx:end_idx]
+
+            # Test data
+            test_data = data.iloc[end_idx:test_end_idx]
+
+            # Optimize strategy on training data
+            # (In production, would tune parameters here)
+
+            # Run backtest on test data
+            test_result = self._run_single_backtest(strategy, test_data, BacktestResult(strategy.name, result.symbol))
+            results.append(test_result)
+
+        # Combine results
+        combined_result = self._combine_walk_forward_results(results, result)
+        return combined_result
+
+    def run_monte_carlo_simulation(
+        self,
+        strategy: BaseStrategy,
+        data: pd.DataFrame,
+        symbol: str,
+        simulations: int = 1000,
+        confidence_level: float = 0.95
+    ) -> Dict[str, Any]:
+        """
+        Run Monte Carlo simulation for robustness testing.
+
+        Args:
+            strategy: Trading strategy
+            data: Historical data
+            symbol: Trading symbol
+            simulations: Number of simulations
+            confidence_level: Statistical confidence level
+
+        Returns:
+            Monte Carlo analysis results
+        """
+        results = []
+
+        # Run multiple backtests with bootstrapped data
+        for i in range(simulations):
+            # Bootstrap sample from original data
+            bootstrap_data = self._bootstrap_data(data)
+
+            # Run backtest
+            result = self.run_backtest(strategy, bootstrap_data, symbol)
+            results.append(result.net_pnl)
+
+        # Statistical analysis
+        results_array = np.array(results)
+
+        monte_carlo_results = {
+            'mean_pnl': float(np.mean(results_array)),
+            'median_pnl': float(np.median(results_array)),
+            'std_pnl': float(np.std(results_array)),
+            'min_pnl': float(np.min(results_array)),
+            'max_pnl': float(np.max(results_array)),
+            'confidence_interval': {
+                'lower': float(np.percentile(results_array, (1 - confidence_level) * 100 / 2)),
+                'upper': float(np.percentile(results_array, 100 - (1 - confidence_level) * 100 / 2))
+            },
+            'probability_profit': float(np.mean(results_array > 0)),
+            'expected_shortfall': float(np.mean(results_array[results_array < np.percentile(results_array, 5)])),
+            'simulations_run': simulations
+        }
+
+        return monte_carlo_results
+
+    def compare_strategies(
+        self,
+        strategies: List[BaseStrategy],
+        data: pd.DataFrame,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> Dict[str, BacktestResult]:
+        """
+        Compare multiple strategies on the same data.
+
+        Args:
+            strategies: List of strategies to compare
+            data: Market data
+            symbol: Trading symbol
+            start_date: Start date
+            end_date: End date
+
+        Returns:
+            Dictionary of results by strategy
+        """
+        results = {}
+
+        for strategy in strategies:
+            self.logger.info(f"Running backtest for {strategy.name}")
+            result = self.run_backtest(strategy, data, symbol, start_date, end_date)
+            results[strategy.name] = result
+
+        return results
+
+    def parallel_backtest(
+        self,
+        strategy_data_pairs: List[Tuple[BaseStrategy, pd.DataFrame, str]],
+        max_workers: Optional[int] = None
+    ) -> Dict[str, BacktestResult]:
+        """
+        Run multiple backtests in parallel.
+
+        Args:
+            strategy_data_pairs: List of (strategy, data, symbol) tuples
+            max_workers: Maximum number of parallel workers
+
+        Returns:
+            Dictionary of results
+        """
+        if max_workers is None:
+            max_workers = min(mp.cpu_count(), len(strategy_data_pairs))
+
+        results = {}
+
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all backtests
+            future_to_key = {}
+            for strategy, data, symbol in strategy_data_pairs:
+                key = f"{strategy.name}_{symbol}"
+                future = executor.submit(self.run_backtest, strategy, data, symbol)
+                future_to_key[future] = key
+
+            # Collect results
+            for future in as_completed(future_to_key):
+                key = future_to_key[future]
+                try:
+                    result = future.result()
+                    results[key] = result
+                except Exception as e:
+                    self.logger.error(f"Backtest failed for {key}: {e}")
+
+        return results
+
+    def validate_production_readiness(
+        self,
+        result: BacktestResult,
+        min_trades: int = 50,
+        min_win_rate: float = 0.55,
+        max_drawdown: float = 0.15,
+        min_sharpe: float = 1.0
+    ) -> Dict[str, Any]:
+        """
+        Validate if strategy is ready for production deployment.
+
+        Args:
+            result: Backtest result to validate
+            min_trades: Minimum number of trades
+            min_win_rate: Minimum win rate
+            max_drawdown: Maximum acceptable drawdown
+            min_sharpe: Minimum Sharpe ratio
+
+        Returns:
+            Validation results
+        """
+        validation = {
+            'ready_for_production': False,
+            'score': 0.0,
+            'checks': {},
+            'recommendations': []
+        }
+
+        # Check minimum trades
+        validation['checks']['sufficient_trades'] = result.total_trades >= min_trades
+        if not validation['checks']['sufficient_trades']:
+            validation['recommendations'].append(f"Need at least {min_trades} trades (current: {result.total_trades})")
+
+        # Check win rate
+        validation['checks']['acceptable_win_rate'] = result.win_rate >= min_win_rate
+        if not validation['checks']['acceptable_win_rate']:
+            validation['recommendations'].append(f"Win rate too low: {result.win_rate:.1%} < {min_win_rate:.1%}")
+
+        # Check drawdown
+        validation['checks']['acceptable_drawdown'] = abs(result.max_drawdown_pct) <= max_drawdown
+        if not validation['checks']['acceptable_drawdown']:
+            validation['recommendations'].append(f"Drawdown too high: {abs(result.max_drawdown_pct):.1%} > {max_drawdown:.1%}")
+
+        # Check Sharpe ratio
+        validation['checks']['acceptable_sharpe'] = result.sharpe_ratio >= min_sharpe
+        if not validation['checks']['acceptable_sharpe']:
+            validation['recommendations'].append(f"Sharpe ratio too low: {result.sharpe_ratio:.2f} < {min_sharpe:.2f}")
+
+        # Additional checks
+        validation['checks']['positive_return'] = result.net_pnl > 0
+        validation['checks']['reasonable_volatility'] = result.volatility < 0.50  # Less than 50% annualized
+
+        # Calculate readiness score
+        passed_checks = sum(validation['checks'].values())
+        total_checks = len(validation['checks'])
+        validation['score'] = passed_checks / total_checks
+
+        validation['ready_for_production'] = validation['score'] >= 0.8  # 80% pass rate
+
+        if validation['ready_for_production']:
+            validation['recommendations'].append("✅ Strategy ready for production deployment")
+        else:
+            validation['recommendations'].append("⚠️ Strategy needs improvement before production")
+
+        return validation
+
+    def _filter_data_by_date(
+        self,
+        data: pd.DataFrame,
+        start_date: Optional[str],
+        end_date: Optional[str]
+    ) -> pd.DataFrame:
+        """Filter data by date range."""
+        filtered = data.copy()
+
+        if start_date:
+            start = pd.Timestamp(start_date)
+            filtered = filtered[filtered.index >= start]
+
+        if end_date:
+            end = pd.Timestamp(end_date)
+            filtered = filtered[filtered.index <= end]
+
+        return filtered
+
+    def _combine_walk_forward_results(
+        self,
+        results: List[BacktestResult],
+        combined_result: BacktestResult
+    ) -> BacktestResult:
+        """Combine multiple walk-forward results."""
+        if not results:
+            return combined_result
+
+        # Combine trades
+        all_trades = []
+        for result in results:
+            all_trades.extend(result.trades)
+
+        combined_result.trades = sorted(all_trades, key=lambda x: x['entry_time'])
+        combined_result.total_trades = len(combined_result.trades)
+
+        # Recalculate metrics
+        combined_result.calculate_metrics()
+
+        return combined_result
+
+    def _bootstrap_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Create bootstrap sample from data."""
+        n = len(data)
+        indices = np.random.choice(n, n, replace=True)
+        return data.iloc[indices].sort_index()
+
+    def export_results(self, results: Union[BacktestResult, Dict[str, BacktestResult]],
+                      filename: str) -> None:
+        """Export backtest results to JSON."""
+        if isinstance(results, BacktestResult):
+            data = results.to_dict()
+        else:
+            data = {name: result.to_dict() for name, result in results.items()}
+
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2, default=str)
+
+        self.logger.info(f"Results exported to {filename}")

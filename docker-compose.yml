@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  supreme-system:
+    build: .
+    container_name: supreme-system-v5
+    ports:
+      - "8501:8501"  # Streamlit dashboard
+      - "8000:8000"  # API (if needed)
+    environment:
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+      - BINANCE_TESTNET=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from data.data_pipeline import DataPipeline; dp = DataPipeline(); print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL for data persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: supreme-postgres
+    environment:
+      POSTGRES_DB: supreme_db
+      POSTGRES_USER: supreme_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supreme_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: supreme-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # Monitoring stack (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: supreme-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: supreme-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: supreme-network
