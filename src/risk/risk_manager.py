@@ -10,7 +10,16 @@ import numpy as np
 from typing import Dict, List, Any, Optional
 import logging
 
-from ..strategies.base_strategy import BaseStrategy
+import sys
+from pathlib import Path
+
+# Fix relative imports
+current_file = Path(__file__)
+src_dir = current_file.parent.parent
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
+from strategies.base_strategy import BaseStrategy
 
 
 class RiskManager:
@@ -65,6 +74,7 @@ class RiskManager:
         Returns:
             Position size in base currency
         """
+        # Risk amount is max_position_size fraction of current capital
         risk_amount = self.current_capital * self.max_position_size
         position_size = risk_amount / entry_price
 

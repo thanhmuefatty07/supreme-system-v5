@@ -1,3 +1,45 @@
+Metadata-Version: 2.4
+Name: supreme-system-v5
+Version: 0.1.0
+Summary: Real algorithmic trading system for ETH-USDT scalping
+Home-page: https://github.com/thanhmuefatty07/supreme-system-v5
+Author: Supreme Trading Team
+Author-email: team@supreme-system.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: requests>=2.25.0
+Requires-Dist: python-binance>=1.0.15
+Requires-Dist: ta>=0.10.1
+Requires-Dist: scikit-learn>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.2.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.10.0; extra == "dev"
+Requires-Dist: black>=21.0.0; extra == "dev"
+Requires-Dist: flake8>=3.8.0; extra == "dev"
+Requires-Dist: mypy>=0.800; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
 # Supreme System V5 - Real Implementation
 
 **Ultra-Constrained ETH-USDT Scalping Bot**

@@ -1,0 +1,2 @@
+[console_scripts]
+supreme-system = supreme_system.cli:main
