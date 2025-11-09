@@ -1,0 +1,23 @@
+2025-11-06 17:27:43 - STARTING MASTER CRITICAL TESTS EXECUTION
+2025-11-06 17:27:44 - Configuration: Parallel=true, Quick=false, JSON=true
+2025-11-06 17:27:45 - 🚀 EXECUTING HIGH PRIORITY TESTS (3 tests)
+2025-11-06 17:27:46 - ==================================================
+2025-11-06 17:27:46 - Running tests in parallel mode...
+2025-11-06 17:27:46 - ▶️  STARTING TEST: live_market (Priority: HIGH)
+2025-11-06 17:27:46 - ▶️  STARTING TEST: network_failure (Priority: HIGH)
+2025-11-06 17:27:47 - ▶️  STARTING TEST: memory_stress (Priority: HIGH)
+2025-11-06 17:27:47 - Command: python tests/network_failure_simulation.py --duration 30
+2025-11-06 17:27:47 - Command: python tests/live_market_integration.py --duration 2
+2025-11-06 17:27:47 - Command: python scripts/stress_test_memory.py --duration 1 --memory-limit 2.2
+2025-11-06 17:27:47 - Timeout: 3600s
+2025-11-06 17:27:47 - Timeout: 14400s
+2025-11-06 17:27:47 - Timeout: 7200s
+2025-11-06 17:27:47 - Output: test_results/network_failure_20251106_172746.log
+2025-11-06 17:27:47 - Output: test_results/memory_stress_20251106_172746.log
+2025-11-06 17:27:47 - Output: test_results/live_market_20251106_172746.log
+2025-11-06 17:27:50 - ❌ memory_stress: FAILED (exit code: 127)
+2025-11-06 17:27:50 - ❌ live_market: FAILED (exit code: 127)
+2025-11-06 17:27:50 - Duration: 4s, Exit Code: 127
+2025-11-06 17:27:50 - Duration: 4s, Exit Code: 127
+2025-11-06 17:27:50 - ❌ network_failure: FAILED (exit code: 127)
+2025-11-06 17:27:50 - Duration: 4s, Exit Code: 127
