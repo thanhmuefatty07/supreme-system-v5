@@ -132,11 +132,11 @@ class MeanReversionStrategy(BaseStrategy):
             # Generate signal based on distance from mean
             if current_price <= latest_lower:
                 # Price touched or broke lower band - potential buy signal
-                self.logger.debug(".2f")
+                self.logger.debug(f"Bollinger Buy Signal: price {current_price:.2f} <= lower {latest_lower:.2f}")
                 return 1
             elif current_price >= latest_upper:
                 # Price touched or broke upper band - potential sell signal
-                self.logger.debug(".2f")
+                self.logger.debug(f"Bollinger Sell Signal: price {current_price:.2f} >= upper {latest_upper:.2f}")
                 return -1
             else:
                 # Price within bands - check for partial reversion
