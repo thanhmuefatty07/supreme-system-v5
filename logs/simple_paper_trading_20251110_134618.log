@@ -1,0 +1,295 @@
+2025-11-10 13:46:18,933 - INFO - ============================================================
+2025-11-10 13:46:18,934 - INFO - SUPREME SYSTEM V5 - SIMPLE PAPER TRADING
+2025-11-10 13:46:18,934 - INFO - ============================================================
+2025-11-10 13:46:18,934 - INFO - Duration: 1 hours
+2025-11-10 13:46:18,935 - INFO - Start Time: 2025-11-10 13:46:18.929418
+2025-11-10 13:46:18,935 - INFO - End Time: 2025-11-10 14:46:18.929418
+2025-11-10 13:46:18,935 - INFO - Initial Capital: $10,000.00
+2025-11-10 13:46:18,935 - INFO - Strategies: Moving Average, Mean Reversion, Momentum, Breakout
+2025-11-10 13:46:18,936 - INFO - ============================================================
+2025-11-10 13:46:18,936 - INFO - Starting trading loop...
+2025-11-10 13:46:59,061 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:01,072 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:01,077 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:01,094 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:47:03,096 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:03,096 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:03,118 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:47:05,134 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:09,176 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:13,208 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:21,292 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:23,309 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:25,339 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:27,389 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:29,424 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:29,424 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:29,440 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:35,523 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:37,556 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:37,562 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:39,583 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:45,668 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:47,721 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:53,802 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:53,820 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:53,824 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:53,828 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:55,835 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:57,869 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:57,869 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:57,898 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:57,901 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:59,906 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:59,933 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:47:59,942 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,950 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,954 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,959 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,962 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,968 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:01,986 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:48:03,992 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:03,996 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:04,006 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:04,009 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:04,023 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:04,024 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:48:06,035 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:06,035 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:08,052 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:08,067 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:08,073 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:08,082 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:10,102 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:10,102 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:10,121 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:12,136 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:12,147 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:14,167 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:14,167 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:20,251 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:24,331 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:26,345 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:26,357 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:30,416 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:32,445 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:32,445 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:34,452 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:34,487 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:38,538 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:38,542 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:40,555 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:40,561 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:40,565 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:40,571 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:40,576 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:42,586 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:42,598 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:42,620 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:44,627 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:44,634 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:46,652 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:50,717 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:50,717 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:54,794 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:56,821 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:56,835 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:48:58,859 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:00,882 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:00,882 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:00,882 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:49:02,907 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,912 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,922 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,922 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,930 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,934 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:02,951 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:49:04,970 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:04,972 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:04,978 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:49:13,074 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:15,093 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:15,110 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:17,128 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:17,143 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:17,161 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:21,193 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:23,210 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:23,221 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:27,292 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:29,325 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:33,362 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:33,367 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:33,380 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:33,381 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:35,408 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:35,424 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:37,437 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:41,490 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:41,490 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:43,540 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:43,540 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:43,558 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:43,561 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:43,561 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:45,589 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:45,589 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:47,655 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:47,668 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:49,689 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:49,714 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:49,717 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:51,728 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:51,730 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:51,742 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:51,746 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:51,748 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:53,759 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:53,761 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:53,761 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:53,778 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:53,786 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:55,805 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:55,805 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:55,822 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:57,841 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:57,841 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:57,865 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:57,874 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:59,904 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:49:59,904 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:01,940 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:01,944 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:01,946 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:50:03,954 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:03,976 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:50:05,989 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:06,015 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:06,023 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:16,202 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:18,230 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:18,230 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:20,314 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:20,331 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:20,347 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:22,372 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:22,413 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:22,458 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:24,520 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:24,537 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:30,639 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:30,643 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:32,650 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:32,666 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:32,683 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:34,708 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:34,747 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:34,752 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:38,786 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:38,799 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:38,819 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:40,828 - WARNING - Error generating signal for Mean Reversion on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:40,828 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:40,844 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:40,854 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:40,857 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:42,881 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:42,903 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:42,909 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:42,917 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:42,920 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:44,956 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:44,963 - WARNING - Error generating signal for Mean Reversion on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:44,965 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:49,014 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:49,027 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:49,036 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:51,048 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:51,075 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:51,079 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:53,108 - WARNING - Error generating signal for Mean Reversion on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:53,108 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:55,138 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:55,142 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:55,160 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:57,173 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:57,175 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:59,214 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:50:59,221 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:01,258 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:01,262 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:01,277 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:51:03,296 - INFO - STATUS: $10,000.00 | P&L: $+0.00 (+0.0%) | Positions: 0 | Trades: 0 | .1f
+2025-11-10 13:51:05,314 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:05,319 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:05,324 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:07,361 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:07,369 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:09,394 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:09,410 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:11,443 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:11,445 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:13,485 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:13,489 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:15,511 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:17,547 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:19,561 - WARNING - Error generating signal for Momentum on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:21,608 - WARNING - Error generating signal for Momentum on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:25,649 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:27,696 - WARNING - Error generating signal for Moving Average on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:27,724 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:29,727 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:29,756 - WARNING - Error generating signal for Momentum on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:31,801 - WARNING - Error generating signal for Moving Average on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:31,828 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:31,860 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:33,919 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:35,947 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:37,970 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:37,973 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:37,975 - WARNING - Error generating signal for Moving Average on DOTUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:37,985 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:40,009 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:42,055 - WARNING - Error generating signal for Mean Reversion on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:42,064 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:44,085 - WARNING - Error generating signal for Momentum on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:44,096 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:46,122 - WARNING - Error generating signal for Mean Reversion on BTCUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:46,157 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:50,224 - WARNING - Error generating signal for Moving Average on ETHUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:56,380 - WARNING - Error generating signal for Momentum on ADAUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:56,420 - WARNING - Error generating signal for Moving Average on LINKUSDT: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2025-11-10 13:51:57,904 - INFO - Received signal 2, initiating graceful shutdown...
+2025-11-10 13:51:57,914 - INFO - Stopping paper trading...
+2025-11-10 13:51:57,914 - INFO - ============================================================
+2025-11-10 13:51:57,915 - INFO - FINAL PAPER TRADING REPORT
+2025-11-10 13:51:57,915 - INFO - ============================================================
+2025-11-10 13:51:57,917 - INFO - Duration: 0:05:38.985735
+2025-11-10 13:51:57,918 - INFO - Start: 2025-11-10 13:46:18.929418
+2025-11-10 13:51:57,918 - INFO - End: 2025-11-10 13:51:57.915153
+2025-11-10 13:51:57,919 - INFO - 
+2025-11-10 13:51:57,919 - INFO - PERFORMANCE:
+2025-11-10 13:51:57,919 - INFO - Initial Capital: $10,000.00
+2025-11-10 13:51:57,920 - INFO - Final Value: $10,000.00
+2025-11-10 13:51:57,929 - INFO - Total P&L: $+0.00
+2025-11-10 13:51:57,932 - INFO - Total Return: +0.0%
+2025-11-10 13:51:57,935 - INFO - 
+2025-11-10 13:51:57,935 - INFO - TRADING STATISTICS:
+2025-11-10 13:51:57,944 - INFO - Total Trades: 0
+2025-11-10 13:51:57,948 - INFO - Winning Trades: 0
+2025-11-10 13:51:57,948 - INFO - Win Rate: 0.0%
+2025-11-10 13:51:57,949 - INFO - 
+2025-11-10 13:51:57,949 - INFO - RISK METRICS:
+2025-11-10 13:51:57,950 - INFO - Volatility: 0.0%
+2025-11-10 13:51:57,950 - INFO - Sharpe Ratio: 0.00
+2025-11-10 13:51:57,951 - INFO - Max Drawdown: 0.0%
+2025-11-10 13:51:57,951 - INFO - 
+2025-11-10 13:51:57,952 - INFO - STRATEGY PERFORMANCE:
+2025-11-10 13:51:57,970 - INFO - 
+2025-11-10 13:51:57,970 - INFO - Report saved: reports\simple_paper_trading_report_20251110_135157.json
+2025-11-10 13:51:57,976 - INFO - ============================================================
+2025-11-10 13:51:57,977 - INFO - NEUTRAL: Paper trading completed - review strategy parameters
+2025-11-10 13:51:57,978 - INFO - Paper trading stopped successfully
+2025-11-10 13:51:58,436 - INFO - Trading duration completed

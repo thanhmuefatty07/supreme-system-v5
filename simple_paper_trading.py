@@ -134,10 +134,10 @@ class SimplePaperTrading:
 
         # Strategies
         self.strategies = {
-            'Moving Average': MovingAverageStrategy(),
-            'Mean Reversion': MeanReversionStrategy(),
-            'Momentum': MomentumStrategy(),
-            'Breakout': BreakoutStrategy()
+            'Moving Average': MovingAverageStrategy(short_window=5, long_window=20),
+            'Mean Reversion': MeanReversionStrategy(lookback_period=20, entry_threshold=2.0),
+            'Momentum': MomentumStrategy(short_period=12, long_period=26, signal_period=9),
+            'Breakout': BreakoutStrategy(lookback_period=20, breakout_threshold=0.02)
         }
 
         # Setup logging

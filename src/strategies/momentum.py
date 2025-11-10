@@ -140,17 +140,23 @@ class MomentumStrategy(BaseStrategy):
             # MACD crossover signals
             if prev_macd <= prev_signal and latest_macd > latest_signal:
                 # Bullish crossover
-                self.logger.debug(".4f")
+                self.logger.debug(f"MACD Bullish Crossover: MACD {latest_macd:.4f} crossed above signal {latest_signal:.4f}")
                 return 1
             elif prev_macd >= prev_signal and latest_macd < latest_signal:
                 # Bearish crossover
-                self.logger.debug(".4f")
+                self.logger.debug(f"MACD Bearish Crossover: MACD {latest_macd:.4f} crossed below signal {latest_signal:.4f}")
                 return -1
             else:
-                # Check histogram momentum
-                if latest_histogram > 0 and abs(latest_histogram) > abs(histogram.iloc[-2] if len(histogram) > 1 else 0):
+                # Check histogram momentum - FIXED: Avoid DataFrame boolean comparison
+                if len(histogram) > 1:
+                    prev_histogram = histogram.iloc[-2]
+                    hist_momentum_increasing = abs(latest_histogram) > abs(prev_histogram)
+                else:
+                    hist_momentum_increasing = False
+
+                if latest_histogram > 0 and hist_momentum_increasing:
                     return 1  # Increasing bullish momentum
-                elif latest_histogram < 0 and abs(latest_histogram) > abs(histogram.iloc[-2] if len(histogram) > 1 else 0):
+                elif latest_histogram < 0 and hist_momentum_increasing:
                     return -1  # Increasing bearish momentum
                 else:
                     return 0

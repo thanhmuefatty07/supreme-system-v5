@@ -1,0 +1,726 @@
+{
+  "metadata": {
+    "start_time": "2025-11-10T13:54:26.266150",
+    "end_time": "2025-11-10T14:00:16.702260",
+    "duration_hours": 0.09734336388888888,
+    "symbols_traded": []
+  },
+  "performance": {
+    "initial_capital": 10000,
+    "final_value": 10000.0,
+    "total_pnl": 0.0,
+    "total_return": 0.0,
+    "volatility": 0.0,
+    "sharpe_ratio": 0,
+    "max_drawdown": 0.0
+  },
+  "trading_stats": {
+    "total_trades": 0,
+    "winning_trades": 0,
+    "win_rate": 0,
+    "avg_trade_pnl": 0
+  },
+  "trades": [],
+  "portfolio_history": [
+    {
+      "timestamp": "2025-11-10 13:56:54.240835",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:56:56.340553",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:56:58.382386",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:00.400060",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:02.437594",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:04.493999",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:06.530109",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:08.563249",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:10.586520",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:12.637479",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:14.677289",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:16.700089",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:18.760478",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:20.793958",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:22.837143",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:24.851411",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:26.882075",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:28.927204",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:30.987437",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:33.010970",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:35.039288",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:37.104030",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:39.452381",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:41.487160",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:43.538364",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:45.587174",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:47.655740",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:49.839516",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:51.873939",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:53.904306",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:55.928350",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:57:57.967618",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:00.022784",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:02.067303",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:04.102144",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:06.151094",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:08.185115",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:10.222345",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:12.255025",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:14.288274",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:16.326362",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:18.359488",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:20.394535",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:22.438709",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:24.473107",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:26.493475",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:28.533977",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:30.578099",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:32.608663",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:34.645623",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:36.673458",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:38.703816",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:40.736191",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:42.767961",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:44.800060",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:46.823691",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:48.866500",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:50.898061",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:52.940259",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:54.977535",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:57.027839",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:58:59.071882",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:01.108902",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:03.136644",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:05.176962",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:07.208613",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:09.247912",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:11.285941",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:13.325930",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:15.358726",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:17.390901",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:19.417487",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:21.447959",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:23.467093",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:25.506394",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:27.557508",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:29.603231",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:31.646367",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:33.688018",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:35.724138",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:37.756015",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:39.781568",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:41.813294",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:43.840571",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:45.888444",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:47.925911",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:49.970642",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:52.004993",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:54.053092",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:56.088519",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 13:59:58.124343",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:00.199894",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:02.251573",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:04.277458",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:06.321890",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:08.341800",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:10.400800",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:12.433785",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:14.464916",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    },
+    {
+      "timestamp": "2025-11-10 14:00:16.654137",
+      "total_value": 10000.0,
+      "cash": 10000.0,
+      "positions_value": 0,
+      "num_positions": 0
+    }
+  ]
+}
