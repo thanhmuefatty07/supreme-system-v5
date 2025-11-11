@@ -10,10 +10,12 @@ Complete data pipeline orchestration:
 """
 
 import pandas as pd
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, AsyncGenerator
 from datetime import datetime, timedelta
 import logging
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from .binance_client import BinanceClient
 from .data_validator import DataValidator
@@ -193,6 +195,190 @@ class DataPipeline:
             self.logger.error(f"Pipeline failed for {symbol} {interval}: {e}")
 
         return result
+
+    async def fetch_and_store_data_async(
+        self,
+        symbol: str,
+        interval: str,
+        start_date: str,
+        end_date: Optional[str] = None,
+        validate: bool = True,
+        force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Async version of fetch_and_store_data for high-performance pipelines.
+
+        Args:
+            symbol: Trading symbol
+            interval: Time interval
+            start_date: Start date
+            end_date: End date (optional)
+            validate: Whether to validate data
+            force_refresh: Force fresh download
+
+        Returns:
+            Pipeline execution results
+        """
+        start_time = time.time()
+
+        result = {
+            'success': False,
+            'symbol': symbol,
+            'interval': interval,
+            'rows_processed': 0,
+            'validation_passed': False,
+            'storage_success': False,
+            'duration': 0.0,
+            'errors': []
+        }
+
+        try:
+            self.logger.info(f"Starting async pipeline for {symbol} {interval}")
+
+            # Check cache first (unless force refresh)
+            if not force_refresh:
+                cached_data = self._get_cached_data(symbol, interval, start_date, end_date)
+                if cached_data is not None:
+                    self.metrics['cache_hits'] += 1
+                    result['success'] = True
+                    result['rows_processed'] = len(cached_data)
+                    result['duration'] = time.time() - start_time
+                    return result
+
+            # Fetch data asynchronously
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                data_future = loop.run_in_executor(
+                    executor,
+                    self.client.get_historical_klines,
+                    symbol, interval, start_date, end_date
+                )
+                data = await data_future
+
+            if data is None or data.empty:
+                result['errors'].append("No data retrieved")
+                result['duration'] = time.time() - start_time
+                return result
+
+            result['rows_processed'] = len(data)
+
+            # Validate data asynchronously
+            if validate:
+                validation_result = await loop.run_in_executor(
+                    executor,
+                    self.validator.validate_ohlcv,
+                    data
+                )
+
+                if not validation_result['valid']:
+                    result['errors'].extend(validation_result['errors'])
+                    result['duration'] = time.time() - start_time
+                    return result
+
+                result['validation_passed'] = True
+
+            # Store data asynchronously
+            storage_success = await loop.run_in_executor(
+                executor,
+                self.storage.store_data,
+                data, symbol
+            )
+
+            if storage_success:
+                result['storage_success'] = True
+                result['success'] = True
+                self._cache_data(symbol, interval, data)
+
+                self.metrics['data_processed'] += len(data)
+                self.metrics['successful_operations'] += 1
+            else:
+                result['errors'].append("Storage failed")
+
+        except Exception as e:
+            result['errors'].append(str(e))
+            result['duration'] = time.time() - start_time
+            self.metrics['errors'] += 1
+            self.logger.error(f"Async pipeline failed for {symbol} {interval}: {e}")
+
+        result['duration'] = time.time() - start_time
+        return result
+
+    async def batch_process_symbols_async(
+        self,
+        symbols: List[str],
+        interval: str,
+        start_date: str,
+        end_date: Optional[str] = None,
+        max_concurrent: int = 5
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Process multiple symbols concurrently with async operations.
+
+        Args:
+            symbols: List of trading symbols
+            interval: Time interval
+            start_date: Start date
+            end_date: End date (optional)
+            max_concurrent: Maximum concurrent operations
+
+        Returns:
+            Results for each symbol
+        """
+        semaphore = asyncio.Semaphore(max_concurrent)
+        results: Dict[str, Dict[str, Any]] = {}
+
+        async def process_symbol(symbol: str) -> None:
+            async with semaphore:
+                result = await self.fetch_and_store_data_async(
+                    symbol, interval, start_date, end_date
+                )
+                results[symbol] = result
+
+        # Create tasks for all symbols
+        tasks = [process_symbol(symbol) for symbol in symbols]
+
+        # Execute concurrently
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        return results
+
+    def process_data(self, data: pd.DataFrame, symbol: str) -> Optional[pd.DataFrame]:
+        """
+        Process data through validation and storage pipeline.
+
+        Args:
+            data: DataFrame to process
+            symbol: Trading symbol
+
+        Returns:
+            Processed DataFrame or None if processing failed
+        """
+        try:
+            if data is None or data.empty:
+                self.logger.warning(f"No data to process for {symbol}")
+                return None
+
+            # Validate data
+            validation_result = self.validator.validate_ohlcv(data)
+            if not validation_result['valid']:
+                self.logger.error(f"Data validation failed for {symbol}: {validation_result['errors']}")
+                return None
+
+            # Store data
+            storage_success = self.storage.store_data(data, symbol)
+            if not storage_success:
+                self.logger.error(f"Data storage failed for {symbol}")
+                return None
+
+            # Cache processed data
+            self._cache_data(symbol, 'processed', None, None, data)
+
+            self.logger.info(f"Successfully processed {len(data)} records for {symbol}")
+            return data
+
+        except Exception as e:
+            self.logger.error(f"Data processing failed for {symbol}: {e}")
+            return None
 
     def get_data(
         self,

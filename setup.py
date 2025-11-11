@@ -48,7 +48,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "supreme-system=supreme_system.cli:main",
+            "supreme-system=src.cli:main",
         ],
     },
 )

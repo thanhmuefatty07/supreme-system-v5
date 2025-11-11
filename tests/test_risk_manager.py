@@ -9,10 +9,17 @@ import numpy as np
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from risk.risk_manager import RiskManager
-from strategies.moving_average import MovingAverageStrategy
+# Add src to path for imports
+src_path = Path(__file__).parent.parent / 'src'
+sys.path.insert(0, str(src_path))
+
+try:
+    from risk.risk_manager import RiskManager
+    from strategies.moving_average import MovingAverageStrategy
+except ImportError:
+    from risk.risk_manager import RiskManager
+    from strategies.moving_average import MovingAverageStrategy
 
 
 class TestRiskManager:
@@ -39,19 +46,19 @@ class TestRiskManager:
         """Test position size calculation"""
         rm = RiskManager(initial_capital=10000, max_position_size=0.1)
 
-        # 10% of 10000 = 1000 risk amount
-        # Position size = 1000 / 100 = 10
+        # 1% risk of 10000 = 100 risk amount (default risk_pct=0.01)
+        # Position size = 100 / 100 = 1
         size = rm.calculate_position_size(100.0)
-        assert size == 10.0
+        assert size == 1.0
 
     def test_calculate_position_size_insufficient_capital(self):
         """Test position sizing with insufficient capital"""
         rm = RiskManager(initial_capital=500, max_position_size=0.1)
 
-        # Risk amount = 500 * 0.1 = 50
-        # Position size = 50 / 100 = 0.5
+        # Risk amount = 500 * 0.01 = 5 (default risk_pct=0.01)
+        # Position size = 5 / 100 = 0.05
         size = rm.calculate_position_size(100.0)
-        assert size == 0.5  # Risk-based sizing
+        assert size == 0.05  # Risk-based sizing
 
     def test_stop_loss_check_long_position(self):
         """Test stop loss for long position"""
@@ -106,7 +113,7 @@ class TestRiskManager:
         assert len(rm.positions) == 1
         position = rm.positions[0]
         assert position['entry_price'] == 100.0
-        assert position['size'] == 10.0  # 10% of capital / price
+        assert position['size'] == 1.0  # 1% risk of capital / price
         assert position['is_long'] is True
         assert rm.current_capital < 10000  # Capital reduced by position cost + fees
 

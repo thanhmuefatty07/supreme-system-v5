@@ -17,10 +17,16 @@ import requests
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceRequestException
 
+# Robust import handling for config
 try:
     from ..config.config import get_config
 except ImportError:
-    from config.config import get_config
+    try:
+        from config.config import get_config
+    except ImportError:
+        # Fallback for when config is not available
+        def get_config():
+            return None
 
 
 class BinanceClient:
@@ -52,17 +58,29 @@ class BinanceClient:
         # Load configuration
         self.config = get_config()
         if config_file:
-            from config.config import load_config
-            self.config = load_config(config_file)
+            try:
+                from config.config import load_config
+                self.config = load_config(config_file)
+            except ImportError:
+                self.config = None
 
-        # Get credentials and settings from config
-        self.api_key = api_key or self.config.get('binance.api_key')
-        self.api_secret = api_secret or self.config.get('binance.api_secret')
-        self.testnet = testnet if testnet is not None else self.config.get('binance.testnet', True)
-        self.rate_limit_delay = rate_limit_delay or self.config.get('binance.rate_limit_delay', 0.1)
-        self.timeout = self.config.get('binance.timeout', 30)
-        self.max_retries = self.config.get('data.max_retries', 3)
-        self.retry_delay = self.config.get('data.retry_delay', 1.0)
+        # Get credentials and settings from config (with fallbacks)
+        if self.config:
+            self.api_key = api_key or self.config.get('binance.api_key')
+            self.api_secret = api_secret or self.config.get('binance.api_secret')
+            self.testnet = testnet if testnet is not None else self.config.get('binance.testnet', True)
+            self.rate_limit_delay = rate_limit_delay or self.config.get('binance.rate_limit_delay', 0.1)
+            self.timeout = self.config.get('binance.timeout', 30)
+            self.max_retries = self.config.get('data.max_retries', 3)
+        else:
+            # Fallback defaults when config is not available
+            self.api_key = api_key
+            self.api_secret = api_secret
+            self.testnet = testnet if testnet is not None else True
+            self.rate_limit_delay = rate_limit_delay or 0.1
+            self.timeout = 30
+            self.max_retries = 3
+        self.retry_delay = (self.config.get('data.retry_delay', 1.0) if self.config else 1.0)
 
         self.client: Optional[Client] = None
         self.logger = logging.getLogger(__name__)

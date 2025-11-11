@@ -35,6 +35,16 @@ class DataValidator:
         self.max_gap_minutes = 60         # Maximum allowed gap in minutes
         self.outlier_std_threshold = 5.0  # Outlier detection threshold
 
+        # Validation rules mapping
+        self.validation_rules = {
+            'ohlcv': self._validate_price_integrity,
+            'price_consistency': self._validate_price_consistency,
+            'volume': self._validate_volume_data,
+            'timestamps': self._validate_timestamps,
+            'statistics': self._validate_statistics,
+            'cross_field': self._validate_cross_field_consistency
+        }
+
     def validate_ohlcv_data(self, data: pd.DataFrame, symbol: str) -> Dict[str, Any]:
         """
         Comprehensive validation of OHLCV data.
@@ -330,6 +340,81 @@ class DataValidator:
 
         return df
 
+    def validate_ohlcv(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Simple OHLCV validation method for testing framework.
+
+        This is a simplified version that returns validation results
+        compatible with the testing expectations.
+
+        Args:
+            data: DataFrame with OHLCV columns
+
+        Returns:
+            Validation result dictionary
+        """
+        errors = []
+
+        try:
+            # Basic validation checks
+            if data.empty:
+                return {
+                    'valid': False,
+                    'errors': ['Empty dataset'],
+                    'timestamp': pd.Timestamp.now()
+                }
+
+            # Check required columns
+            required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                errors.append(f"Missing required columns: {missing_columns}")
+
+            # Check OHLC relationships
+            if 'high' in data.columns and 'low' in data.columns:
+                invalid_ohlc = (data['high'] < data['low']).any()
+                if invalid_ohlc:
+                    errors.append("High prices below low prices detected")
+
+            # Check price ranges
+            if 'open' in data.columns and 'high' in data.columns and 'low' in data.columns:
+                invalid_open = ((data['open'] > data['high']) | (data['open'] < data['low'])).any()
+                if invalid_open:
+                    errors.append("Open prices outside high-low range")
+
+            if 'close' in data.columns and 'high' in data.columns and 'low' in data.columns:
+                invalid_close = ((data['close'] > data['high']) | (data['close'] < data['low'])).any()
+                if invalid_close:
+                    errors.append("Close prices outside high-low range")
+
+            # Check for negative prices
+            price_columns = ['open', 'high', 'low', 'close']
+            for col in price_columns:
+                if col in data.columns:
+                    negative_prices = (data[col] <= 0).any()
+                    if negative_prices:
+                        errors.append(f"Negative or zero {col} prices detected")
+
+            # Check volume
+            if 'volume' in data.columns:
+                negative_volume = (data['volume'] < 0).any()
+                if negative_volume:
+                    errors.append("Negative volume detected")
+
+            # Check timestamp ordering
+            if 'timestamp' in data.columns and len(data) > 1:
+                if not data['timestamp'].is_monotonic_increasing:
+                    errors.append("Timestamps not in ascending order")
+
+        except Exception as e:
+            errors.append(f"Validation error: {str(e)}")
+
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors,
+            'timestamp': pd.Timestamp.now()
+        }
+
     def generate_quality_report(self, validation_results: Dict[str, Any]) -> str:
         """
         Generate a human-readable quality report.
@@ -363,3 +448,100 @@ ISSUES FOUND:
         report += f"\n{'='*60}"
 
         return report
+
+    def _validate_price_integrity(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate basic OHLC price integrity."""
+        errors = []
+
+        # Check high >= low
+        if 'high' in data.columns and 'low' in data.columns:
+            invalid_hl = (data['high'] < data['low']).any()
+            if invalid_hl:
+                errors.append("High prices below low prices detected")
+
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def _validate_price_consistency(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate price consistency across OHLC."""
+        errors = []
+
+        # Check open/close within high/low range
+        if all(col in data.columns for col in ['open', 'high', 'low', 'close']):
+            invalid_open = ((data['open'] > data['high']) | (data['open'] < data['low'])).any()
+            invalid_close = ((data['close'] > data['high']) | (data['close'] < data['low'])).any()
+
+            if invalid_open:
+                errors.append("Open prices outside high-low range")
+            if invalid_close:
+                errors.append("Close prices outside high-low range")
+
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def _validate_volume_data(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate volume data."""
+        errors = []
+
+        if 'volume' in data.columns:
+            negative_volume = (data['volume'] < 0).any()
+            if negative_volume:
+                errors.append("Negative volume detected")
+
+            zero_volume = (data['volume'] == 0).all()
+            if zero_volume:
+                errors.append("All volume values are zero")
+
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def _validate_timestamps(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate timestamp data."""
+        errors = []
+
+        if 'timestamp' in data.columns and len(data) > 1:
+            if not data['timestamp'].is_monotonic_increasing:
+                errors.append("Timestamps not in ascending order")
+
+            # Check for gaps
+            time_diffs = data['timestamp'].diff().dropna()
+            large_gaps = time_diffs > pd.Timedelta(minutes=self.max_gap_minutes)
+            if large_gaps.any():
+                errors.append(f"Large time gaps detected (> {self.max_gap_minutes} minutes)")
+
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def _validate_statistics(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate statistical properties of data."""
+        errors = []
+
+        # Check for extreme price movements
+        if 'close' in data.columns and len(data) > 1:
+            returns = data['close'].pct_change().abs()
+            extreme_moves = (returns > self.max_price_change_pct).any()
+            if extreme_moves:
+                errors.append(f"Extreme price movements detected (> {self.max_price_change_pct:.1%})")
+
+        # Check for outliers in volume
+        if 'volume' in data.columns:
+            volume_mean = data['volume'].mean()
+            volume_std = data['volume'].std()
+            if volume_std > 0:
+                outliers = ((data['volume'] - volume_mean) / volume_std).abs() > self.outlier_std_threshold
+                if outliers.any():
+                    errors.append("Volume outliers detected")
+
+        return {'valid': len(errors) == 0, 'errors': errors}
+
+    def _validate_cross_field_consistency(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate consistency between different data fields."""
+        errors = []
+
+        # Check if high/low/close relationship makes sense
+        if all(col in data.columns for col in ['high', 'low', 'close']):
+            # Close should be within a reasonable range of high/low
+            close_to_high_ratio = (data['close'] / data['high']).abs()
+            close_to_low_ratio = (data['close'] / data['low']).abs()
+
+            unreasonable_close = (close_to_high_ratio > 1.5) | (close_to_low_ratio < 0.67)
+            if unreasonable_close.any():
+                errors.append("Close prices unreasonable compared to high/low")
+
+        return {'valid': len(errors) == 0, 'errors': errors}

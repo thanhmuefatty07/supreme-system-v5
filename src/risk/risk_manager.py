@@ -7,7 +7,7 @@ Real implementation of position sizing, risk management, and backtesting.
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import logging
 
 import sys
@@ -64,18 +64,24 @@ class RiskManager:
         self.positions: List[Dict[str, Any]] = []
         self.trades: List[Dict[str, Any]] = []
 
-    def calculate_position_size(self, entry_price: float) -> float:
+    def calculate_position_size(self, entry_price: float, capital: Optional[float] = None,
+                               risk_pct: float = 0.01) -> float:
         """
         Calculate position size based on risk management rules.
 
         Args:
             entry_price: Entry price for the position
+            capital: Capital to use (default: current capital)
+            risk_pct: Risk percentage per trade (default: 1%)
 
         Returns:
             Position size in base currency
         """
-        # Risk amount is max_position_size fraction of current capital
-        risk_amount = self.current_capital * self.max_position_size
+        # Use provided capital or current capital
+        capital_to_use = capital if capital is not None else self.current_capital
+
+        # Risk amount is risk_pct of capital
+        risk_amount = capital_to_use * risk_pct
         position_size = risk_amount / entry_price
 
         # Ensure position size doesn't exceed available capital
@@ -84,43 +90,59 @@ class RiskManager:
 
         return position_size
 
-    def check_stop_loss(self, entry_price: float, current_price: float, is_long: bool) -> bool:
+    def check_stop_loss(self, entry_price: float, current_price: float, side: Union[str, bool]) -> bool:
         """
         Check if stop loss should be triggered.
 
         Args:
             entry_price: Position entry price
             current_price: Current market price
-            is_long: True for long position, False for short
+            side: Position side ('long', 'short', True for long, False for short)
 
         Returns:
             True if stop loss triggered, False otherwise
         """
+        # Convert side to boolean
+        if isinstance(side, str):
+            is_long = side.lower() == 'long'
+        else:
+            is_long = side
+
         if is_long:
+            # Long position: loss when price falls
             loss_pct = (entry_price - current_price) / entry_price
         else:
+            # Short position: loss when price rises
             loss_pct = (current_price - entry_price) / entry_price
 
-        return loss_pct >= self.stop_loss_pct
+        return abs(loss_pct) >= self.stop_loss_pct
 
-    def check_take_profit(self, entry_price: float, current_price: float, is_long: bool) -> bool:
+    def check_take_profit(self, entry_price: float, current_price: float, side: Union[str, bool]) -> bool:
         """
         Check if take profit should be triggered.
 
         Args:
             entry_price: Position entry price
             current_price: Current market price
-            is_long: True for long position, False for short
+            side: Position side ('long', 'short', True for long, False for short)
 
         Returns:
             True if take profit triggered, False otherwise
         """
+        # Convert side to boolean
+        if isinstance(side, str):
+            is_long = side.lower() == 'long'
+        else:
+            is_long = side
+
         if is_long:
+            # Long position: profit when price rises
             profit_pct = (current_price - entry_price) / entry_price
         else:
+            # Short position: profit when price falls
             profit_pct = (entry_price - current_price) / entry_price
 
-        return profit_pct >= self.take_profit_pct
+        return abs(profit_pct) >= self.take_profit_pct
 
     def run_backtest(
         self,
