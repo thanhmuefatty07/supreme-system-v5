@@ -8,6 +8,7 @@ backtesting, and configuration management.
 
 import pytest
 import pandas as pd
+import numpy as np
 from unittest.mock import Mock, patch, MagicMock
 from click.testing import CliRunner
 import tempfile

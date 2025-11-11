@@ -9,9 +9,9 @@ to ensure proper trade execution and risk control.
 import pytest
 import pandas as pd
 import numpy as np
-from strategies.momentum import MomentumStrategy
-from strategies.moving_average import MovingAverageStrategy
-from risk.advanced_risk_manager import AdvancedRiskManager
+from src.strategies.momentum import MomentumStrategy
+from src.strategies.moving_average import MovingAverageStrategy
+from src.risk.advanced_risk_manager import AdvancedRiskManager
 
 
 class TestStrategyRiskIntegration:

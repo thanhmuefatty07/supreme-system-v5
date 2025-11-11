@@ -9,7 +9,7 @@ Based on SEC/ESMA requirements and circuit breaker patterns.
 import pytest
 import time
 from unittest.mock import Mock, MagicMock
-from risk.circuit_breaker import (
+from src.risk.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerState,
     CircuitBreakerOpen

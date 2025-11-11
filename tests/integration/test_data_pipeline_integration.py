@@ -11,9 +11,9 @@ import numpy as np
 import tempfile
 import os
 from pathlib import Path
-from data.data_validator import DataValidator
-from data.data_storage import DataStorage
-from data.data_pipeline import DataPipeline
+from src.data.data_validator import DataValidator
+from src.data.data_storage import DataStorage
+from src.data.data_pipeline import DataPipeline
 
 
 class TestDataValidatorImplementation:

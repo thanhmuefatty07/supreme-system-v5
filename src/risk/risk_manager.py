@@ -10,16 +10,7 @@ import numpy as np
 from typing import Dict, List, Any, Optional, Union
 import logging
 
-import sys
-from pathlib import Path
-
-# Fix relative imports
-current_file = Path(__file__)
-src_dir = current_file.parent.parent
-if str(src_dir) not in sys.path:
-    sys.path.insert(0, str(src_dir))
-
-from strategies.base_strategy import BaseStrategy
+from ..strategies.base_strategy import BaseStrategy
 
 
 class RiskManager:
@@ -341,4 +332,49 @@ class RiskManager:
             'trades': self.trades,
             'capital_history': capital_history,
             'data_points': len(data)
+        }
+
+    def assess_trade_risk(self, symbol: str, quantity: float, entry_price: float, current_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Assess risk for a potential trade.
+
+        Args:
+            symbol: Trading symbol
+            quantity: Trade quantity
+            entry_price: Entry price
+            current_data: Current market data
+
+        Returns:
+            Dict containing risk assessment results
+        """
+        # Calculate position size
+        position_size = self.calculate_position_size(entry_price, self.capital, 0.01)  # 1% risk
+
+        # Check if trade exceeds position size limit
+        if quantity > position_size:
+            return {
+                'approved': False,
+                'risk_score': 1.0,
+                'recommended_size': position_size,
+                'warnings': ['Position size exceeds recommended limit'],
+                'reasons': ['Trade size too large']
+            }
+
+        # Basic risk assessment
+        risk_amount = quantity * entry_price * 0.01  # 1% risk
+        if risk_amount > self.capital * 0.02:  # More than 2% of capital
+            return {
+                'approved': False,
+                'risk_score': 0.8,
+                'recommended_size': position_size,
+                'warnings': ['Risk amount too high'],
+                'reasons': ['Exceeds 2% capital risk limit']
+            }
+
+        return {
+            'approved': True,
+            'risk_score': 0.2,
+            'recommended_size': quantity,
+            'warnings': [],
+            'reasons': ['Trade approved']
         }

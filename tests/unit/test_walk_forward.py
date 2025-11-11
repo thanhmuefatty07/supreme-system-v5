@@ -15,7 +15,7 @@ from src.backtesting.walk_forward import (
     OptimizationResult,
     optimize_strategy_walk_forward
 )
-from strategies.momentum import MomentumStrategy
+from src.strategies.momentum import MomentumStrategy
 
 
 class TestWalkForwardOptimizer:

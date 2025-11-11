@@ -15,7 +15,7 @@ src_path = Path(__file__).parent.parent / 'src'
 sys.path.insert(0, str(src_path))
 
 try:
-    from data.binance_client import BinanceClient
+    from src.data.binance_client import BinanceClient
 except ImportError:
     from data.binance_client import BinanceClient
 
@@ -40,7 +40,7 @@ class TestBinanceClient:
         assert client.api_secret == "test_secret"
         assert client.testnet is False
 
-    @patch('data.binance_client.Client')
+    @patch('src.data.binance_client.Client')
     def test_test_connection_success(self, mock_client_class):
         """Test successful connection test"""
         # Setup mock
@@ -55,7 +55,7 @@ class TestBinanceClient:
         assert result is True
         mock_client.ping.assert_called_once()
 
-    @patch('data.binance_client.Client')
+    @patch('src.data.binance_client.Client')
     def test_test_connection_failure(self, mock_client_class):
         """Test connection failure"""
         # Setup mock to raise exception
@@ -67,7 +67,7 @@ class TestBinanceClient:
 
         assert result is False
 
-    @patch('data.binance_client.Client')
+    @patch('src.data.binance_client.Client')
     def test_get_historical_klines_success(self, mock_client_class):
         """Test successful historical data download"""
         # Setup mock data
@@ -97,7 +97,7 @@ class TestBinanceClient:
         assert 'close' in result.columns
         assert result['close'].iloc[0] == 102.0
 
-    @patch('data.binance_client.Client')
+    @patch('src.data.binance_client.Client')
     def test_get_historical_klines_empty_data(self, mock_client_class):
         """Test handling of empty data response"""
         mock_client = Mock()
@@ -110,7 +110,7 @@ class TestBinanceClient:
         assert result is not None
         assert len(result) == 0
 
-    @patch('data.binance_client.Client')
+    @patch('src.data.binance_client.Client')
     def test_get_historical_klines_api_error(self, mock_client_class):
         """Test API error handling"""
         mock_client = Mock()

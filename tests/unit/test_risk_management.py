@@ -9,8 +9,8 @@ and circuit breaker functionality.
 import pytest
 import pandas as pd
 import numpy as np
-from risk.advanced_risk_manager import AdvancedRiskManager, PortfolioMetrics
-from risk.risk_manager import RiskManager
+from src.risk.advanced_risk_manager import AdvancedRiskManager, PortfolioMetrics
+from src.risk.risk_manager import RiskManager
 
 
 class TestBasicRiskManager:
