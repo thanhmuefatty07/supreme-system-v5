@@ -5,17 +5,22 @@ Tests for Supreme System V5 monitoring dashboard.
 Tests real-time monitoring and dashboard functionality.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Import monitoring components
 try:
-    from src.monitoring.dashboard import MonitoringDashboard
-    from src.monitoring.dashboard import create_price_chart, create_signal_chart
-    from src.monitoring.dashboard import create_system_health_gauge, create_metrics_cards
+    from src.monitoring.dashboard import (
+        MonitoringDashboard,
+        create_metrics_cards,
+        create_price_chart,
+        create_signal_chart,
+        create_system_health_gauge,
+    )
 except ImportError:
     MonitoringDashboard = None
     create_price_chart = None
@@ -226,8 +231,9 @@ class TestMonitoringDashboard:
 
     def test_memory_usage_tracking(self):
         """Test memory usage tracking in dashboard."""
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         memory_before = process.memory_info().rss / 1024 / 1024  # MB

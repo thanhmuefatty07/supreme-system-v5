@@ -5,17 +5,18 @@ Tests for Supreme System V5 production backtester.
 Tests comprehensive backtesting functionality with realistic market data.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Import backtesting components
 try:
     from src.backtesting.production_backtester import ProductionBacktester
-    from src.strategies.moving_average import MovingAverageStrategy
     from src.risk.risk_manager import RiskManager
+    from src.strategies.moving_average import MovingAverageStrategy
 except ImportError:
     ProductionBacktester = None
     MovingAverageStrategy = None
@@ -89,7 +90,7 @@ class TestProductionBacktester:
         """Test strategy registration and management."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Crossover', strategy)
 
         assert 'MA_Crossover' in backtester.strategies
@@ -143,7 +144,7 @@ class TestProductionBacktester:
         """Test backtesting with single strategy."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=5, long_period=20)
+        strategy = MovingAverageStrategy(short_window=5, long_window=20)
         backtester.register_strategy('MA_Test', strategy)
 
         results = backtester.run_backtest(
@@ -167,8 +168,8 @@ class TestProductionBacktester:
 
         # Register multiple strategies
         strategies = [
-            ('MA_5_20', MovingAverageStrategy(short_period=5, long_period=20)),
-            ('MA_10_30', MovingAverageStrategy(short_period=10, long_period=30)),
+            ('MA_5_20', MovingAverageStrategy(short_window=5, long_window=20)),
+            ('MA_10_30', MovingAverageStrategy(short_window=10, long_window=30)),
         ]
 
         for name, strategy in strategies:
@@ -189,13 +190,13 @@ class TestProductionBacktester:
         """Test walk-forward optimization."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Opt', strategy)
 
         # Parameter ranges for optimization
         param_ranges = {
-            'short_period': (5, 20),
-            'long_period': (15, 50)
+            'short_window': (5, 20),
+            'long_window': (15, 50)
         }
 
         optimized_params = backtester.optimize_strategy(
@@ -207,14 +208,14 @@ class TestProductionBacktester:
 
         assert optimized_params is not None
         assert isinstance(optimized_params, dict)
-        assert 'short_period' in optimized_params
-        assert 'long_period' in optimized_params
+        assert 'short_window' in optimized_params
+        assert 'long_window' in optimized_params
 
     def test_performance_metrics_calculation(self, sample_backtest_data, backtest_config):
         """Test comprehensive performance metrics calculation."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Metrics', strategy)
 
         results = backtester.run_backtest(
@@ -237,7 +238,7 @@ class TestProductionBacktester:
         """Test risk management integration during backtesting."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Risk', strategy)
 
         results = backtester.run_backtest(
@@ -261,7 +262,7 @@ class TestProductionBacktester:
 
         backtester = ProductionBacktester(config=config_with_costs)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Costs', strategy)
 
         results = backtester.run_backtest(
@@ -278,7 +279,7 @@ class TestProductionBacktester:
         backtester = ProductionBacktester(config=backtest_config)
 
         # Test with multiple positions
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Rebalance', strategy)
 
         results = backtester.run_backtest(
@@ -295,9 +296,9 @@ class TestProductionBacktester:
         backtester = ProductionBacktester(config=backtest_config)
 
         strategies = [
-            ('MA_1', MovingAverageStrategy(short_period=5, long_period=15)),
-            ('MA_2', MovingAverageStrategy(short_period=10, long_period=25)),
-            ('MA_3', MovingAverageStrategy(short_period=15, long_period=35)),
+            ('MA_1', MovingAverageStrategy(short_window=5, long_window=15)),
+            ('MA_2', MovingAverageStrategy(short_window=10, long_window=25)),
+            ('MA_3', MovingAverageStrategy(short_window=15, long_window=35)),
         ]
 
         for name, strategy in strategies:
@@ -324,15 +325,16 @@ class TestProductionBacktester:
 
     def test_memory_efficiency(self, sample_backtest_data, backtest_config):
         """Test memory efficiency during backtesting."""
-        import psutil
         import os
+
+        import psutil
 
         backtester = ProductionBacktester(config=backtest_config)
 
         process = psutil.Process(os.getpid())
         memory_before = process.memory_info().rss / 1024 / 1024  # MB
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Memory', strategy)
 
         results = backtester.run_backtest(
@@ -361,7 +363,7 @@ class TestProductionBacktester:
             'volume': [1000] * 10
         })
 
-        strategy = MovingAverageStrategy(short_period=5, long_period=10)
+        strategy = MovingAverageStrategy(short_window=5, long_window=10)
         backtester.register_strategy('MA_Edge', strategy)
 
         # Should handle edge cases gracefully
@@ -408,7 +410,7 @@ class TestProductionBacktester:
         """Test saving and loading backtest results."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Save', strategy)
 
         results = backtester.run_backtest(
@@ -434,9 +436,9 @@ class TestProductionBacktester:
 
         # Test different parameter combinations
         param_combinations = [
-            {'short_period': 5, 'long_period': 15},
-            {'short_period': 10, 'long_period': 25},
-            {'short_period': 15, 'long_period': 35},
+            {'short_window': 5, 'long_window': 15},
+            {'short_window': 10, 'long_window': 25},
+            {'short_window': 15, 'long_window': 35},
         ]
 
         sensitivity_results = {}
@@ -461,7 +463,7 @@ class TestProductionBacktester:
         """Test backtesting across different market regimes."""
         backtester = ProductionBacktester(config=backtest_config)
 
-        strategy = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy = MovingAverageStrategy(short_window=10, long_window=20)
         backtester.register_strategy('MA_Regime', strategy)
 
         # Split data into different market periods
@@ -490,8 +492,8 @@ class TestProductionBacktester:
         backtester1 = ProductionBacktester(config=backtest_config)
         backtester2 = ProductionBacktester(config=backtest_config)
 
-        strategy1 = MovingAverageStrategy(short_period=10, long_period=20)
-        strategy2 = MovingAverageStrategy(short_period=10, long_period=20)
+        strategy1 = MovingAverageStrategy(short_window=10, long_window=20)
+        strategy2 = MovingAverageStrategy(short_window=10, long_window=20)
 
         backtester1.register_strategy('MA_Repro1', strategy1)
         backtester2.register_strategy('MA_Repro2', strategy2)

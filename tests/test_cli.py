@@ -6,17 +6,18 @@ Tests command-line interface functionality including data download,
 backtesting, and configuration management.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from click.testing import CliRunner
-import tempfile
 import os
+import tempfile
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
+from click.testing import CliRunner
 
 # Import CLI functions - adjust based on actual CLI structure
 try:
-    from src.cli import cmd_data, cmd_backtest, setup_logging
+    from src.cli import cmd_backtest, cmd_data, setup_logging
 except ImportError:
     # If CLI structure is different, create mock tests
     cmd_data = None
@@ -236,6 +237,7 @@ class TestCLIIntegration:
         """Test that CLI can be imported safely."""
         try:
             import sys
+
             # Try to import CLI components
             from pathlib import Path
             cli_path = Path(__file__).parent.parent / 'src'
@@ -251,7 +253,7 @@ class TestCLIIntegration:
                 import_warnings.append(f"setup_logging: {e}")
 
             try:
-                from cli import cmd_data, cmd_backtest
+                from cli import cmd_backtest, cmd_data
             except ImportError as e:
                 import_warnings.append(f"commands: {e}")
 

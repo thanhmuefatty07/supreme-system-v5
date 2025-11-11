@@ -5,17 +5,18 @@ Supreme System V5 - Base Trading Strategy
 Abstract base class for all trading strategies.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Union, Protocol
-import pandas as pd
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional, Protocol, Union
+
+import pandas as pd
 
 # Import with fallback for different execution contexts
 try:
-    from ..utils.data_utils import validate_and_clean_data, optimize_dataframe_memory
+    from ..utils.data_utils import optimize_dataframe_memory, validate_and_clean_data
 except ImportError:
     try:
-        from utils.data_utils import validate_and_clean_data, optimize_dataframe_memory
+        from utils.data_utils import optimize_dataframe_memory, validate_and_clean_data
     except ImportError:
         # Fallback implementation
         def validate_and_clean_data(df, required_columns=None):

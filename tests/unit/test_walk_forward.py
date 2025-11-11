@@ -5,15 +5,17 @@ Unit tests for Walk-Forward Optimization Framework.
 Tests advanced optimization techniques and overfitting prevention.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from src.backtesting.walk_forward import (
     AdvancedWalkForwardOptimizer,
-    WalkForwardConfig,
     OptimizationResult,
-    optimize_strategy_walk_forward
+    WalkForwardConfig,
+    optimize_strategy_walk_forward,
 )
 from src.strategies.momentum import MomentumStrategy
 

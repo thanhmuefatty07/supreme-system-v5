@@ -6,20 +6,21 @@ Tests system performance and memory usage under high load conditions,
 large datasets, concurrent operations, and memory-intensive scenarios.
 """
 
-import pytest
-import psutil
-import os
 import gc
-import time
+import os
 import threading
+import time
 from unittest.mock import Mock, patch
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import psutil
+import pytest
 from memory_profiler import profile as memory_profile
 
 from src.backtesting.production_backtester import ProductionBacktester
-from src.strategies.breakout import ImprovedBreakoutStrategy
 from src.data.data_pipeline import DataPipeline
+from src.strategies.breakout import ImprovedBreakoutStrategy
 
 
 class TestMemoryStress:

@@ -8,9 +8,10 @@ Common helper functions used across the system.
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
-import pandas as pd
+from typing import Any, Dict, Optional, Union
+
 import numpy as np
+import pandas as pd
 
 
 def setup_logging(
@@ -143,10 +144,16 @@ def calculate_moving_average(data: pd.Series, window: int, method: str = 'sma') 
     elif method.lower() == 'ema':
         return data.ewm(span=window).mean()
     elif method.lower() == 'wma':
-        weights = np.arange(1, window + 1)
-        return data.rolling(window=window).apply(
-            lambda x: np.dot(x, weights) / weights.sum(), raw=False
-        )
+        # Vectorized WMA calculation using convolution
+        weights = np.arange(1, window + 1, dtype=np.float64)
+        weights = weights / weights.sum()  # Normalize weights
+
+        # Use numpy.convolve for efficient WMA calculation
+        def wma_conv(series):
+            return np.convolve(series.values, weights[::-1], mode='valid')
+
+        result = data.rolling(window=window).apply(lambda x: np.sum(x * weights), raw=False)
+        return result
     else:
         raise ValueError(f"Unknown moving average method: {method}")
 

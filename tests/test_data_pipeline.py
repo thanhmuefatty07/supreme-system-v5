@@ -5,15 +5,16 @@ Tests for Supreme System V5 Data Pipeline.
 Tests data ingestion, validation, processing, and storage pipeline.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 from src.data.data_pipeline import DataPipeline
-from src.data.data_validator import DataValidator
 from src.data.data_storage import DataStorage
+from src.data.data_validator import DataValidator
 
 
 class TestDataPipelineInitialization:
@@ -230,8 +231,9 @@ class TestDataPipelinePerformance:
 
     def test_memory_usage_during_processing(self, large_dataset):
         """Test memory usage during data processing."""
-        import psutil
         import os
+
+        import psutil
 
         pipeline = DataPipeline()
         process = psutil.Process(os.getpid())

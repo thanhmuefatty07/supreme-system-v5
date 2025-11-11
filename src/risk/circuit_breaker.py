@@ -6,11 +6,11 @@ Industry-standard circuit breaker pattern for algorithmic trading.
 Implements SEC/ESMA regulatory requirements and modern resilience patterns.
 """
 
-import time
 import logging
-from typing import Dict, Any, Callable, Optional, List
+import time
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class CircuitBreakerState(Enum):

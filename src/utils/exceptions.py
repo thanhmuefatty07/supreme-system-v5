@@ -5,7 +5,7 @@ Supreme System V5 - Custom Exceptions
 Comprehensive exception hierarchy for the trading system.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class SupremeSystemError(Exception):

@@ -137,29 +137,68 @@ class AdvancedPerformanceProfiler:
         """
         operation_name = f"{func.__name__}"
 
-        # Memory monitoring
-        memory_start = self.process.memory_info().rss / 1024 / 1024
-        cpu_start = self.process.cpu_percent()
+        # Initialize CPU monitoring
+        self.process.cpu_percent()  # First call to reset CPU measurement
 
-        # Time execution
+        # Memory and CPU monitoring setup
+        memory_start = self.process.memory_info().rss / 1024 / 1024
+        peak_memory = memory_start
+
+        # Time execution with detailed monitoring
         start_time = time.time()
+        cpu_samples = []
+
+        # Create monitoring thread for CPU usage during execution
+        monitoring_active = True
+
+        def monitor_resources():
+            while monitoring_active:
+                try:
+                    # Sample CPU usage
+                    cpu_pct = self.process.cpu_percent(interval=0.1)
+                    cpu_samples.append(cpu_pct)
+
+                    # Track peak memory
+                    current_memory = self.process.memory_info().rss / 1024 / 1024
+                    nonlocal peak_memory
+                    peak_memory = max(peak_memory, current_memory)
+
+                    time.sleep(0.05)  # 20Hz sampling
+                except:
+                    break
+
+        # Start monitoring thread
+        monitor_thread = threading.Thread(target=monitor_resources, daemon=True)
+        monitor_thread.start()
 
         try:
             result = func(*args, **kwargs)
         except Exception as e:
             self.logger.error(f"Function {operation_name} failed: {e}")
             result = None
+        finally:
+            # Stop monitoring
+            monitoring_active = False
+            monitor_thread.join(timeout=1.0)
 
         end_time = time.time()
         execution_time = end_time - start_time
 
-        # Memory and CPU after execution
+        # Final memory reading
         memory_end = self.process.memory_info().rss / 1024 / 1024
-        cpu_end = self.process.cpu_percent()
+        peak_memory = max(peak_memory, memory_end)
 
-        # Calculate metrics
-        memory_usage = memory_end - memory_start
-        cpu_percent = max(cpu_start, cpu_end)  # Use the higher value
+        # Calculate accurate CPU metrics
+        if cpu_samples:
+            avg_cpu = sum(cpu_samples) / len(cpu_samples)
+            max_cpu = max(cpu_samples)
+            cpu_percent = avg_cpu  # Use average for more stable measurement
+        else:
+            cpu_percent = self.process.cpu_percent()
+
+        # Calculate memory metrics
+        memory_delta = memory_end - memory_start
+        memory_peak_delta = peak_memory - memory_start
 
         # Calculate throughput if result has length
         throughput = None
@@ -175,14 +214,20 @@ class AdvancedPerformanceProfiler:
         metrics = PerformanceMetrics(
             operation_name=operation_name,
             execution_time=execution_time,
-            memory_usage_mb=memory_usage,
+            memory_usage_mb=memory_peak_delta,  # Use peak memory usage
             cpu_percent=cpu_percent,
             throughput=throughput,
             latency_ms=latency_ms,
+            memory_efficiency=memory_peak_delta / execution_time if execution_time > 0 else None,
             metadata={
                 'args_count': len(args),
                 'kwargs_count': len(kwargs),
-                'result_type': type(result).__name__ if result is not None else 'None'
+                'result_type': type(result).__name__ if result is not None else 'None',
+                'cpu_samples': len(cpu_samples),
+                'peak_memory_mb': peak_memory,
+                'memory_delta_mb': memory_delta,
+                'avg_cpu_percent': avg_cpu if cpu_samples else None,
+                'max_cpu_percent': max_cpu if cpu_samples else None
             }
         )
 

@@ -5,10 +5,11 @@ Supreme System V5 - Risk Management System
 Real implementation of position sizing, risk management, and backtesting.
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Any, Optional, Union
 import logging
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import pandas as pd
 
 from ..strategies.base_strategy import BaseStrategy
 

@@ -5,30 +5,31 @@ Tests for Supreme System V5 data utilities.
 Tests data processing, validation, and optimization utilities.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Import data utilities
 try:
     from src.utils.data_utils import (
-        optimize_dataframe_memory,
-        chunk_dataframe,
-        validate_and_clean_data,
-        calculate_returns,
-        detect_outliers,
-        resample_ohlcv,
-        calculate_technical_indicators,
-        handle_missing_data,
-        calculate_correlation_matrix,
-        find_highly_correlated_pairs,
-        calculate_drawdowns,
-        calculate_roll_max_drawdown,
-        split_data_by_date,
+        calculate_alpha,
         calculate_beta,
-        calculate_alpha
+        calculate_correlation_matrix,
+        calculate_drawdowns,
+        calculate_returns,
+        calculate_roll_max_drawdown,
+        calculate_technical_indicators,
+        chunk_dataframe,
+        detect_outliers,
+        find_highly_correlated_pairs,
+        handle_missing_data,
+        optimize_dataframe_memory,
+        resample_ohlcv,
+        split_data_by_date,
+        validate_and_clean_data,
     )
 except ImportError:
     # Fallback for testing

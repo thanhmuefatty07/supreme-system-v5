@@ -10,18 +10,18 @@ try:
     from .production_backtester import ProductionBacktester
     from .walk_forward import (
         AdvancedWalkForwardOptimizer,
-        WalkForwardConfig,
         OptimizationResult,
-        optimize_strategy_walk_forward
+        WalkForwardConfig,
+        optimize_strategy_walk_forward,
     )
 except ImportError:
     # Fallback for testing environments
     from production_backtester import ProductionBacktester
     from walk_forward import (
         AdvancedWalkForwardOptimizer,
-        WalkForwardConfig,
         OptimizationResult,
-        optimize_strategy_walk_forward
+        WalkForwardConfig,
+        optimize_strategy_walk_forward,
     )
 
 __all__ = [

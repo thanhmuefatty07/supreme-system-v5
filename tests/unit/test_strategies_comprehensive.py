@@ -6,13 +6,14 @@ Based on algorithmic trading research and testing best practices.
 Tests signal generation, parameter validation, and edge cases.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
+from src.strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
+from src.strategies.mean_reversion import MeanReversionStrategy
 from src.strategies.momentum import MomentumStrategy
 from src.strategies.moving_average import MovingAverageStrategy
-from src.strategies.mean_reversion import MeanReversionStrategy
-from src.strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 
 
 class TestBaseStrategyFunctionality:

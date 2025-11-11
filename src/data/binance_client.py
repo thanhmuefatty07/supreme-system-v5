@@ -6,11 +6,11 @@ Real implementation for connecting to Binance API and downloading market data.
 Enhanced with configuration management and robust error handling.
 """
 
+import logging
 import os
 import time
-import logging
-from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests

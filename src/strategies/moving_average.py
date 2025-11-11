@@ -5,9 +5,10 @@ Supreme System V5 - Moving Average Crossover Strategy
 Real implementation of a moving average crossover trading strategy.
 """
 
-import pandas as pd
-import numpy as np
 from typing import Optional
+
+import numpy as np
+import pandas as pd
 
 from .base_strategy import BaseStrategy
 

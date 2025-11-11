@@ -5,11 +5,12 @@ Pytest configuration and shared fixtures for Supreme System V5 testing.
 Based on pytest best practices and industry standards [pytest documentation].
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))

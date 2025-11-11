@@ -6,18 +6,18 @@ Production-ready live trading engine for real market execution.
 Handles order placement, position management, and live risk controls.
 """
 
-import time
 import logging
-from typing import Dict, List, Optional, Any, Union
-from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_DOWN
 import threading
+import time
+from datetime import datetime, timedelta
+from decimal import ROUND_DOWN, Decimal
+from typing import Any, Dict, List, Optional, Union
 
-from ..data.binance_client import BinanceClient
-from ..strategies.base_strategy import BaseStrategy
-from ..risk.risk_manager import RiskManager
-from ..risk.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 from ..config.config import get_config
+from ..data.binance_client import BinanceClient
+from ..risk.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+from ..risk.risk_manager import RiskManager
+from ..strategies.base_strategy import BaseStrategy
 
 
 class LiveTradingPosition:
@@ -656,6 +656,17 @@ class LiveTradingEngine:
         self._monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
         self._monitoring_thread.start()
         self.logger.info("Live trading monitoring started")
+
+    def stop_monitoring(self) -> None:
+        """
+        Stop the monitoring thread for live trading.
+
+        This method stops the background thread that monitors positions.
+        """
+        self._monitoring_active = False
+        if hasattr(self, '_monitoring_thread') and self._monitoring_thread.is_alive():
+            self._monitoring_thread.join(timeout=5.0)
+        self.logger.info("Live trading monitoring stopped")
 
     def _execute_buy_order(self, symbol: str, quantity: float, price: Optional[float] = None) -> Optional[str]:
         """

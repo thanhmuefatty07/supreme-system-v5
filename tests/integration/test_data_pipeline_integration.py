@@ -5,15 +5,17 @@ Integration tests for data pipeline components.
 Tests data validation, storage, and processing pipeline integration.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from src.data.data_validator import DataValidator
-from src.data.data_storage import DataStorage
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from src.data.data_pipeline import DataPipeline
+from src.data.data_storage import DataStorage
+from src.data.data_validator import DataValidator
 
 
 class TestDataValidatorImplementation:

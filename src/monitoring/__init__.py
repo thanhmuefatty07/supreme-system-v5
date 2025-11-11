@@ -6,8 +6,12 @@ Contains monitoring, dashboard, and observability components.
 """
 
 from .dashboard import (
-    MonitoringDashboard, create_price_chart, create_signal_chart,
-    create_system_health_gauge, create_metrics_cards, main
+    MonitoringDashboard,
+    create_metrics_cards,
+    create_price_chart,
+    create_signal_chart,
+    create_system_health_gauge,
+    main,
 )
 
 __all__ = [
