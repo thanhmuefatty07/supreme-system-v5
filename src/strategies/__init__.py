@@ -8,7 +8,7 @@ from .base_strategy import BaseStrategy
 from .moving_average import MovingAverageStrategy
 from .mean_reversion import MeanReversionStrategy
 from .momentum import MomentumStrategy
-from .breakout import BreakoutStrategy
+from .breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 
 __all__ = [
     "BaseStrategy",
