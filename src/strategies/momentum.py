@@ -59,6 +59,10 @@ class MomentumStrategy(BaseStrategy):
         self._indicators_cache = {}
         self._last_data_hash = None
 
+        # Use hardware-optimized calculations when available
+        from ..utils.vectorized_ops import HardwareDetector
+        self.hardware_detector = HardwareDetector()
+
         # Set parameters for tracking
         self.set_parameters(
             short_period=short_period,
@@ -122,7 +126,7 @@ class MomentumStrategy(BaseStrategy):
 
     def _precalculate_indicators(self, data: pd.DataFrame) -> None:
         """
-        Pre-calculate and cache indicators for performance optimization using vectorized operations.
+        Pre-calculate and cache indicators for performance optimization using hardware-optimized operations.
         """
         # Create data hash for cache invalidation
         data_hash = hash(data['close'].values.tobytes())
@@ -136,10 +140,24 @@ class MomentumStrategy(BaseStrategy):
         prices = data['close']
         volume = data.get('volume', pd.Series([1] * len(data)))
 
-        # Use vectorized MACD calculation - 5x faster
-        macd_line, signal_line, macd_histogram = VectorizedTradingOps.calculate_macd_vectorized(
-            prices, self.short_period, self.long_period, self.signal_period
-        )
+        # Auto-select optimal calculation method based on hardware and data size
+        n = len(data)
+        use_numba = self.hardware_detector.detect_avx512_support() or n > 1000
+
+        # Use hardware-optimized MACD calculation - up to 10x faster
+        if use_numba:
+            macd_line, signal_line, macd_histogram = VectorizedTradingOps.calculate_macd_numba(
+                prices.values, self.short_period, self.long_period, self.signal_period
+            )
+            # Convert back to pandas Series for compatibility
+            macd_line = pd.Series(macd_line, index=prices.index)
+            signal_line = pd.Series(signal_line, index=prices.index)
+            macd_histogram = pd.Series(macd_histogram, index=prices.index)
+        else:
+            macd_line, signal_line, macd_histogram = VectorizedTradingOps.calculate_macd_vectorized(
+                prices, self.short_period, self.long_period, self.signal_period
+            )
+
         self._indicators_cache['macd_line'] = macd_line
         self._indicators_cache['signal_line'] = signal_line
         self._indicators_cache['macd_histogram'] = macd_histogram

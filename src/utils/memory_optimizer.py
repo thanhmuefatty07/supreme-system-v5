@@ -6,13 +6,24 @@ Reduces memory footprint while maintaining performance.
 """
 
 import gc
+import os
 import psutil
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Iterator
+from typing import Dict, List, Tuple, Optional, Any, Iterator, Union
 from contextlib import contextmanager
 import logging
 from pathlib import Path
+import tempfile
+import mmap
+
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    PYARROW_AVAILABLE = True
+except ImportError:
+    PYARROW_AVAILABLE = False
+    logger.warning("PyArrow not available - Parquet compression features disabled")
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +280,266 @@ class _MemoryMonitor:
                        f"(start: {self.start_memory:.1f} MB, end: {end_memory:.1f} MB)")
 
         return False
+
+    @staticmethod
+    def save_to_parquet_compressed(df: pd.DataFrame,
+                                  file_path: str,
+                                  compression: str = 'snappy',
+                                  row_group_size: int = 50000) -> bool:
+        """
+        Save DataFrame to compressed Parquet format for optimal storage.
+
+        Args:
+            df: DataFrame to save
+            file_path: Output file path
+            compression: Compression algorithm ('snappy', 'gzip', 'brotli', 'lz4', 'zstd')
+            row_group_size: Number of rows per row group
+
+        Returns:
+            Success status
+        """
+        if not PYARROW_AVAILABLE:
+            logger.error("PyArrow not available - cannot save to Parquet")
+            return False
+
+        try:
+            # Convert to Arrow table
+            table = pa.Table.from_pandas(df)
+
+            # Save with compression
+            pq.write_table(
+                table,
+                file_path,
+                compression=compression,
+                row_group_size=row_group_size,
+                use_dictionary=True,
+                use_deprecated_int96_timestamps=False
+            )
+
+            # Log compression ratio
+            original_size = df.memory_usage(deep=True).sum()
+            compressed_size = os.path.getsize(file_path)
+            compression_ratio = original_size / compressed_size
+
+            logger.info(f"Saved compressed Parquet: {file_path}")
+            logger.info(f"Compression ratio: {compression_ratio:.2f}x")
+            logger.info(f"Original size: {original_size / 1024 / 1024:.2f} MB")
+            logger.info(f"Compressed size: {compressed_size / 1024 / 1024:.2f} MB")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save compressed Parquet: {e}")
+            return False
+
+    @staticmethod
+    def load_from_parquet_compressed(file_path: str,
+                                    columns: Optional[List[str]] = None,
+                                    filters: Optional[List] = None) -> Optional[pd.DataFrame]:
+        """
+        Load DataFrame from compressed Parquet format with optional column selection and filtering.
+
+        Args:
+            file_path: Path to Parquet file
+            columns: Optional list of columns to load
+            filters: Optional filters for row selection
+
+        Returns:
+            Loaded DataFrame or None if failed
+        """
+        if not PYARROW_AVAILABLE:
+            logger.error("PyArrow not available - cannot load from Parquet")
+            return None
+
+        try:
+            # Load with optional column selection and filtering
+            df = pd.read_parquet(
+                file_path,
+                columns=columns,
+                filters=filters,
+                engine='pyarrow'
+            )
+
+            logger.info(f"Loaded compressed Parquet: {file_path}")
+            logger.info(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+            logger.info(f"Memory usage: {df.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB")
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Failed to load compressed Parquet: {e}")
+            return None
+
+    @staticmethod
+    def create_memory_mapped_array(data: np.ndarray,
+                                  file_path: Optional[str] = None,
+                                  mode: str = 'r+') -> np.ndarray:
+        """
+        Create memory-mapped array for large datasets.
+
+        Args:
+            data: NumPy array to memory map
+            file_path: Optional file path (auto-generated if None)
+            mode: File mode ('r', 'r+', 'w+', 'c')
+
+        Returns:
+            Memory-mapped array
+        """
+        if file_path is None:
+            # Create temporary file
+            temp_fd, file_path = tempfile.mkstemp(suffix='.mmap')
+            os.close(temp_fd)  # Close file descriptor, keep path
+
+        try:
+            # Save array to file
+            if mode in ['w+', 'c']:
+                np.save(file_path, data)
+
+            # Create memory-mapped array
+            mmap_array = np.load(file_path + '.npy', mmap_mode=mode)
+
+            logger.info(f"Created memory-mapped array: {file_path}.npy")
+            logger.info(f"Array shape: {mmap_array.shape}, dtype: {mmap_array.dtype}")
+            logger.info(f"Memory usage: {mmap_array.nbytes / 1024 / 1024:.2f} MB")
+
+            # Store file path for cleanup
+            mmap_array._mmap_file = file_path + '.npy'
+
+            return mmap_array
+
+        except Exception as e:
+            logger.error(f"Failed to create memory-mapped array: {e}")
+            return data  # Return original array as fallback
+
+    @staticmethod
+    def process_large_file_chunked(file_path: str,
+                                  chunk_size: int = 100000,
+                                  process_func: callable = None,
+                                  output_format: str = 'dataframe') -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        """
+        Process large files in chunks to avoid memory issues.
+
+        Args:
+            file_path: Path to large file
+            chunk_size: Number of rows per chunk
+            process_func: Optional function to apply to each chunk
+            output_format: 'dataframe' for single concatenated result, 'list' for chunk list
+
+        Returns:
+            Processed data
+        """
+        file_extension = Path(file_path).suffix.lower()
+        chunks = []
+
+        try:
+            if file_extension == '.csv':
+                # Process CSV in chunks
+                for chunk in pd.read_csv(file_path, chunksize=chunk_size):
+                    if process_func:
+                        chunk = process_func(chunk)
+                    chunks.append(chunk)
+
+            elif file_extension in ['.parquet', '.pq']:
+                # For Parquet, load entire file (can be optimized with pyarrow)
+                if PYARROW_AVAILABLE:
+                    # Use pyarrow for better chunked reading
+                    parquet_file = pq.ParquetFile(file_path)
+                    for batch in parquet_file.iter_batches(batch_size=chunk_size):
+                        chunk = batch.to_pandas()
+                        if process_func:
+                            chunk = process_func(chunk)
+                        chunks.append(chunk)
+                else:
+                    # Fallback to pandas
+                    full_data = pd.read_parquet(file_path)
+                    for i in range(0, len(full_data), chunk_size):
+                        chunk = full_data.iloc[i:i+chunk_size].copy()
+                        if process_func:
+                            chunk = process_func(chunk)
+                        chunks.append(chunk)
+
+            else:
+                raise ValueError(f"Unsupported file format: {file_extension}")
+
+            if output_format == 'dataframe':
+                # Concatenate all chunks
+                result = pd.concat(chunks, ignore_index=True)
+                logger.info(f"Processed {len(chunks)} chunks into single DataFrame: {len(result)} rows")
+                return result
+            else:
+                # Return list of chunks
+                logger.info(f"Processed {len(chunks)} chunks")
+                return chunks
+
+        except Exception as e:
+            logger.error(f"Failed to process large file chunked: {e}")
+            return pd.DataFrame() if output_format == 'dataframe' else []
+
+    @staticmethod
+    def create_compressed_cache(df: pd.DataFrame,
+                               cache_key: str,
+                               cache_dir: str = './cache',
+                               compression: str = 'zstd') -> str:
+        """
+        Create compressed cache file for DataFrame.
+
+        Args:
+            df: DataFrame to cache
+            cache_key: Unique cache key
+            cache_dir: Cache directory
+            compression: Compression algorithm
+
+        Returns:
+            Cache file path
+        """
+        # Create cache directory
+        Path(cache_dir).mkdir(exist_ok=True)
+
+        # Create cache file path
+        cache_file = Path(cache_dir) / f"{cache_key}.parquet"
+
+        # Save compressed
+        success = MemoryOptimizer.save_to_parquet_compressed(
+            df, str(cache_file), compression=compression
+        )
+
+        if success:
+            return str(cache_file)
+        else:
+            raise RuntimeError(f"Failed to create compressed cache: {cache_file}")
+
+    @staticmethod
+    def load_from_compressed_cache(cache_file: str,
+                                  max_age_seconds: Optional[int] = None) -> Optional[pd.DataFrame]:
+        """
+        Load DataFrame from compressed cache.
+
+        Args:
+            cache_file: Cache file path
+            max_age_seconds: Maximum cache age in seconds (None for no limit)
+
+        Returns:
+            Cached DataFrame or None if cache miss/invalid
+        """
+        try:
+            # Check cache age
+            if max_age_seconds is not None:
+                cache_path = Path(cache_file)
+                if cache_path.exists():
+                    age_seconds = (pd.Timestamp.now() - pd.Timestamp.fromtimestamp(cache_path.stat().st_mtime)).total_seconds()
+                    if age_seconds > max_age_seconds:
+                        logger.debug(f"Cache expired: {cache_file} ({age_seconds:.0f}s old)")
+                        return None
+
+            # Load from cache
+            df = MemoryOptimizer.load_from_parquet_compressed(cache_file)
+            if df is not None:
+                logger.debug(f"Cache hit: {cache_file}")
+            return df
+
+        except Exception as e:
+            logger.debug(f"Cache miss/error: {cache_file} - {e}")
+            return None
 
 
 @contextmanager

@@ -17,6 +17,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from ..utils.memory_optimizer import MemoryOptimizer
+
 
 class DataStorage:
     """
@@ -450,12 +452,12 @@ class DataStorage:
         except Exception as e:
             self.logger.error(f"Failed to save metadata: {e}")
 
-    def store_data(self, data: pd.DataFrame, symbol: str, partition_by: str = 'date') -> bool:
+    def store_data(self, data: pd.DataFrame, symbol: str, partition_by: str = 'date') -> Dict[str, Any]:
         """
-        Store data with partitioning for testing framework.
+        Store data with advanced compression and memory optimization.
 
-        This is a simplified version of store_historical_data that matches
-        the testing expectations.
+        Enhanced version with compressed Parquet storage, memory optimization,
+        and detailed performance metrics.
 
         Args:
             data: DataFrame to store
@@ -463,19 +465,38 @@ class DataStorage:
             partition_by: Partitioning strategy ('date' or 'date_hour')
 
         Returns:
-            Success status
+            Dict with success status and performance metrics
         """
+        result = {
+            'success': False,
+            'rows_stored': 0,
+            'original_size_mb': 0.0,
+            'compressed_size_mb': 0.0,
+            'compression_ratio': 0.0,
+            'duration_seconds': 0.0,
+            'error': None
+        }
+
+        start_time = datetime.now()
+
         try:
             if data.empty:
+                result['error'] = "No data to store"
                 self.logger.warning(f"No data to store for {symbol}")
-                return False
+                return result
 
             # Validate required columns
             required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
             missing_cols = [col for col in required_columns if col not in data.columns]
             if missing_cols:
+                result['error'] = f"Missing required columns: {missing_cols}"
                 self.logger.error(f"Missing required columns: {missing_cols}")
-                return False
+                return result
+
+            # Optimize memory usage before storage
+            original_memory = data.memory_usage(deep=True).sum() / 1024 / 1024
+            data = MemoryOptimizer.optimize_dataframe_dtypes(data)
+            optimized_memory = data.memory_usage(deep=True).sum() / 1024 / 1024
 
             # Ensure timestamp is datetime
             data = data.copy()
@@ -490,30 +511,46 @@ class DataStorage:
             symbol_dir = self.historical_dir / symbol
             symbol_dir.mkdir(parents=True, exist_ok=True)
 
-            # Convert to PyArrow Table
-            table = pa.Table.from_pandas(data)
+            # Use advanced compressed storage
+            file_path = symbol_dir / f"{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.parquet"
 
-            # Determine partition columns
-            partition_cols = ['date']
-            if partition_by == 'date_hour':
-                partition_cols.append('hour')
-
-            # Write with partitioning
-            pq.write_to_dataset(
-                table,
-                root_path=symbol_dir,
-                partition_cols=partition_cols,
-                compression=self.compression,
-                # Enable statistics for predicate pushdown
-                write_statistics=True
+            # Store with compression
+            compression_success = MemoryOptimizer.save_to_parquet_compressed(
+                data,
+                str(file_path),
+                compression='zstd',  # Best compression ratio
+                row_group_size=min(50000, len(data))  # Adaptive row group size
             )
 
-            self.logger.info(f"Stored {len(data)} rows for {symbol} with partitioning by {partition_by}")
-            return True
+            if not compression_success:
+                result['error'] = "Failed to save compressed data"
+                return result
+
+            # Get compressed file size
+            compressed_size = os.path.getsize(file_path) / 1024 / 1024
+
+            # Calculate metrics
+            duration = (datetime.now() - start_time).total_seconds()
+
+            result.update({
+                'success': True,
+                'rows_stored': len(data),
+                'original_size_mb': original_memory,
+                'compressed_size_mb': compressed_size,
+                'compression_ratio': original_memory / compressed_size if compressed_size > 0 else 0,
+                'duration_seconds': duration,
+                'memory_optimization_ratio': optimized_memory / original_memory if original_memory > 0 else 1.0
+            })
+
+            self.logger.info(f"Stored {len(data)} rows for {symbol} with {result['compression_ratio']:.1f}x compression")
+            self.logger.info(f"Memory optimization: {result['memory_optimization_ratio']:.2f}x reduction")
+            return result
 
         except Exception as e:
+            result['error'] = str(e)
+            result['duration_seconds'] = (datetime.now() - start_time).total_seconds()
             self.logger.error(f"Failed to store data for {symbol}: {e}")
-            return False
+            return result
 
     def query_data(self, symbol: str, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """

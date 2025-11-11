@@ -6,7 +6,8 @@ Provides real-time insights into system health, performance, and trading activit
 """
 
 import time
-from typing import Dict, Any, Optional
+import uuid
+from typing import Dict, Any, Optional, List
 from prometheus_client import (
     Counter, Gauge, Histogram, Summary, CollectorRegistry,
     generate_latest, CONTENT_TYPE_LATEST
@@ -15,6 +16,23 @@ from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 import psutil
 import threading
 from datetime import datetime, timedelta
+from collections import defaultdict, deque
+
+# OpenTelemetry imports (optional)
+try:
+    from opentelemetry import trace, metrics
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.trace import Status, StatusCode
+    from opentelemetry.metrics import CallbackOptions, Observation
+    OPENTELEMETRY_AVAILABLE = True
+except ImportError:
+    OPENTELEMETRY_AVAILABLE = False
+    trace = None
+    metrics = None
 
 
 class SupremeSystemMetrics:
@@ -34,7 +52,269 @@ class SupremeSystemMetrics:
         """
         self.registry = registry or CollectorRegistry()
 
-        # System Health Metrics
+        # Initialize OpenTelemetry if available
+        self._setup_opentelemetry()
+
+        # Correlation ID tracking
+        self._correlation_ids = defaultdict(lambda: str(uuid.uuid4()))
+        self._active_spans = {}
+
+        # Latency tracking
+        self._latency_buffers = defaultdict(lambda: deque(maxlen=1000))
+        self._performance_history = deque(maxlen=10000)
+
+    def _setup_opentelemetry(self):
+        """Setup OpenTelemetry tracing and metrics."""
+        if not OPENTELEMETRY_AVAILABLE:
+            self.tracer = None
+            self.meter = None
+            return
+
+        # Setup tracing
+        resource = Resource.create({"service.name": "supreme-system-v5"})
+        trace.set_tracer_provider(TracerProvider(resource=resource))
+
+        # Jaeger exporter for distributed tracing
+        jaeger_exporter = JaegerExporter(
+            agent_host_name="localhost",
+            agent_port=6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+
+        self.tracer = trace.get_tracer(__name__)
+
+        # Setup metrics
+        metrics.set_meter_provider(MeterProvider(resource=resource))
+        self.meter = metrics.get_meter(__name__)
+
+        # Create OpenTelemetry metrics
+        self.ot_trading_operations = self.meter.create_counter(
+            "trading_operations_total",
+            description="Total number of trading operations"
+        )
+
+        self.ot_operation_duration = self.meter.create_histogram(
+            "operation_duration_seconds",
+            description="Duration of operations in seconds"
+        )
+
+        self.ot_portfolio_value = self.meter.create_gauge(
+            "portfolio_value",
+            description="Current portfolio value",
+            unit="USD"
+        )
+
+        logger.info("OpenTelemetry initialized with Jaeger tracing")
+
+    # ===== DISTRIBUTED TRACING METHODS =====
+
+    def start_trace(self, operation: str, correlation_id: Optional[str] = None,
+                   attributes: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Start a distributed trace span.
+
+        Args:
+            operation: Operation name
+            correlation_id: Optional correlation ID
+            attributes: Span attributes
+
+        Returns:
+            Span ID or None if tracing not available
+        """
+        if not self.tracer:
+            return None
+
+        span_id = str(uuid.uuid4())
+        correlation_id = correlation_id or self._correlation_ids[operation]
+
+        with self.tracer.start_as_span(operation) as span:
+            span.set_attribute("correlation_id", correlation_id)
+            span.set_attribute("operation", operation)
+
+            if attributes:
+                for key, value in attributes.items():
+                    span.set_attribute(key, str(value))
+
+            self._active_spans[span_id] = span
+            return span_id
+
+    def end_trace(self, span_id: str, status: str = "success",
+                  error: Optional[str] = None):
+        """
+        End a distributed trace span.
+
+        Args:
+            span_id: Span ID to end
+            status: Operation status
+            error: Error message if failed
+        """
+        if span_id not in self._active_spans:
+            return
+
+        span = self._active_spans[span_id]
+
+        if status == "error" and error:
+            span.set_status(Status(StatusCode.ERROR, error))
+        elif status == "success":
+            span.set_status(Status(StatusCode.OK))
+
+        span.end()
+        del self._active_spans[span_id]
+
+    def get_correlation_id(self, operation: str) -> str:
+        """Get correlation ID for an operation."""
+        return self._correlation_ids[operation]
+
+    # ===== LATENCY HISTOGRAMS =====
+
+    def record_latency(self, operation: str, duration: float,
+                      attributes: Optional[Dict[str, Any]] = None):
+        """
+        Record operation latency for histogram analysis.
+
+        Args:
+            operation: Operation name
+            duration: Duration in seconds
+            attributes: Additional attributes
+        """
+        # Store in latency buffer
+        self._latency_buffers[operation].append({
+            'duration': duration,
+            'timestamp': time.time(),
+            'attributes': attributes or {}
+        })
+
+        # Record in OpenTelemetry if available
+        if self.meter:
+            self.ot_operation_duration.record(
+                duration,
+                {
+                    "operation": operation,
+                    **(attributes or {})
+                }
+            )
+
+    def get_latency_percentiles(self, operation: str,
+                               percentiles: List[float] = [50, 95, 99]) -> Dict[str, float]:
+        """
+        Get latency percentiles for an operation.
+
+        Args:
+            operation: Operation name
+            percentiles: Percentiles to calculate
+
+        Returns:
+            Dict of percentile -> latency mapping
+        """
+        latencies = [entry['duration'] for entry in self._latency_buffers[operation]]
+
+        if not latencies:
+            return {f'p{p}': 0.0 for p in percentiles}
+
+        sorted_latencies = sorted(latencies)
+        n = len(sorted_latencies)
+
+        result = {}
+        for p in percentiles:
+            index = int((p / 100) * (n - 1))
+            result[f'p{p}'] = sorted_latencies[index]
+
+        return result
+
+    # ===== BUSINESS METRICS =====
+
+    def record_trading_operation(self, operation_type: str, symbol: str,
+                               quantity: float, price: float, pnl: Optional[float] = None):
+        """
+        Record business-level trading metrics.
+
+        Args:
+            operation_type: Type of operation (buy, sell, etc.)
+            symbol: Trading symbol
+            quantity: Quantity traded
+            price: Execution price
+            pnl: Profit/loss if applicable
+        """
+        # Record in Prometheus
+        self.trading_operations_total.labels(
+            operation=operation_type,
+            symbol=symbol
+        ).inc()
+
+        self.last_trade_price.labels(symbol=symbol).set(price)
+
+        if pnl is not None:
+            self.total_pnl.inc(pnl)
+
+        # Record in OpenTelemetry
+        if self.meter:
+            self.ot_trading_operations.add(
+                1,
+                {
+                    "operation_type": operation_type,
+                    "symbol": symbol,
+                    "quantity": quantity,
+                    "price": price,
+                    "pnl": pnl or 0.0
+                }
+            )
+
+    def update_business_metrics(self, portfolio_value: float,
+                               daily_pnl: float, win_rate: float):
+        """
+        Update high-level business metrics.
+
+        Args:
+            portfolio_value: Current portfolio value
+            daily_pnl: Daily profit/loss
+            win_rate: Trading win rate
+        """
+        self.portfolio_value.set(portfolio_value)
+        self.daily_pnl.set(daily_pnl)
+        self.win_rate.set(win_rate)
+
+        # Record in OpenTelemetry
+        if self.meter:
+            self.ot_portfolio_value.set(portfolio_value)
+
+    # ===== RESOURCE USAGE TRACKING =====
+
+    def record_resource_usage(self, operation: str):
+        """
+        Record system resource usage during an operation.
+
+        Args:
+            operation: Operation name
+        """
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory_percent = psutil.virtual_memory().percent
+        disk_usage = psutil.disk_usage('/').percent
+
+        self.cpu_usage_during_operation.labels(operation=operation).observe(cpu_percent)
+        self.memory_usage_during_operation.labels(operation=operation).observe(memory_percent)
+        self.disk_usage_during_operation.labels(operation=operation).observe(disk_usage)
+
+    def get_resource_usage_summary(self) -> Dict[str, Any]:
+        """
+        Get summary of resource usage across all operations.
+
+        Returns:
+            Resource usage summary
+        """
+        return {
+            'cpu_percent': psutil.cpu_percent(),
+            'memory_percent': psutil.virtual_memory().percent,
+            'memory_used_gb': psutil.virtual_memory().used / (1024**3),
+            'disk_percent': psutil.disk_usage('/').percent,
+            'network_connections': len(psutil.net_connections()),
+            'open_files': len(psutil.Process().open_files()) if psutil.Process().open_files() else 0
+        }
+
+
+# ===== COMPLETED ENHANCED MONITORING =====
+
+# System Health Metrics
         self.system_uptime = Gauge(
             'supreme_system_uptime_seconds',
             'System uptime in seconds',

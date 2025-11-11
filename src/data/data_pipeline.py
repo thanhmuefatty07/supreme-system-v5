@@ -18,7 +18,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import pandas as pd
 
-from .binance_client import BinanceClient
+from .binance_client import AsyncBinanceClient, BinanceClient
 from .data_storage import DataStorage
 from .data_validator import DataValidator
 from ..utils.memory_optimizer import MemoryOptimizer, optimize_trading_data_pipeline
@@ -37,17 +37,25 @@ class DataPipeline:
     - Performance monitoring
     """
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: Optional[str] = None, use_async: bool = True):
         """
         Initialize data pipeline.
 
         Args:
             config_file: Optional configuration file
+            use_async: Whether to use async client for better performance
         """
         self.logger = logging.getLogger(__name__)
+        self.use_async = use_async
 
         # Initialize components
-        self.client = BinanceClient(config_file=config_file)
+        if use_async:
+            self.async_client = AsyncBinanceClient(config_file=config_file)
+            self.client = None  # Will be set when needed for backward compatibility
+        else:
+            self.client = BinanceClient(config_file=config_file)
+            self.async_client = None
+
         self.validator = DataValidator()
         self.storage = DataStorage()
 
@@ -72,6 +80,185 @@ class DataPipeline:
         self.cache_ttl = 300  # 5 minutes cache TTL
 
         self.logger.info("Data pipeline initialized")
+
+    async def fetch_and_store_data_async(
+        self,
+        symbol: str,
+        interval: str,
+        start_date: str,
+        end_date: Optional[str] = None,
+        validate: bool = True,
+        force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Complete async pipeline: fetch, validate, and store data.
+
+        Args:
+            symbol: Trading symbol
+            interval: Time interval
+            start_date: Start date
+            end_date: End date (optional)
+            validate: Whether to validate data
+            force_refresh: Force fresh download
+
+        Returns:
+            Pipeline execution results
+        """
+        if not self.use_async:
+            raise RuntimeError("Async pipeline requires use_async=True")
+
+        start_time = time.time()
+
+        result = {
+            'success': False,
+            'symbol': symbol,
+            'interval': interval,
+            'rows_processed': 0,
+            'validation_passed': False,
+            'storage_success': False,
+            'duration': 0.0,
+            'errors': []
+        }
+
+        try:
+            self.logger.info(f"Starting async pipeline for {symbol} {interval}")
+
+            # Initialize session if needed
+            if not self.async_client._session:
+                await self.async_client.initialize_session()
+
+            # Check cache first (unless force refresh)
+            if not force_refresh:
+                cached_data = self._get_cached_data(symbol, interval, start_date, end_date)
+                if cached_data is not None:
+                    self.metrics['cache_hits'] += 1
+                    result['success'] = True
+                    result['rows_processed'] = len(cached_data)
+                    result['cached'] = True
+                    result['duration'] = time.time() - start_time
+                    self.logger.info(f"Cache hit for {symbol} {interval}")
+                    return result
+
+            self.metrics['cache_misses'] += 1
+
+            # Fetch data asynchronously
+            data = await self.async_client.get_historical_klines(
+                symbol, interval, start_date, end_date
+            )
+
+            if data is None or data.empty:
+                result['errors'].append("No data fetched")
+                result['duration'] = time.time() - start_time
+                return result
+
+            self.metrics['fetches'] += 1
+            result['rows_processed'] = len(data)
+            self.metrics['total_processed_rows'] += len(data)
+
+            # Validate data
+            if validate:
+                validation_result = self.validator.validate_ohlcv_data(data)
+                result['validation_passed'] = validation_result['valid']
+                self.metrics['validations'] += 1
+
+                if not validation_result['valid']:
+                    result['errors'].extend(validation_result['errors'])
+                    self.logger.warning(f"Validation failed for {symbol}: {validation_result['errors']}")
+                    # Still store invalid data but mark as such
+                else:
+                    self.logger.info(f"Validation passed for {symbol}")
+
+            # Optimize memory usage
+            data = self.memory_optimizer.optimize_dataframe_memory(data)
+
+            # Store data
+            storage_result = self.storage.store_data(data, symbol, interval)
+            result['storage_success'] = storage_result['success']
+            self.metrics['storages'] += 1
+
+            if not storage_result['success']:
+                result['errors'].append(f"Storage failed: {storage_result.get('error', 'Unknown error')}")
+            else:
+                # Log compression metrics
+                compression_ratio = storage_result.get('compression_ratio', 0)
+                memory_ratio = storage_result.get('memory_optimization_ratio', 1.0)
+                self.logger.info(f"Successfully stored {len(data)} rows for {symbol}")
+                self.logger.info(f"Compression: {compression_ratio:.1f}x, Memory optimization: {memory_ratio:.2f}x")
+
+            result['success'] = result['validation_passed'] and result['storage_success']
+            result['duration'] = time.time() - start_time
+
+            self.logger.info(f"Async pipeline completed for {symbol} in {result['duration']:.2f}s")
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Pipeline failed for {symbol}: {e}")
+            result['errors'].append(str(e))
+            result['duration'] = time.time() - start_time
+            return result
+
+    async def fetch_multiple_symbols_async(
+        self,
+        symbols: List[str],
+        interval: str,
+        start_date: str,
+        end_date: Optional[str] = None,
+        validate: bool = True,
+        max_concurrent: int = 5
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Fetch data for multiple symbols concurrently.
+
+        Args:
+            symbols: List of trading symbols
+            interval: Time interval
+            start_date: Start date
+            end_date: End date (optional)
+            validate: Whether to validate data
+            max_concurrent: Maximum concurrent fetches
+
+        Returns:
+            Dict mapping symbols to pipeline results
+        """
+        if not self.use_async:
+            raise RuntimeError("Concurrent fetching requires use_async=True")
+
+        # Initialize session if needed
+        if not self.async_client._session:
+            await self.async_client.initialize_session()
+
+        semaphore = asyncio.Semaphore(max_concurrent)
+        results = {}
+
+        async def fetch_with_semaphore(symbol: str):
+            async with semaphore:
+                return await self.fetch_and_store_data_async(
+                    symbol, interval, start_date, end_date, validate
+                )
+
+        # Create concurrent tasks
+        tasks = [fetch_with_semaphore(symbol) for symbol in symbols]
+
+        # Execute concurrently
+        task_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Map results back to symbols
+        for symbol, result in zip(symbols, task_results):
+            if isinstance(result, Exception):
+                self.logger.error(f"Failed to fetch {symbol}: {result}")
+                results[symbol] = {
+                    'success': False,
+                    'symbol': symbol,
+                    'errors': [str(result)],
+                    'duration': 0.0
+                }
+            else:
+                results[symbol] = result
+
+        total_duration = sum(result.get('duration', 0) for result in results.values())
+        self.logger.info(f"Concurrent fetch completed for {len(symbols)} symbols in {total_duration:.2f}s")
+
+        return results
 
     def fetch_and_store_data(
         self,
@@ -126,9 +313,24 @@ class DataPipeline:
 
             self.metrics['cache_misses'] += 1
 
-            # 1. Fetch data
+            # 1. Fetch data - prefer async for performance
             self.logger.info(f"Fetching data for {symbol} {interval}")
-            raw_data = self.client.get_historical_klines(symbol, interval, start_date, end_date)
+
+            if self.use_async and self.async_client:
+                # Use async client synchronously via asyncio.run
+                import asyncio
+                async def fetch_async():
+                    if not self.async_client._session:
+                        await self.async_client.initialize_session()
+                    return await self.async_client.get_historical_klines(
+                        symbol, interval, start_date, end_date
+                    )
+                raw_data = asyncio.run(fetch_async())
+            else:
+                # Fallback to sync client
+                if not self.client:
+                    self.client = BinanceClient()  # Create sync client if needed
+                raw_data = self.client.get_historical_klines(symbol, interval, start_date, end_date)
 
             if raw_data is None or raw_data.empty:
                 result['errors'].append("No data fetched")
@@ -372,9 +574,10 @@ class DataPipeline:
                 return None
 
             # Store data
-            storage_success = self.storage.store_data(data, symbol)
-            if not storage_success:
-                self.logger.error(f"Data storage failed for {symbol}")
+            storage_result = self.storage.store_data(data, symbol)
+            if not storage_result['success']:
+                error_msg = storage_result.get('error', 'Unknown storage error')
+                self.logger.error(f"Data storage failed for {symbol}: {error_msg}")
                 return None
 
             # Cache processed data

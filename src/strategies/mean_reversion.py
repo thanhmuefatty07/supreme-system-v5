@@ -180,20 +180,20 @@ class MeanReversionStrategy(BaseStrategy):
         """Calculate RSI (Relative Strength Index)."""
         try:
             # Calculate price changes
-        delta = prices.diff()
+            delta = prices.diff()
 
             # Separate gains and losses
             gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
 
             # Calculate RS (Relative Strength)
-        rs = gain / loss
+            rs = gain / loss
 
             # Calculate RSI
-        rsi = 100 - (100 / (1 + rs))
+            rsi = 100 - (100 / (1 + rs))
 
-        return rsi
-    
+            return rsi
+
         except Exception as e:
             self.logger.error(f"Error calculating RSI: {e}")
             return None
@@ -250,7 +250,7 @@ class MeanReversionStrategy(BaseStrategy):
 
             if std_price > 0:
                 z_score = abs(current_price - mean_price) / std_price
-        else:
+            else:
                 return 0.5  # Neutral if no volatility
 
             # Calculate reversion probability based on historical data
@@ -262,7 +262,7 @@ class MeanReversionStrategy(BaseStrategy):
                 return 0.6
             elif z_score >= 1.0:
                 return 0.4
-        else:
+            else:
                 # Not extreme enough for strong reversion signal
                 return 0.2
 
