@@ -6,7 +6,6 @@ Real implementation of the trading system CLI.
 """
 
 import argparse
-import logging
 import sys
 from pathlib import Path
 
@@ -15,15 +14,68 @@ import pandas as pd
 from .data.binance_client import BinanceClient
 from .risk.risk_manager import RiskManager
 from .strategies.moving_average import MovingAverageStrategy
+from .utils.logger import setup_logging
 
 
-def setup_logging(verbose: bool = False):
-    """Setup logging configuration"""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+def setup_logging(level: str = "INFO", log_file: str = None):
+    """Setup comprehensive logging configuration"""
+    import logging
+    from datetime import datetime
+    from pathlib import Path
+
+    # Convert string level to logging level
+    level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL
+    }
+    log_level = level_map.get(level.upper(), logging.INFO)
+
+    # Create logs directory if it doesn't exist
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    # Setup formatters
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
+
+    # Setup handlers
+    handlers = []
+
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    handlers.append(console_handler)
+
+    # File handler (optional)
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
+    else:
+        # Default log file with timestamp
+        log_filename = f"supreme_cli_{datetime.now():%Y%m%d_%H%M%S}.log"
+        file_handler = logging.FileHandler(log_dir / log_filename)
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
+
+    # Setup root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    # Remove existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Add new handlers
+    for handler in handlers:
+        root_logger.addHandler(handler)
+
+    return root_logger
 
 
 def cmd_data(args):

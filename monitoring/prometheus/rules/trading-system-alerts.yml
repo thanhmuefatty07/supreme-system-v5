@@ -1,0 +1,193 @@
+groups:
+  - name: supreme_system_alerts
+    rules:
+
+    # System Health Alerts
+    - alert: SupremeSystemDown
+      expr: up{job="supreme-system"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        service: supreme-system
+      annotations:
+        summary: "Supreme System is down"
+        description: "Supreme System has been down for more than 5 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#system-down"
+
+    - alert: SupremeSystemHighMemoryUsage
+      expr: (supreme_system_memory_usage_bytes / supreme_system_memory_total_bytes) > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High memory usage detected"
+        description: "Supreme System memory usage is above 90% for 10 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#memory-usage"
+
+    - alert: SupremeSystemHighCPUUsage
+      expr: supreme_system_cpu_usage_percent > 85
+      for: 5m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High CPU usage detected"
+        description: "Supreme System CPU usage is above 85% for 5 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#cpu-usage"
+
+    # Trading Activity Alerts
+    - alert: SupremeSystemNoTradesExecuted
+      expr: increase(supreme_trades_total[1h]) == 0
+      for: 1h
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "No trades executed recently"
+        description: "No trades have been executed in the last hour."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#trading-activity"
+
+    - alert: SupremeSystemHighTradeFailureRate
+      expr: rate(supreme_trades_total{result="REJECTED"}[5m]) / rate(supreme_trades_total[5m]) > 0.1
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High trade failure rate"
+        description: "Trade failure rate is above 10% for the last 10 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#trade-failures"
+
+    # Risk Management Alerts
+    - alert: SupremeSystemCircuitBreakerTripped
+      expr: increase(supreme_circuit_breaker_trips_total[5m]) > 0
+      labels:
+        severity: critical
+        service: supreme-system
+      annotations:
+        summary: "Circuit breaker activated"
+        description: "Circuit breaker has been tripped. Trading suspended."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#circuit-breaker"
+
+    - alert: SupremeSystemHighDrawdown
+      expr: supreme_max_drawdown_percent > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High drawdown detected"
+        description: "Portfolio drawdown is above 10%."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#drawdown"
+
+    # API and Data Alerts
+    - alert: SupremeSystemHighAPIErrorRate
+      expr: rate(supreme_api_errors_total[5m]) / rate(supreme_data_requests_total[5m]) > 0.05
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High API error rate"
+        description: "API error rate is above 5% for the last 10 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#api-errors"
+
+    - alert: SupremeSystemDataRequestLatencyHigh
+      expr: histogram_quantile(0.95, rate(supreme_data_request_duration_seconds_bucket[5m])) > 5
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High data request latency"
+        description: "95th percentile data request latency is above 5 seconds."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#data-latency"
+
+    # Performance Alerts
+    - alert: SupremeSystemSlowStrategyExecution
+      expr: histogram_quantile(0.95, rate(supreme_strategy_execution_time_seconds_bucket[5m])) > 1
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "Slow strategy execution"
+        description: "95th percentile strategy execution time is above 1 second."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#strategy-performance"
+
+    - alert: SupremeSystemHighErrorRate
+      expr: rate(supreme_errors_total{severity="error"}[5m]) > 0.01
+      for: 10m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "High application error rate"
+        description: "Application error rate is above 1% for the last 10 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#error-rate"
+
+    # Business Logic Alerts
+    - alert: SupremeSystemNegativeSharpeRatio
+      expr: supreme_sharpe_ratio_current < 0
+      for: 1h
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "Negative Sharpe ratio"
+        description: "Strategy Sharpe ratio is negative for the last hour."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#sharpe-ratio"
+
+    - alert: SupremeSystemPortfolioValueDecline
+      expr: (supreme_portfolio_value - supremum(supreme_portfolio_value) over (1h)) / supremum(supreme_portfolio_value) over (1h) < -0.05
+      for: 30m
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "Significant portfolio value decline"
+        description: "Portfolio value has declined by more than 5% in the last 30 minutes."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#portfolio-value"
+
+    # System Resource Alerts
+    - alert: SupremeSystemDiskSpaceLow
+      expr: (supreme_system_disk_free_bytes / supreme_system_disk_total_bytes) < 0.1
+      for: 15m
+      labels:
+        severity: critical
+        service: supreme-system
+      annotations:
+        summary: "Low disk space"
+        description: "Available disk space is below 10%."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#disk-space"
+
+    - alert: SupremeSystemMemoryLeakSuspected
+      expr: increase(supreme_system_memory_usage_bytes[1h]) > 0
+      for: 2h
+      labels:
+        severity: warning
+        service: supreme-system
+      annotations:
+        summary: "Potential memory leak"
+        description: "Memory usage has been consistently increasing for 2 hours."
+        runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#memory-leak"
+
+  - name: supreme_system_info
+    rules:
+
+    # Recording rules for derived metrics
+    - record: supreme_trades_success_rate:rate
+      expr: rate(supreme_trades_total{result="FILLED"}[5m]) / rate(supreme_trades_total[5m])
+
+    - record: supreme_portfolio_return_daily
+      expr: (supreme_portfolio_value - supreme_portfolio_value offset 1d) / supreme_portfolio_value offset 1d
+
+    - record: supreme_system_memory_usage_percent
+      expr: supreme_system_memory_usage_bytes / supreme_system_memory_total_bytes * 100
+
+    - record: supreme_trades_volume_daily
+      expr: increase(supreme_trades_value_total[1d])
+
+    - record: supreme_strategy_win_rate
+      expr: rate(supreme_trades_total{result="FILLED"}[1d]) / rate(supreme_trades_total[1d])

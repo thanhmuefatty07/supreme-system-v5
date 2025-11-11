@@ -7,9 +7,29 @@ Abstract base class for all trading strategies.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Protocol, Union
+from typing import Any, Dict, Optional, Protocol, Union, List, Tuple
 
 import pandas as pd
+
+# Import typed structures
+try:
+    from ..types.trading_types import (
+        OHLCVData, SignalData, StrategyConfig, IndicatorResult,
+        validate_ohlcv_data, SignalStrength, OrderAction
+    )
+except ImportError:
+    # Fallback for missing types
+    OHLCVData = Dict[str, Any]
+    SignalData = Dict[str, Any]
+    StrategyConfig = Dict[str, Any]
+    IndicatorResult = Dict[str, Any]
+    SignalStrength = str
+    OrderAction = str
+
+    def validate_ohlcv_data(data: pd.DataFrame) -> bool:
+        """Fallback validation."""
+        required = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+        return all(col in data.columns for col in required)
 
 # Import with fallback for different execution contexts
 try:
@@ -65,17 +85,16 @@ class BaseStrategy(ABC):
         self.is_initialized: bool = False
 
     @abstractmethod
-    def generate_signal(self, data: pd.DataFrame) -> int:
+    def generate_signal(self, data: pd.DataFrame, portfolio_value: Optional[float] = None) -> SignalData:
         """
         Generate trading signal based on market data.
 
         Args:
             data: DataFrame with OHLCV data (timestamp, open, high, low, close, volume)
+            portfolio_value: Current portfolio value (optional)
 
         Returns:
-            SignalType.BUY (1) for buy signal,
-            SignalType.SELL (-1) for sell signal,
-            SignalType.HOLD (0) for hold
+            SignalData dict with action, symbol, strength, confidence, etc.
         """
         pass
 

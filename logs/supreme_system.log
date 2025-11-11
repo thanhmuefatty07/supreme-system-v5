@@ -17328,3 +17328,7 @@
 2025-11-11 17:01:30,455 - src.backtesting.walk_forward - WARNING - Strategy evaluation failed: ProductionBacktester.run_backtest() missing 1 required positional argument: 'symbol'
 2025-11-11 17:01:30,455 - src.backtesting.walk_forward - WARNING - Strategy evaluation failed: ProductionBacktester.run_backtest() missing 1 required positional argument: 'symbol'
 2025-11-11 17:01:30,455 - src.backtesting.walk_forward - WARNING - Strategy evaluation failed: ProductionBacktester.run_backtest() missing 1 required positional argument: 'symbol'
+2025-11-11 21:47:04,884 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
+2025-11-11 21:47:05,887 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
+2025-11-11 21:47:54,278 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
+2025-11-11 21:47:55,296 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
