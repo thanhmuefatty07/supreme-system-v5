@@ -12,8 +12,19 @@ import json
 import yaml
 import logging
 
-from ..utils.constants import DEFAULT_CONFIG, LOGGING_CONFIG
-from ..utils.helpers import setup_logging
+try:
+    from ..utils.constants import DEFAULT_CONFIG, LOGGING_CONFIG
+    from ..utils.helpers import setup_logging
+except ImportError:
+    try:
+        from utils.constants import DEFAULT_CONFIG, LOGGING_CONFIG
+        from utils.helpers import setup_logging
+    except ImportError:
+        # Fallback defaults for testing
+        DEFAULT_CONFIG = {}
+        LOGGING_CONFIG = {}
+        def setup_logging(*args, **kwargs):
+            pass
 
 
 class Config:

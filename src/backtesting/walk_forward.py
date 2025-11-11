@@ -24,7 +24,6 @@ from scipy.optimize import minimize
 import warnings
 
 from ..strategies.base_strategy import BaseStrategy
-from ..backtesting.production_backtester import ProductionBacktester
 
 
 @dataclass
@@ -62,7 +61,7 @@ class WalkForwardConfig:
     min_sharpe_ratio: float = 1.0
     max_drawdown_limit: float = 0.20
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.validation_metrics is None:
             self.validation_metrics = ['sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'total_return']
 
@@ -79,7 +78,7 @@ class AdvancedWalkForwardOptimizer:
     - Multiple performance metrics validation
     """
 
-    def __init__(self, config: WalkForwardConfig = None):
+    def __init__(self, config: WalkForwardConfig = None) -> None:
         """
         Initialize the walk-forward optimizer.
 
@@ -304,7 +303,7 @@ class AdvancedWalkForwardOptimizer:
 
             # Objective function for Bayesian optimization
             @use_named_args(dimensions)
-            def objective(**params):
+            def objective(**params) -> float:
                 try:
                     # Combine with fixed parameters
                     all_params = {**params, **fixed_params}
@@ -417,7 +416,8 @@ class AdvancedWalkForwardOptimizer:
             # Create strategy instance
             strategy = strategy_class(**params)
 
-            # Run backtest
+            # Run backtest (import here to avoid circular import)
+            from ..backtesting.production_backtester import ProductionBacktester
             backtester = ProductionBacktester()
             results = backtester.run_backtest(strategy, data)
 
@@ -658,7 +658,7 @@ class AdvancedWalkForwardOptimizer:
                 validation['sharpe_t_stat'] = t_stat
                 validation['sharpe_p_value'] = p_value
                 validation['sharpe_significant'] = p_value < self.config.significance_level
-            except:
+            except (ValueError, TypeError, ZeroDivisionError):
                 validation['sharpe_t_stat'] = None
                 validation['sharpe_p_value'] = None
                 validation['sharpe_significant'] = False
@@ -794,7 +794,7 @@ class AdvancedWalkForwardOptimizer:
                         # Use most common value, or mean if numeric
                         try:
                             stable_params[param_name] = np.mean(good_values)
-                        except:
+                        except (TypeError, ValueError):
                             # For non-numeric, use most common
                             stable_params[param_name] = max(set(good_values), key=good_values.count)
 

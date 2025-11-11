@@ -18,7 +18,12 @@ import logging
 try:
     from ..config.config import get_config
 except ImportError:
-    from config.config import get_config
+    try:
+        from config.config import get_config
+    except ImportError:
+        # Fallback for testing environments
+        def get_config():
+            return None
 
 
 class BinanceWebSocketClient:

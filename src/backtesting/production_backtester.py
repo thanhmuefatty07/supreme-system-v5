@@ -94,7 +94,7 @@ class BacktestPosition:
 class BacktestResult:
     """Comprehensive backtest result container."""
 
-    def __init__(self, strategy_name: str, symbol: str):
+    def __init__(self, strategy_name: str, symbol: str) -> None:
         self.strategy_name = strategy_name
         self.symbol = symbol
         self.start_date: Optional[datetime] = None
@@ -360,7 +360,7 @@ class ProductionBacktester:
         positions: Dict[str, BacktestPosition] = {}
         equity_curve = [capital]
 
-        for i, (timestamp, row) in enumerate(data.iterrows()):
+        for i, row in data.iterrows():
             current_price = row['close']
 
             # Update existing positions
