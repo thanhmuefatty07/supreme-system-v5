@@ -25,7 +25,7 @@ except ImportError:
         from config.config import get_config
     except ImportError:
         # Fallback for when config is not available
-        def get_config():
+        def get_config() -> Optional[Dict[str, Any]]:
             return None
 
 
@@ -217,7 +217,7 @@ class BinanceClient:
                 elif error_code == -1021:
                     self.logger.warning(f"⚠️ Timestamp error for {symbol}, retrying...")
                 elif error_code == -1003:
-                    self.logger.warning(f"⚠️ Rate limit exceeded, waiting longer...")
+                    self.logger.warning("⚠️ Rate limit exceeded, waiting longer...")
                     time.sleep(5)  # Additional delay for rate limits
                 else:
                     self.logger.error(f"❌ Binance API error: {error_msg}")
