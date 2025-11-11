@@ -72,7 +72,7 @@ class OHLCVDataPoint(BaseModel):
 
 class TradingSymbol(BaseModel):
     """Trading symbol validation."""
-    symbol: str = Field(..., min_length=1, max_length=20, regex=r'^[A-Z0-9]+$')
+    symbol: str = Field(..., min_length=1, max_length=20, pattern=r'^[A-Z0-9]+$')
 
     @validator('symbol')
     def validate_symbol_format(cls, v):
@@ -95,7 +95,7 @@ class TradingSymbol(BaseModel):
 
 class KlineInterval(BaseModel):
     """Kline/candlestick interval validation."""
-    interval: str = Field(..., regex=r'^\d+[mhdwM]$')
+    interval: str = Field(..., pattern=r'^\d+[mhdwM]$')
 
     @validator('interval')
     def validate_interval(cls, v):
