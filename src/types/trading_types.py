@@ -4,7 +4,7 @@ Type Definitions for Supreme System V5 Trading Components
 Comprehensive type hints and TypedDict definitions for type safety.
 """
 
-from typing import Dict, List, Optional, Union, Literal, Any, Protocol, TypeVar
+from typing import Dict, List, Optional, Union, Literal, Any, Protocol, TypeVar, TypedDict, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum

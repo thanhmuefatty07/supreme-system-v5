@@ -6,10 +6,21 @@ Comprehensive exception hierarchy with advanced error handling,
 decorators, and context management for production-grade reliability.
 """
 
+import asyncio
 import logging
-from typing import Any, Dict, Optional, List
-from datetime import datetime
+import time
+import threading
+from typing import Any, Dict, Optional, List, Callable, Union
+from datetime import datetime, timedelta
 from functools import wraps
+from enum import Enum
+
+try:
+    import structlog
+    STRUCTLOG_AVAILABLE = True
+except ImportError:
+    STRUCTLOG_AVAILABLE = False
+    structlog = None
 
 
 class SupremeSystemError(Exception):
@@ -427,12 +438,301 @@ __all__ = [
     'FileOperationError',
     'SerializationError',
     'MonitoringError',
+
+# ===== ADVANCED ERROR HANDLING & RESILIENCE =====
+
+class ErrorSeverity(Enum):
+    """Error severity levels for classification and handling."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class CircuitBreakerState(Enum):
+    """Circuit breaker states for resilience patterns."""
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"         # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing recovery
+
+
+class CircuitBreakerOpenException(SupremeSystemError):
+    """Exception raised when circuit breaker is open."""
+    pass
+
+
+class CircuitBreaker:
+    """
+    Circuit Breaker pattern implementation for fault tolerance.
+    """
+
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 60.0,
+                 expected_exception: tuple = Exception, name: str = "default"):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.expected_exception = expected_exception
+        self.name = name
+        self._state = CircuitBreakerState.CLOSED
+        self._failure_count = 0
+        self._last_failure_time = None
+        self._success_count = 0
+        self._lock = threading.Lock()
+        self.logger = logging.getLogger(f"circuit_breaker.{name}")
+
+    def call(self, func: Callable, *args, **kwargs) -> Any:
+        if self._state == CircuitBreakerState.OPEN:
+            if self._should_attempt_reset():
+                self._state = CircuitBreakerState.HALF_OPEN
+            else:
+                raise CircuitBreakerOpenException(f"Circuit breaker '{self.name}' is OPEN")
+
+        try:
+            result = func(*args, **kwargs)
+            self._record_success()
+            return result
+        except self.expected_exception as e:
+            self._record_failure()
+            raise
+
+    def _should_attempt_reset(self) -> bool:
+        if self._last_failure_time is None:
+            return False
+        return time.time() - self._last_failure_time >= self.recovery_timeout
+
+    def _record_success(self):
+        with self._lock:
+            self._success_count += 1
+            if self._state == CircuitBreakerState.HALF_OPEN:
+                self._state = CircuitBreakerState.CLOSED
+                self._failure_count = 0
+
+    def _record_failure(self):
+        with self._lock:
+            self._failure_count += 1
+            self._last_failure_time = time.time()
+            if self._failure_count >= self.failure_threshold:
+                self._state = CircuitBreakerState.OPEN
+
+
+def circuit_breaker(failure_threshold: int = 5, recovery_timeout: float = 60.0,
+                   expected_exception: tuple = Exception, name: Optional[str] = None):
+    """Decorator to apply circuit breaker pattern."""
+    def decorator(func: Callable) -> Callable:
+        circuit_name = name or f"{func.__module__}.{func.__name__}"
+        breaker = CircuitBreaker(failure_threshold, recovery_timeout, expected_exception, circuit_name)
+
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                return await breaker.call_async(func, *args, **kwargs)
+            async def call_async(self, func, *args, **kwargs):
+                try:
+                    return await func(*args, **kwargs)
+                except self.expected_exception as e:
+                    self._record_failure()
+                    raise
+                else:
+                    self._record_success()
+            CircuitBreaker.call_async = call_async
+            return async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                return breaker.call(func, *args, **kwargs)
+            return sync_wrapper
+    return decorator
+
+
+class ResilienceManager:
+    """Centralized resilience management."""
+
+    def __init__(self):
+        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._lock = threading.Lock()
+        self.logger = logging.getLogger("resilience_manager")
+
+    def register_circuit_breaker(self, name: str, failure_threshold: int = 5,
+                                recovery_timeout: float = 60.0,
+                                expected_exception: tuple = Exception) -> CircuitBreaker:
+        with self._lock:
+            if name in self.circuit_breakers:
+                return self.circuit_breakers[name]
+            breaker = CircuitBreaker(failure_threshold, recovery_timeout, expected_exception, name)
+            self.circuit_breakers[name] = breaker
+            return breaker
+
+
+resilience_manager = ResilienceManager()
+
+def get_resilience_manager() -> ResilienceManager:
+    return resilience_manager
+
+
+def retry_with_circuit_breaker(max_attempts: int = 3, delay: float = 1.0, backoff: float = 2.0,
+                              exceptions: tuple = (Exception,), circuit_breaker_name: Optional[str] = None,
+                              failure_threshold: int = 5, recovery_timeout: float = 60.0):
+    """Enhanced retry decorator with circuit breaker."""
+    def decorator(func: Callable) -> Callable:
+        cb_name = circuit_breaker_name or f"{func.__module__}.{func.__name__}"
+        circuit_breaker = resilience_manager.register_circuit_breaker(
+            cb_name, failure_threshold, recovery_timeout, exceptions)
+
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return circuit_breaker.call(func, *args, **kwargs)
+                except exceptions as e:
+                    if attempt < max_attempts - 1:
+                        wait_time = delay * (backoff ** attempt)
+                        logging.warning(f"Retry attempt {attempt + 1} for {func.__name__}: {e}")
+                        time.sleep(wait_time)
+                    else:
+                        logging.error(f"All retry attempts exhausted for {func.__name__}: {e}")
+                        raise
+            raise Exception("Should not reach here")
+
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return await circuit_breaker.call_async(func, *args, **kwargs)
+                except exceptions as e:
+                    if attempt < max_attempts - 1:
+                        wait_time = delay * (backoff ** attempt)
+                        logging.warning(f"Async retry attempt {attempt + 1} for {func.__name__}: {e}")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logging.error(f"All async retry attempts exhausted for {func.__name__}: {e}")
+                        raise
+            raise Exception("Should not reach here")
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+    return decorator
+
+
+class RecoveryStrategy:
+    """Base class for error recovery strategies."""
+    def __init__(self, name: str):
+        self.name = name
+
+    def can_recover(self, error: Exception) -> bool:
+        raise NotImplementedError
+
+    def recover(self, error: Exception, context: Dict[str, Any]) -> Any:
+        raise NotImplementedError
+
+
+class FallbackRecoveryStrategy(RecoveryStrategy):
+    def __init__(self, name: str, fallback_value: Any):
+        super().__init__(name)
+        self.fallback_value = fallback_value
+
+    def can_recover(self, error: Exception) -> bool:
+        return True
+
+    def recover(self, error: Exception, context: Dict[str, Any]) -> Any:
+        logging.info(f"Fallback recovery '{self.name}': using {self.fallback_value}")
+        return self.fallback_value
+
+
+class ErrorRecoveryManager:
+    def __init__(self):
+        self.strategies: List[RecoveryStrategy] = []
+        self._default_strategies()
+        self.logger = logging.getLogger("error_recovery")
+
+    def _default_strategies(self):
+        self.add_strategy(FallbackRecoveryStrategy("default_fallback", None))
+
+    def add_strategy(self, strategy: RecoveryStrategy):
+        self.strategies.append(strategy)
+
+    def recover(self, error: Exception, context: Dict[str, Any] = None) -> Any:
+        context = context or {}
+        for strategy in self.strategies:
+            if strategy.can_recover(error):
+                try:
+                    return strategy.recover(error, context)
+                except Exception:
+                    continue
+        raise error
+
+
+error_recovery_manager = ErrorRecoveryManager()
+
+def get_error_recovery_manager() -> ErrorRecoveryManager:
+    return error_recovery_manager
+
+
+def resilient_operation(recovery_context: Optional[Dict[str, Any]] = None,
+                       enable_circuit_breaker: bool = True, **circuit_kwargs):
+    """Decorator for resilient operations."""
+    def decorator(func: Callable) -> Callable:
+        if enable_circuit_breaker:
+            func = circuit_breaker(**circuit_kwargs)(func)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            context = recovery_context or {}
+            context.update({'function': func, 'args': args, 'kwargs': kwargs})
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                return error_recovery_manager.recover(e, context)
+
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            context = recovery_context or {}
+            context.update({'function': func, 'args': args, 'kwargs': kwargs})
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                return error_recovery_manager.recover(e, context)
+
+        return async_wrapper if asyncio.iscoroutinefunction(func) else wrapper
+    return decorator
+
+
+__all__ = [
+    # Base exceptions
+    'SupremeSystemError',
+    # Specific exceptions
+    'ConnectionError',
+    'RateLimitError',
+    'PositionSizeError',
+    'StopLossError',
+    'MaxDrawdownError',
+    'StrategyTimeoutError',
+    'BacktestDataError',
+    'InsufficientDataError',
+    'FileOperationError',
+    'SerializationError',
+    'MonitoringError',
     'EXCEPTION_MAPPING',
     'create_exception',
     'handle_exception',
     # Advanced error handling
     'handle_errors',
     'retry_on_failure',
-    'ErrorHandler'
+    'ErrorHandler',
+    # Resilience and fault tolerance
+    'ErrorSeverity',
+    'CircuitBreakerState',
+    'CircuitBreakerOpenException',
+    'CircuitBreaker',
+    'circuit_breaker',
+    'ResilienceManager',
+    'get_resilience_manager',
+    'retry_with_circuit_breaker',
+    'RecoveryStrategy',
+    'FallbackRecoveryStrategy',
+    'RetryRecoveryStrategy',
+    'ErrorRecoveryManager',
+    'get_error_recovery_manager',
+    'resilient_operation'
 ]
 

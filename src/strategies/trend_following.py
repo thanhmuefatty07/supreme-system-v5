@@ -61,7 +61,7 @@ class TrendFollowingAgent(BaseStrategy):
 
         logger.info(f"Initialized TrendFollowingAgent {agent_id} with parameters: {self.parameters}")
 
-    def generate_trade_signal(self, market_data: pd.DataFrame, portfolio_value: float) -> Dict[str, Any]:
+    def generate_signal(self, data: pd.DataFrame, portfolio_value: Optional[float] = None) -> Dict[str, Any]:
         """
         Generate trading signal based on trend analysis.
 
@@ -74,49 +74,70 @@ class TrendFollowingAgent(BaseStrategy):
         """
         try:
             # Validate data
-            if not self.validate_data(market_data):
-                return {'action': 'HOLD', 'reason': 'Invalid data'}
-
-            if len(market_data) < self.long_window:
-                return {'action': 'HOLD', 'reason': 'Insufficient data'}
+            if data is None or data.empty or len(data) < self.long_window:
+                return {
+                    'action': 'HOLD',
+                    'symbol': 'AAPL',
+                    'quantity': 0,
+                    'price': 0.0,
+                    'strength': 0.0,
+                    'confidence': 0.0,
+                    'reason': 'Insufficient or invalid data'
+                }
 
             # Calculate indicators
-            indicators = self._calculate_indicators(market_data)
+            indicators = self._calculate_indicators(data)
 
             # Determine trend direction
             trend_direction = self._determine_trend_direction(indicators)
 
             # Check entry conditions
-            if trend_direction == 'UPTREND':
-                if self._check_buy_conditions(indicators):
-                    position_size = self._calculate_position_size(portfolio_value, indicators['close'].iloc[-1])
-                    return {
-                        'action': 'BUY',
-                        'symbol': 'AAPL',  # Default symbol
-                        'quantity': position_size,
-                        'price': indicators['close'].iloc[-1],
-                        'stop_loss': indicators['close'].iloc[-1] * (1 - self.stop_loss_pct),
-                        'take_profit': indicators['close'].iloc[-1] * (1 + self.take_profit_pct),
-                        'reason': 'Strong uptrend with confirmation'
-                    }
-            elif trend_direction == 'DOWNTREND':
-                if self._check_sell_conditions(indicators):
-                    position_size = self._calculate_position_size(portfolio_value, indicators['close'].iloc[-1])
-                    return {
-                        'action': 'SELL',
-                        'symbol': 'AAPL',  # Default symbol
-                        'quantity': position_size,
-                        'price': indicators['close'].iloc[-1],
-                        'stop_loss': indicators['close'].iloc[-1] * (1 + self.stop_loss_pct),
-                        'take_profit': indicators['close'].iloc[-1] * (1 - self.take_profit_pct),
-                        'reason': 'Strong downtrend with confirmation'
-                    }
+            current_price = indicators['close'].iloc[-1]
 
-            return {'action': 'HOLD', 'reason': 'No clear trend signal'}
+            if trend_direction == 'UPTREND' and self._check_buy_conditions(indicators):
+                position_size = self._calculate_position_size(portfolio_value or 10000, current_price)
+                return {
+                    'action': 'BUY',
+                    'symbol': 'AAPL',
+                    'quantity': position_size,
+                    'price': current_price,
+                    'strength': 0.8,
+                    'confidence': 0.9,
+                    'reason': 'Strong uptrend with confirmation'
+                }
+            elif trend_direction == 'DOWNTREND' and self._check_sell_conditions(indicators):
+                position_size = self._calculate_position_size(portfolio_value or 10000, current_price)
+                return {
+                    'action': 'SELL',
+                    'symbol': 'AAPL',
+                    'quantity': position_size,
+                    'price': current_price,
+                    'strength': 0.8,
+                    'confidence': 0.9,
+                    'reason': 'Strong downtrend with confirmation'
+                }
+
+            return {
+                'action': 'HOLD',
+                'symbol': 'AAPL',
+                'quantity': 0,
+                'price': current_price,
+                'strength': 0.0,
+                'confidence': 0.5,
+                'reason': 'No clear trend signal'
+            }
 
         except Exception as e:
             logger.error(f"Error generating trade signal: {e}")
-            return {'action': 'HOLD', 'reason': f'Error: {str(e)}'}
+            return {
+                'action': 'HOLD',
+                'symbol': 'AAPL',
+                'quantity': 0,
+                'price': 0.0,
+                'strength': 0.0,
+                'confidence': 0.0,
+                'reason': f'Error: {str(e)}'
+            }
 
     def _calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate technical indicators for trend analysis."""

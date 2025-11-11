@@ -8,10 +8,211 @@ Ensures data quality, integrity, and compliance.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+from decimal import Decimal
 
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, Field, validator, model_validator
+from pydantic import ValidationError
+
+
+# Pydantic Models for Input Validation
+
+class OHLCVDataPoint(BaseModel):
+    """Single OHLCV data point with comprehensive validation."""
+    timestamp: datetime = Field(..., description="Data timestamp")
+    open: Decimal = Field(..., gt=0, description="Opening price")
+    high: Decimal = Field(..., gt=0, description="Highest price")
+    low: Decimal = Field(..., gt=0, description="Lowest price")
+    close: Decimal = Field(..., gt=0, description="Closing price")
+    volume: Decimal = Field(..., ge=0, description="Trading volume")
+
+    @model_validator(mode='after')
+    def validate_ohlc_relationships(self):
+        """Validate OHLC relationships."""
+        open_price = self.open
+        high_price = self.high
+        low_price = self.low
+        close_price = self.close
+
+        # High >= Low
+        if high_price < low_price:
+            raise ValueError("High price must be >= low price")
+
+        # Open and Close within high-low range
+        if not (low_price <= open_price <= high_price):
+            raise ValueError("Open price must be within high-low range")
+
+        if not (low_price <= close_price <= high_price):
+            raise ValueError("Close price must be within high-low range")
+
+        return self
+
+    @validator('timestamp')
+    def validate_timestamp(cls, v):
+        """Validate timestamp is not in future and not too old."""
+        now = datetime.now()
+        if v > now + timedelta(minutes=1):  # Allow 1 minute future tolerance
+            raise ValueError("Timestamp cannot be in the future")
+
+        # Not older than 10 years
+        ten_years_ago = now - timedelta(days=3650)
+        if v < ten_years_ago:
+            raise ValueError("Timestamp cannot be older than 10 years")
+
+        return v
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            Decimal: lambda v: float(v)
+        }
+
+
+class TradingSymbol(BaseModel):
+    """Trading symbol validation."""
+    symbol: str = Field(..., min_length=1, max_length=20, regex=r'^[A-Z0-9]+$')
+
+    @validator('symbol')
+    def validate_symbol_format(cls, v):
+        """Validate symbol format for common exchanges."""
+        # Remove common separators
+        clean_symbol = v.replace('/', '').replace('-', '').replace('_', '')
+
+        # Should contain at least one letter and end with quote currency
+        if not any(c.isalpha() for c in clean_symbol):
+            raise ValueError("Symbol must contain at least one letter")
+
+        # Common quote currencies
+        quote_currencies = ['USDT', 'BUSD', 'USDC', 'BTC', 'ETH', 'BNB', 'USD']
+        if not any(clean_symbol.upper().endswith(qc) for qc in quote_currencies):
+            # Allow if it's a known symbol format
+            pass
+
+        return v.upper()
+
+
+class KlineInterval(BaseModel):
+    """Kline/candlestick interval validation."""
+    interval: str = Field(..., regex=r'^\d+[mhdwM]$')
+
+    @validator('interval')
+    def validate_interval(cls, v):
+        """Validate interval format."""
+        valid_intervals = [
+            '1m', '3m', '5m', '15m', '30m',
+            '1h', '2h', '4h', '6h', '8h', '12h',
+            '1d', '3d', '1w', '1M'
+        ]
+
+        if v not in valid_intervals:
+            raise ValueError(f"Invalid interval. Valid intervals: {valid_intervals}")
+
+        return v
+
+
+class TradingStrategyConfig(BaseModel):
+    """Trading strategy configuration validation."""
+    name: str = Field(..., min_length=1, max_length=50)
+    symbol: str
+    initial_capital: Decimal = Field(..., gt=0, le=Decimal('10000000'))  # Max 10M
+    risk_per_trade: Decimal = Field(..., gt=0, le=Decimal('1'))  # Max 100%
+    max_positions: int = Field(..., ge=1, le=100)
+    stop_loss_pct: Decimal = Field(..., gt=0, le=Decimal('0.5'))  # Max 50%
+    take_profit_pct: Decimal = Field(..., gt=0, le=Decimal('1'))  # Max 100%
+
+    @model_validator(mode='after')
+    def validate_risk_parameters(self):
+        """Validate risk parameters make sense together."""
+        capital = self.initial_capital
+        risk_pct = self.risk_per_trade
+        max_pos = self.max_positions
+
+        # Risk per position should not exceed reasonable limits
+        risk_per_position = capital * risk_pct / max_pos
+        if risk_per_position < Decimal('1'):  # Less than $1 risk
+            raise ValueError("Risk per position too low (< $1)")
+
+        if risk_per_position > capital * Decimal('0.1'):  # More than 10% of capital per position
+            raise ValueError("Risk per position too high (> 10% of capital)")
+
+        return self
+
+
+class APIRequestConfig(BaseModel):
+    """API request configuration validation."""
+    api_key: str = Field(..., min_length=10, max_length=200)
+    api_secret: str = Field(..., min_length=10, max_length=200)
+    testnet: bool = True
+    rate_limit_delay: Decimal = Field(..., ge=0, le=Decimal('10'))  # Max 10 seconds
+    timeout: int = Field(..., ge=1, le=300)  # 1-300 seconds
+    max_retries: int = Field(..., ge=0, le=10)
+
+    @validator('api_key', 'api_secret')
+    def validate_api_credentials(cls, v):
+        """Validate API credentials format."""
+        # Should be alphanumeric with possible special chars
+        import re
+        if not re.match(r'^[A-Za-z0-9+/=]+$', v):
+            raise ValueError("API credentials should be base64 encoded")
+
+        return v
+
+
+class DataQueryParams(BaseModel):
+    """Data query parameters validation."""
+    symbol: str
+    interval: str
+    start_date: str
+    end_date: Optional[str] = None
+    limit: int = Field(..., ge=1, le=1000)
+
+    @model_validator(mode='after')
+    def validate_date_range(self):
+        """Validate date range."""
+        start_str = self.start_date
+        end_str = self.end_date
+
+        if end_str:
+            try:
+                start_dt = datetime.strptime(start_str, '%Y-%m-%d')
+                end_dt = datetime.strptime(end_str, '%Y-%m-%d')
+
+                if start_dt >= end_dt:
+                    raise ValueError("Start date must be before end date")
+
+                # Not more than 1 year range
+                if (end_dt - start_dt).days > 365:
+                    raise ValueError("Date range cannot exceed 1 year")
+
+            except ValueError as e:
+                if "time data" in str(e):
+                    raise ValueError("Invalid date format. Use YYYY-MM-DD")
+                raise
+
+        return self
+
+    @validator('start_date', 'end_date')
+    def validate_date_format(cls, v):
+        """Validate date string format."""
+        if v is None:
+            return v
+
+        try:
+            datetime.strptime(v, '%Y-%m-%d')
+            return v
+        except ValueError:
+            raise ValueError("Date must be in YYYY-MM-DD format")
+
+
+class ValidationResult(BaseModel):
+    """Validation result structure."""
+    valid: bool
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    timestamp: datetime = Field(default_factory=datetime.now)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DataValidator:
@@ -44,6 +245,319 @@ class DataValidator:
             'statistics': self._validate_statistics,
             'cross_field': self._validate_cross_field_consistency
         }
+
+    def validate_with_pydantic(self, data: Union[Dict, List[Dict], pd.DataFrame],
+                              model_type: str) -> ValidationResult:
+        """
+        Validate data using Pydantic models.
+
+        Args:
+            data: Data to validate (dict, list of dicts, or DataFrame)
+            model_type: Type of model to use ('ohlcv', 'symbol', 'config', etc.)
+
+        Returns:
+            ValidationResult with detailed feedback
+        """
+        result = ValidationResult(valid=True, errors=[], warnings=[])
+
+        try:
+            if model_type == 'ohlcv_datapoint':
+                if isinstance(data, dict):
+                    OHLCVDataPoint(**data)
+                elif isinstance(data, list):
+                    for item in data:
+                        OHLCVDataPoint(**item)
+                elif isinstance(data, pd.DataFrame):
+                    # Convert DataFrame rows to dicts and validate
+                    for _, row in data.iterrows():
+                        row_dict = row.to_dict()
+                        # Convert numpy types to native Python types
+                        for key, value in row_dict.items():
+                            if hasattr(value, 'item'):  # numpy scalar
+                                row_dict[key] = value.item()
+                            elif isinstance(value, np.datetime64):
+                                row_dict[key] = value.astype('datetime64[s]').astype(datetime)
+                        OHLCVDataPoint(**row_dict)
+
+            elif model_type == 'trading_symbol':
+                TradingSymbol(symbol=data if isinstance(data, str) else data.get('symbol'))
+
+            elif model_type == 'kline_interval':
+                KlineInterval(interval=data if isinstance(data, str) else data.get('interval'))
+
+            elif model_type == 'strategy_config':
+                TradingStrategyConfig(**data)
+
+            elif model_type == 'api_config':
+                APIRequestConfig(**data)
+
+            elif model_type == 'query_params':
+                DataQueryParams(**data)
+
+            else:
+                result.errors.append(f"Unknown model type: {model_type}")
+                result.valid = False
+
+        except ValidationError as e:
+            result.valid = False
+            result.errors = [f"{err['loc'][0]}: {err['msg']}" for err in e.errors()]
+        except Exception as e:
+            result.valid = False
+            result.errors = [f"Validation error: {str(e)}"]
+
+        return result
+
+    def validate_dataframe_with_models(self, df: pd.DataFrame) -> ValidationResult:
+        """
+        Validate entire DataFrame using Pydantic models.
+
+        Args:
+            df: DataFrame to validate
+
+        Returns:
+            ValidationResult with comprehensive feedback
+        """
+        result = ValidationResult(valid=True, errors=[], warnings=[])
+
+        try:
+            # First check basic structure
+            required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                result.errors.append(f"Missing required columns: {missing_cols}")
+                result.valid = False
+                return result
+
+            # Validate each row using Pydantic
+            invalid_rows = 0
+            for idx, row in df.iterrows():
+                try:
+                    row_dict = {}
+                    for col in required_cols:
+                        value = row[col]
+                        if hasattr(value, 'item'):  # numpy scalar
+                            value = value.item()
+                        elif isinstance(value, np.datetime64):
+                            value = value.astype('datetime64[s]').astype(datetime)
+                        row_dict[col] = value
+
+                    OHLCVDataPoint(**row_dict)
+
+                except ValidationError as e:
+                    invalid_rows += 1
+                    if invalid_rows <= 5:  # Only log first 5 errors
+                        result.errors.append(f"Row {idx}: {e.errors()[0]['msg']}")
+                except Exception as e:
+                    invalid_rows += 1
+                    if invalid_rows <= 5:
+                        result.errors.append(f"Row {idx}: {str(e)}")
+
+            if invalid_rows > 0:
+                result.errors.append(f"Total invalid rows: {invalid_rows}/{len(df)}")
+                result.valid = False
+
+            # Add metadata
+            result.metadata = {
+                'total_rows': len(df),
+                'valid_rows': len(df) - invalid_rows,
+                'invalid_rows': invalid_rows,
+                'validity_percentage': ((len(df) - invalid_rows) / len(df) * 100) if len(df) > 0 else 0
+            }
+
+        except Exception as e:
+            result.valid = False
+            result.errors = [f"DataFrame validation failed: {str(e)}"]
+
+        return result
+
+    def validate_api_inputs(self, **kwargs) -> ValidationResult:
+        """
+        Validate API input parameters.
+
+        Args:
+            **kwargs: API parameters to validate
+
+        Returns:
+            ValidationResult
+        """
+        result = ValidationResult(valid=True, errors=[], warnings=[])
+
+        # Validate symbol if provided
+        if 'symbol' in kwargs:
+            symbol_result = self.validate_with_pydantic({'symbol': kwargs['symbol']}, 'trading_symbol')
+            if not symbol_result.valid:
+                result.errors.extend(symbol_result.errors)
+
+        # Validate interval if provided
+        if 'interval' in kwargs:
+            interval_result = self.validate_with_pydantic({'interval': kwargs['interval']}, 'kline_interval')
+            if not interval_result.valid:
+                result.errors.extend(interval_result.errors)
+
+        # Validate dates if provided
+        date_params = {}
+        if 'start_date' in kwargs:
+            date_params['start_date'] = kwargs['start_date']
+        if 'end_date' in kwargs:
+            date_params['end_date'] = kwargs['end_date']
+
+        if date_params:
+            date_result = self.validate_with_pydantic(date_params, 'query_params')
+            if not date_result.valid:
+                result.errors.extend(date_result.errors)
+
+        # Validate numeric parameters
+        if 'limit' in kwargs:
+            limit = kwargs['limit']
+            if not isinstance(limit, int) or limit < 1 or limit > 1000:
+                result.errors.append("Limit must be integer between 1 and 1000")
+
+        result.valid = len(result.errors) == 0
+        return result
+
+    def validate_strategy_config(self, config: Dict[str, Any]) -> ValidationResult:
+        """
+        Validate trading strategy configuration.
+
+        Args:
+            config: Strategy configuration dictionary
+
+        Returns:
+            ValidationResult
+        """
+        return self.validate_with_pydantic(config, 'strategy_config')
+
+    def sanitize_input_data(self, data: Union[Dict, List[Dict], pd.DataFrame],
+                           data_type: str = 'ohlcv') -> Union[Dict, List[Dict], pd.DataFrame]:
+        """
+        Sanitize and normalize input data.
+
+        Args:
+            data: Input data to sanitize
+            data_type: Type of data ('ohlcv', 'config', etc.)
+
+        Returns:
+            Sanitized data
+        """
+        try:
+            if data_type == 'ohlcv':
+                if isinstance(data, pd.DataFrame):
+                    # Convert DataFrame to list of dicts, sanitize, then back to DataFrame
+                    records = []
+                    for _, row in data.iterrows():
+                        record = {}
+                        for col in data.columns:
+                            value = row[col]
+                            if hasattr(value, 'item'):  # numpy scalar
+                                value = value.item()
+                            elif isinstance(value, np.datetime64):
+                                value = value.astype('datetime64[s]').astype(datetime)
+                            record[col] = value
+                        records.append(record)
+
+                    # Sanitize each record
+                    sanitized_records = []
+                    for record in records:
+                        try:
+                            # Try to create Pydantic model (this will sanitize)
+                            model = OHLCVDataPoint(**record)
+                            sanitized_records.append(model.dict())
+                        except ValidationError:
+                            # If validation fails, try to fix common issues
+                            sanitized_record = self._fix_common_data_issues(record)
+                            try:
+                                model = OHLCVDataPoint(**sanitized_record)
+                                sanitized_records.append(model.dict())
+                            except ValidationError:
+                                # Skip invalid records
+                                continue
+
+                    # Convert back to DataFrame
+                    if sanitized_records:
+                        return pd.DataFrame(sanitized_records)
+                    else:
+                        return pd.DataFrame()
+
+                elif isinstance(data, list):
+                    sanitized_list = []
+                    for item in data:
+                        try:
+                            model = OHLCVDataPoint(**item)
+                            sanitized_list.append(model.dict())
+                        except ValidationError:
+                            sanitized_item = self._fix_common_data_issues(item)
+                            try:
+                                model = OHLCVDataPoint(**sanitized_item)
+                                sanitized_list.append(model.dict())
+                            except ValidationError:
+                                continue
+                    return sanitized_list
+
+                elif isinstance(data, dict):
+                    try:
+                        model = OHLCVDataPoint(**data)
+                        return model.dict()
+                    except ValidationError:
+                        sanitized = self._fix_common_data_issues(data)
+                        model = OHLCVDataPoint(**sanitized)
+                        return model.dict()
+
+        except Exception as e:
+            self.logger.error(f"Data sanitization failed: {e}")
+            return data  # Return original data if sanitization fails
+
+        return data
+
+    def _fix_common_data_issues(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Fix common data issues before validation.
+
+        Args:
+            data: Data dictionary with potential issues
+
+        Returns:
+            Fixed data dictionary
+        """
+        fixed = data.copy()
+
+        # Fix timestamp
+        if 'timestamp' in fixed:
+            ts = fixed['timestamp']
+            if isinstance(ts, str):
+                try:
+                    fixed['timestamp'] = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                except:
+                    # Try other formats
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d']:
+                        try:
+                            fixed['timestamp'] = datetime.strptime(ts, fmt)
+                            break
+                        except:
+                            continue
+
+        # Fix numeric types and ensure positive values
+        price_fields = ['open', 'high', 'low', 'close']
+        for field in price_fields:
+            if field in fixed:
+                value = fixed[field]
+                if isinstance(value, (int, float, str)):
+                    try:
+                        numeric_value = float(value)
+                        fixed[field] = Decimal(str(max(0.00000001, numeric_value)))  # Ensure positive
+                    except:
+                        fixed[field] = Decimal('1.0')  # Default value
+
+        # Fix volume
+        if 'volume' in fixed:
+            value = fixed['volume']
+            if isinstance(value, (int, float, str)):
+                try:
+                    numeric_value = float(value)
+                    fixed['volume'] = Decimal(str(max(0, numeric_value)))
+                except:
+                    fixed['volume'] = Decimal('0')
+
+        return fixed
 
     def validate_ohlcv_data(self, data: pd.DataFrame, symbol: str) -> Dict[str, Any]:
         """
