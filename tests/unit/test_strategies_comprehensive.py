@@ -12,7 +12,7 @@ import numpy as np
 from strategies.momentum import MomentumStrategy
 from strategies.moving_average import MovingAverageStrategy
 from strategies.mean_reversion import MeanReversionStrategy
-from strategies.breakout import BreakoutStrategy
+from strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 
 
 class TestBaseStrategyFunctionality:
