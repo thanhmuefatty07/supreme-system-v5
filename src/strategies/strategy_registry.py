@@ -395,6 +395,7 @@ def initialize_builtin_strategies():
     try:
         # Import strategy modules
         from . import momentum, trend_following, breakout, moving_average, mean_reversion
+        from .breakout import ImprovedBreakoutStrategy
 
         # Register strategies
         strategy_registry.register_strategy(
@@ -430,7 +431,7 @@ def initialize_builtin_strategies():
 
         strategy_registry.register_strategy(
             'breakout',
-            breakout.BreakoutStrategy,
+            ImprovedBreakoutStrategy,
             metadata={'type': 'breakout', 'description': 'Breakout trading strategy'},
             parameters={
                 'lookback_period': 20,

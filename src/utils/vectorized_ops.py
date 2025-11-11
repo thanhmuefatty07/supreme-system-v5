@@ -13,7 +13,7 @@ Features:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union, Any
 from numba import jit, prange, njit, vectorize, float64, int32, cuda
 import logging
 import platform

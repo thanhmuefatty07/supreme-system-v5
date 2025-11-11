@@ -21,7 +21,7 @@ from plotly.subplots import make_subplots
 
 from ..data.data_pipeline import DataPipeline
 from ..data.realtime_client import BinanceWebSocketClient
-from ..strategies.breakout import BreakoutStrategy
+from ..strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 from ..strategies.mean_reversion import MeanReversionStrategy
 from ..strategies.momentum import MomentumStrategy
 from ..strategies.moving_average import MovingAverageStrategy

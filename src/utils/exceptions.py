@@ -413,32 +413,6 @@ class ErrorHandler:
         return False
 
 
-__all__ = [
-    'SupremeSystemError',
-    'ConfigurationError',
-    'DataError',
-    'ValidationError',
-    'TradingError',
-    'RiskError',
-    'NetworkError',
-    'StrategyError',
-    'BacktestError',
-    'CircuitBreakerError',
-    'InsufficientFundsError',
-    'InvalidOrderError',
-    'MarketDataError',
-    'ConnectionError',
-    'RateLimitError',
-    'PositionSizeError',
-    'StopLossError',
-    'MaxDrawdownError',
-    'StrategyTimeoutError',
-    'BacktestDataError',
-    'InsufficientDataError',
-    'FileOperationError',
-    'SerializationError',
-    'MonitoringError',
-
 # ===== ADVANCED ERROR HANDLING & RESILIENCE =====
 
 class ErrorSeverity(Enum):

@@ -17332,3 +17332,5 @@
 2025-11-11 21:47:05,887 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
 2025-11-11 21:47:54,278 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
 2025-11-11 21:47:55,296 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
+2025-11-12 00:48:56,748 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
+2025-11-12 00:48:57,928 - src.data.binance_client - WARNING - No API credentials provided - operating in read-only mode
