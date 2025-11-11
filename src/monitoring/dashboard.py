@@ -18,15 +18,12 @@ import threading
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
-
-from data.data_pipeline import DataPipeline
-from data.realtime_client import BinanceWebSocketClient
-from strategies.moving_average import MovingAverageStrategy
-from strategies.mean_reversion import MeanReversionStrategy
-from strategies.momentum import MomentumStrategy
-from strategies.breakout import BreakoutStrategy
+from ..data.data_pipeline import DataPipeline
+from ..data.realtime_client import BinanceWebSocketClient
+from ..strategies.moving_average import MovingAverageStrategy
+from ..strategies.mean_reversion import MeanReversionStrategy
+from ..strategies.momentum import MomentumStrategy
+from ..strategies.breakout import BreakoutStrategy
 
 
 class MonitoringDashboard:

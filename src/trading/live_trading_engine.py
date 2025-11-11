@@ -20,6 +20,49 @@ from ..risk.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 from ..config.config import get_config
 
 
+class LiveTradingPosition:
+    """Represents a live trading position."""
+
+    def __init__(
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        entry_price: float,
+        timestamp: Optional[datetime] = None
+    ):
+        self.symbol = symbol
+        self.side = side  # 'LONG' or 'SHORT'
+        self.quantity = quantity
+        self.entry_price = entry_price
+        self.current_price = entry_price
+        self.timestamp = timestamp or datetime.now()
+        self.unrealized_pnl = 0.0
+        self.realized_pnl = 0.0
+        self.stop_loss: Optional[float] = None
+        self.take_profit: Optional[float] = None
+        self.status = 'OPEN'
+
+    def update_pnl(self, current_price: float) -> float:
+        """Update and return unrealized P&L."""
+        self.current_price = current_price
+        if self.side == 'LONG':
+            self.unrealized_pnl = (current_price - self.entry_price) * self.quantity
+        else:  # SHORT
+            self.unrealized_pnl = (self.entry_price - current_price) * self.quantity
+        return self.unrealized_pnl
+
+    def close_position(self, exit_price: float) -> float:
+        """Close position and return realized P&L."""
+        if self.side == 'LONG':
+            self.realized_pnl = (exit_price - self.entry_price) * self.quantity
+        else:  # SHORT
+            self.realized_pnl = (self.entry_price - exit_price) * self.quantity
+
+        self.status = 'CLOSED'
+        return self.realized_pnl
+
+
 class LiveOrder:
     """Represents a live trading order."""
 
@@ -597,6 +640,82 @@ class LiveTradingEngine:
                 'available_capital': self._get_available_capital()
             }
         }
+
+    def start_monitoring(self) -> None:
+        """
+        Start the monitoring thread for live trading.
+
+        This method starts a background thread that monitors positions,
+        checks stop losses, and handles risk management.
+        """
+        if hasattr(self, '_monitoring_thread') and self._monitoring_thread.is_alive():
+            self.logger.warning("Monitoring already running")
+            return
+
+        self._monitoring_active = True
+        self._monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+        self._monitoring_thread.start()
+        self.logger.info("Live trading monitoring started")
+
+    def _execute_buy_order(self, symbol: str, quantity: float, price: Optional[float] = None) -> Optional[str]:
+        """
+        Execute a buy order.
+
+        Args:
+            symbol: Trading symbol
+            quantity: Order quantity
+            price: Optional limit price
+
+        Returns:
+            Order ID if successful, None if failed
+        """
+        try:
+            order_type = 'LIMIT' if price else 'MARKET'
+            order = LiveOrder(
+                symbol=symbol,
+                side='BUY',
+                order_type=order_type,
+                quantity=quantity,
+                price=price
+            )
+
+            if self._execute_order(order):
+                return order.order_id
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to execute buy order for {symbol}: {e}")
+            return None
+
+    def _execute_sell_order(self, symbol: str, quantity: float, price: Optional[float] = None) -> Optional[str]:
+        """
+        Execute a sell order.
+
+        Args:
+            symbol: Trading symbol
+            quantity: Order quantity
+            price: Optional limit price
+
+        Returns:
+            Order ID if successful, None if failed
+        """
+        try:
+            order_type = 'LIMIT' if price else 'MARKET'
+            order = LiveOrder(
+                symbol=symbol,
+                side='SELL',
+                order_type=order_type,
+                quantity=quantity,
+                price=price
+            )
+
+            if self._execute_order(order):
+                return order.order_id
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to execute sell order for {symbol}: {e}")
+            return None
 
     def __enter__(self):
         """Context manager entry."""

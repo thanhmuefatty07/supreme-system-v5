@@ -15,8 +15,8 @@ src_path = Path(__file__).parent.parent / 'src'
 sys.path.insert(0, str(src_path))
 
 try:
-    from risk.risk_manager import RiskManager
-    from strategies.moving_average import MovingAverageStrategy
+    from src.risk.risk_manager import RiskManager
+    from src.strategies.moving_average import MovingAverageStrategy
 except ImportError:
     from risk.risk_manager import RiskManager
     from strategies.moving_average import MovingAverageStrategy

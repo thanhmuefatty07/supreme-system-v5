@@ -20,16 +20,13 @@ from typing import Dict, List, Optional, Any, Union
 import pandas as pd
 import numpy as np
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from data.realtime_client import BinanceWebSocketClient
-from data.data_pipeline import DataPipeline
-from strategies.moving_average import MovingAverageStrategy
-from strategies.mean_reversion import MeanReversionStrategy
-from strategies.momentum import MomentumStrategy
-from strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
-from risk.advanced_risk_manager import AdvancedRiskManager
+from ..data.realtime_client import BinanceWebSocketClient
+from ..data.data_pipeline import DataPipeline
+from ..strategies.moving_average import MovingAverageStrategy
+from ..strategies.mean_reversion import MeanReversionStrategy
+from ..strategies.momentum import MomentumStrategy
+from ..strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
+from ..risk.advanced_risk_manager import AdvancedRiskManager
 
 
 class PaperTradingPosition:
