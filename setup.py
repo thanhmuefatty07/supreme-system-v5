@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="supreme-system-v5",
-    version="0.1.0",
+    version="5.0.0",
     author="Supreme Trading Team",
     author_email="team@supreme-system.com",
     description="Real algorithmic trading system for ETH-USDT scalping",
@@ -48,7 +48,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "supreme-system=src.cli:main",
+            "supreme-system=cli:main",
         ],
     },
 )

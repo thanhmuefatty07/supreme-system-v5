@@ -4,7 +4,7 @@ Supreme System V5 - Real Algorithmic Trading System
 A production-ready trading system for ETH-USDT scalping built from the ground up.
 """
 
-__version__ = "0.1.0"
+__version__ = "5.0.0"
 __author__ = "Supreme Trading Team"
 __description__ = "Real algorithmic trading system for ETH-USDT scalping"
 
