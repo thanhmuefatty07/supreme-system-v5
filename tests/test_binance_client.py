@@ -9,9 +9,15 @@ from unittest.mock import Mock, patch
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from data.binance_client import BinanceClient
+# Add src to path for imports
+src_path = Path(__file__).parent.parent / 'src'
+sys.path.insert(0, str(src_path))
+
+try:
+    from data.binance_client import BinanceClient
+except ImportError:
+    from data.binance_client import BinanceClient
 
 
 class TestBinanceClient:

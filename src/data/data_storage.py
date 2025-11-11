@@ -449,6 +449,119 @@ class DataStorage:
         except Exception as e:
             self.logger.error(f"Failed to save metadata: {e}")
 
+    def store_data(self, data: pd.DataFrame, symbol: str, partition_by: str = 'date') -> bool:
+        """
+        Store data with partitioning for testing framework.
+
+        This is a simplified version of store_historical_data that matches
+        the testing expectations.
+
+        Args:
+            data: DataFrame to store
+            symbol: Trading symbol
+            partition_by: Partitioning strategy ('date' or 'date_hour')
+
+        Returns:
+            Success status
+        """
+        try:
+            if data.empty:
+                self.logger.warning(f"No data to store for {symbol}")
+                return False
+
+            # Validate required columns
+            required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            missing_cols = [col for col in required_columns if col not in data.columns]
+            if missing_cols:
+                self.logger.error(f"Missing required columns: {missing_cols}")
+                return False
+
+            # Ensure timestamp is datetime
+            data = data.copy()
+            data['timestamp'] = pd.to_datetime(data['timestamp'])
+
+            # Add partitioning columns
+            data['date'] = data['timestamp'].dt.date
+            if partition_by == 'date_hour':
+                data['hour'] = data['timestamp'].dt.hour
+
+            # Create symbol directory
+            symbol_dir = self.historical_dir / symbol
+            symbol_dir.mkdir(parents=True, exist_ok=True)
+
+            # Convert to PyArrow Table
+            table = pa.Table.from_pandas(data)
+
+            # Determine partition columns
+            partition_cols = ['date']
+            if partition_by == 'date_hour':
+                partition_cols.append('hour')
+
+            # Write with partitioning
+            pq.write_to_dataset(
+                table,
+                root_path=symbol_dir,
+                partition_cols=partition_cols,
+                compression=self.compression,
+                # Enable statistics for predicate pushdown
+                write_statistics=True
+            )
+
+            self.logger.info(f"Stored {len(data)} rows for {symbol} with partitioning by {partition_by}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to store data for {symbol}: {e}")
+            return False
+
+    def query_data(self, symbol: str, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
+        """
+        Query data by date range for testing framework.
+
+        This is a simplified version that matches testing expectations.
+
+        Args:
+            symbol: Trading symbol
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            Filtered DataFrame or None
+        """
+        try:
+            symbol_dir = self.historical_dir / symbol
+
+            if not symbol_dir.exists():
+                self.logger.warning(f"No data found for {symbol}")
+                return None
+
+            # Read parquet dataset with filtering
+            # Convert dates to string format for filtering
+            start_str = pd.Timestamp(start_date).strftime('%Y-%m-%d')
+            end_str = pd.Timestamp(end_date).strftime('%Y-%m-%d')
+
+            dataset = pq.ParquetDataset(
+                symbol_dir,
+                filters=[
+                    ('date', '>=', start_str),
+                    ('date', '<=', end_str)
+                ]
+            )
+
+            # Read only essential columns
+            table = dataset.read(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df = table.to_pandas()
+
+            # Sort by timestamp
+            df = df.sort_values('timestamp').reset_index(drop=True)
+
+            self.logger.info(f"Queried {len(df)} rows for {symbol} from {start_date} to {end_date}")
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Failed to query data for {symbol}: {e}")
+            return None
+
     def cleanup_old_data(self, days_to_keep: int = 365):
         """Clean up data older than specified days."""
         try:

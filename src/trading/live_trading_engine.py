@@ -16,6 +16,7 @@ import threading
 from ..data.binance_client import BinanceClient
 from ..strategies.base_strategy import BaseStrategy
 from ..risk.risk_manager import RiskManager
+from ..risk.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 from ..config.config import get_config
 
 
@@ -167,6 +168,20 @@ class LiveTradingEngine:
             take_profit_pct=self.config.get('risk.take_profit_pct', 0.05)
         )
 
+        # Initialize circuit breaker
+        circuit_config = {
+            'failure_threshold': self.config.get('circuit_breaker.failure_threshold', 5),
+            'timeout': self.config.get('circuit_breaker.timeout', 300),  # 5 minutes
+            'success_threshold': self.config.get('circuit_breaker.success_threshold', 3),
+            'max_daily_loss': self.config.get('circuit_breaker.max_daily_loss', 0.05),
+            'max_hourly_loss': self.config.get('circuit_breaker.max_hourly_loss', 0.02),
+            'max_position_size': self.config.get('circuit_breaker.max_position_size', 0.10),
+            'max_drawdown': self.config.get('circuit_breaker.max_drawdown', 0.15)
+        }
+        self.circuit_breaker = CircuitBreaker(circuit_config)
+        # Set portfolio reference for risk checks
+        self.circuit_breaker.portfolio = self.risk_manager.portfolio if hasattr(self.risk_manager, 'portfolio') else None
+
         # Trading state
         self.is_live = False
         self.positions: Dict[str, LivePosition] = {}
@@ -184,10 +199,6 @@ class LiveTradingEngine:
         self.daily_loss_limit = self.config.get('risk.daily_loss_limit', 0.05)
         self.max_consecutive_losses = self.config.get('risk.max_consecutive_losses', 5)
         self.consecutive_losses = 0
-
-        # Circuit breaker
-        self.circuit_breaker_active = False
-        self.last_circuit_reset = datetime.now()
 
         # Monitoring
         self.monitoring_thread: Optional[threading.Thread] = None
@@ -269,11 +280,32 @@ class LiveTradingEngine:
         if not self._check_risk_limits(strategy_name, symbol, signal, price, confidence):
             return None
 
-        # Circuit breaker check
-        if self.circuit_breaker_active:
-            self.logger.warning("Circuit breaker active - no new trades")
+        # Circuit breaker protection
+        try:
+            # Define the trading execution function
+            def execute_trading_signal():
+                return self._execute_signal_internal(strategy_name, symbol, signal, price, confidence)
+
+            # Execute with circuit breaker protection
+            return self.circuit_breaker.call(execute_trading_signal)
+
+        except CircuitBreakerOpen:
+            self.logger.critical("Circuit breaker triggered - trading halted for safety")
             return None
 
+    def _execute_signal_internal(
+        self,
+        strategy_name: str,
+        symbol: str,
+        signal: int,
+        price: float,
+        confidence: float
+    ) -> Optional[LiveOrder]:
+        """
+        Internal signal execution without circuit breaker (called by circuit breaker).
+
+        This method contains the actual trading logic that needs protection.
+        """
         # Check existing position
         existing_position = self.positions.get(symbol)
         if existing_position:
@@ -287,9 +319,8 @@ class LiveTradingEngine:
 
         # Calculate position size
         position_size = self.risk_manager.calculate_position_size(
-            capital=self._get_available_capital(),
-            price=price,
-            risk_pct=self.config.get('risk.risk_per_trade', 0.01)
+            entry_price=price,
+            capital=self._get_available_capital()
         )
 
         if position_size <= 0:

@@ -8,7 +8,8 @@ Trades based on the principle that trending assets continue to trend.
 
 import pandas as pd
 import numpy as np
-from typing import Optional
+from typing import Optional, Dict, Any, Tuple, List
+import logging
 
 from .base_strategy import BaseStrategy
 
@@ -30,7 +31,7 @@ class MomentumStrategy(BaseStrategy):
         trend_threshold: float = 0.02,  # 2% trend strength threshold
         volume_confirmation: bool = True,
         name: str = "Momentum"
-    ):
+    ) -> None:
         """
         Initialize the momentum strategy.
 
@@ -51,6 +52,10 @@ class MomentumStrategy(BaseStrategy):
         self.roc_period = roc_period
         self.trend_threshold = trend_threshold
         self.volume_confirmation = volume_confirmation
+
+        # Performance optimization cache
+        self._indicators_cache = {}
+        self._last_data_hash = None
 
         # Set parameters for tracking
         self.set_parameters(
@@ -80,10 +85,13 @@ class MomentumStrategy(BaseStrategy):
         if len(data) < min_periods:
             return 0
 
-        # Calculate momentum signals
-        macd_signal = self._calculate_macd_signal(data)
-        roc_signal = self._calculate_roc_signal(data)
-        trend_signal = self._calculate_trend_signal(data)
+        # Pre-calculate indicators for performance optimization
+        self._precalculate_indicators(data)
+
+        # Calculate momentum signals using cached indicators
+        macd_signal = self._calculate_macd_signal_cached(data)
+        roc_signal = self._calculate_roc_signal_cached(data)
+        trend_signal = self._calculate_trend_signal_cached(data)
 
         # Volume confirmation (if enabled)
         volume_signal = 1
@@ -108,6 +116,114 @@ class MomentumStrategy(BaseStrategy):
         elif bearish_ratio >= 0.6:
             return -1
         else:
+            return 0
+
+    def _precalculate_indicators(self, data: pd.DataFrame) -> None:
+        """
+        Pre-calculate and cache indicators for performance optimization.
+        """
+        # Create data hash for cache invalidation
+        data_hash = hash(data['close'].values.tobytes())
+
+        if data_hash == self._last_data_hash:
+            return  # Cache is still valid
+
+        # Clear old cache
+        self._indicators_cache.clear()
+
+        prices = data['close']
+        volume = data.get('volume', pd.Series([1] * len(data)))
+
+        # Pre-calculate EMAs for MACD
+        self._indicators_cache['short_ema'] = prices.ewm(span=self.short_period, adjust=False).mean()
+        self._indicators_cache['long_ema'] = prices.ewm(span=self.long_period, adjust=False).mean()
+        self._indicators_cache['macd_line'] = self._indicators_cache['short_ema'] - self._indicators_cache['long_ema']
+        self._indicators_cache['signal_line'] = self._indicators_cache['macd_line'].ewm(span=self.signal_period, adjust=False).mean()
+
+        # Pre-calculate ROC
+        self._indicators_cache['roc'] = ((prices - prices.shift(self.roc_period)) / prices.shift(self.roc_period)) * 100
+
+        # Pre-calculate trend indicators
+        self._indicators_cache['sma_short'] = prices.rolling(window=self.short_period, min_periods=1).mean()
+        self._indicators_cache['sma_long'] = prices.rolling(window=self.long_period, min_periods=1).mean()
+
+        # Pre-calculate volume indicators if needed
+        if self.volume_confirmation:
+            self._indicators_cache['volume_sma'] = volume.rolling(window=self.short_period, min_periods=1).mean()
+
+        # Update cache hash
+        self._last_data_hash = data_hash
+
+    def _calculate_macd_signal_cached(self, data: pd.DataFrame) -> int:
+        """Calculate MACD-based momentum signal using cached indicators."""
+        try:
+            macd_line = self._indicators_cache['macd_line']
+            signal_line = self._indicators_cache['signal_line']
+
+            # Get latest values
+            current_macd = macd_line.iloc[-1]
+            current_signal = signal_line.iloc[-1]
+
+            # MACD crossover signals
+            prev_macd = macd_line.iloc[-2] if len(macd_line) > 1 else current_macd
+            prev_signal = signal_line.iloc[-2] if len(signal_line) > 1 else current_signal
+
+            # Bullish crossover: MACD crosses above signal line
+            if prev_macd <= prev_signal and current_macd > current_signal:
+                return 1
+            # Bearish crossover: MACD crosses below signal line
+            elif prev_macd >= prev_signal and current_macd < current_signal:
+                return -1
+
+            return 0
+
+        except (KeyError, IndexError) as e:
+            self.logger.warning(f"MACD calculation failed: {e}")
+            return 0
+
+    def _calculate_roc_signal_cached(self, data: pd.DataFrame) -> int:
+        """Calculate ROC-based momentum signal using cached indicators."""
+        try:
+            roc = self._indicators_cache['roc']
+
+            # Get latest ROC value
+            current_roc = roc.iloc[-1]
+
+            # Strong momentum thresholds
+            if current_roc > 5.0:  # Strong upward momentum
+                return 1
+            elif current_roc < -5.0:  # Strong downward momentum
+                return -1
+
+            return 0
+
+        except (KeyError, IndexError) as e:
+            self.logger.warning(f"ROC calculation failed: {e}")
+            return 0
+
+    def _calculate_trend_signal_cached(self, data: pd.DataFrame) -> int:
+        """Calculate trend-based momentum signal using cached indicators."""
+        try:
+            sma_short = self._indicators_cache['sma_short']
+            sma_long = self._indicators_cache['sma_long']
+
+            # Get latest values
+            current_short = sma_short.iloc[-1]
+            current_long = sma_long.iloc[-1]
+
+            # Trend strength
+            trend_strength = abs(current_short - current_long) / current_long
+
+            if trend_strength > self.trend_threshold:
+                if current_short > current_long:
+                    return 1  # Uptrend
+                else:
+                    return -1  # Downtrend
+
+            return 0
+
+        except (KeyError, IndexError) as e:
+            self.logger.warning(f"Trend calculation failed: {e}")
             return 0
 
     def _calculate_macd_signal(self, data: pd.DataFrame) -> int:

@@ -296,9 +296,11 @@ class AdvancedRiskManager:
     - Stress testing capabilities
     """
 
-    def __init__(self, initial_capital: float = 10000):
+    def __init__(self, initial_capital: float = 10000, stop_loss_pct: float = 0.02, take_profit_pct: float = 0.05):
         self.initial_capital = initial_capital
         self.current_capital = initial_capital
+        self.stop_loss_pct = stop_loss_pct
+        self.take_profit_pct = take_profit_pct
 
         self.logger = logging.getLogger(__name__)
 
@@ -500,11 +502,15 @@ class AdvancedRiskManager:
             # Apply shock to portfolio
             shocked_value = self._apply_portfolio_shock(positions, shock_type, shock_value)
 
+            original_value = self.portfolio_metrics.total_value
+            loss_pct = 0.0
+            if original_value != 0:
+                loss_pct = (shocked_value - original_value) / original_value
+
             results[scenario_name] = {
-                'original_value': self.portfolio_metrics.total_value,
+                'original_value': original_value,
                 'shocked_value': shocked_value,
-                'loss_pct': (shocked_value - self.portfolio_metrics.total_value) /
-                           self.portfolio_metrics.total_value,
+                'loss_pct': loss_pct,
                 'breach_warnings': self._check_risk_breaches(shocked_value)
             }
 
@@ -512,7 +518,7 @@ class AdvancedRiskManager:
 
     def _detect_market_regime(self, market_data: Optional[pd.DataFrame]) -> str:
         """Detect current market regime."""
-        if not market_data or len(market_data) < self.regime_window:
+        if market_data is None or len(market_data) < self.regime_window:
             return 'unknown'
 
         # Calculate volatility
@@ -528,7 +534,7 @@ class AdvancedRiskManager:
 
     def _calculate_volatility(self, symbol: str, market_data: Optional[pd.DataFrame]) -> float:
         """Calculate asset volatility."""
-        if not market_data or len(market_data) < 10:
+        if market_data is None or len(market_data) < 10:
             return 0.02  # Default 2% volatility
 
         returns = market_data['close'].pct_change().dropna()
@@ -570,7 +576,7 @@ class AdvancedRiskManager:
 
     def _check_correlation_risk(self, symbol: str, market_data: Optional[pd.DataFrame]) -> float:
         """Check correlation with existing positions."""
-        if not market_data or not self.positions:
+        if market_data is None or not self.positions:
             return 0.0
 
         # Simplified correlation check

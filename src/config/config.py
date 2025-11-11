@@ -7,9 +7,13 @@ Centralized configuration management with environment variable support.
 
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 import json
 import yaml
+import logging
+
+from ..utils.constants import DEFAULT_CONFIG, LOGGING_CONFIG
+from ..utils.helpers import setup_logging
 
 
 class Config:
@@ -23,12 +27,13 @@ class Config:
     - Type validation
     """
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: Optional[str] = None, setup_logging: bool = True):
         """
         Initialize configuration manager.
 
         Args:
             config_file: Path to YAML configuration file (optional)
+            setup_logging: Whether to setup logging automatically
         """
         self._config = {}
         self._load_defaults()
@@ -36,72 +41,46 @@ class Config:
         if config_file:
             self._load_from_file(config_file)
 
+        # Setup logging if requested
+        if setup_logging:
+            self._setup_logging()
+
     def _load_defaults(self):
         """Load default configuration values."""
-        self._config.update({
-            # Binance API
-            'binance': {
-                'api_key': None,
-                'api_secret': None,
-                'testnet': True,
-                'timeout': 30,
-                'rate_limit_delay': 0.1
-            },
+        # Use the comprehensive default config from constants
+        self._config.update(DEFAULT_CONFIG.copy())
 
-            # Trading
-            'trading': {
-                'default_symbol': 'ETHUSDT',
-                'default_interval': '1h',
-                'max_position_size': 0.1,
-                'stop_loss_pct': 0.02,
-                'take_profit_pct': 0.05,
-                'transaction_fee': 0.001
-            },
+    def _setup_logging(self):
+        """Setup logging based on configuration."""
+        log_config = self._config.get('monitoring', {}).get('log_level', 'INFO')
+        log_file = self._config.get('system', {}).get('log_file', 'logs/supreme_system.log')
 
-            # Data
-            'data': {
-                'cache_dir': './data/cache',
-                'historical_dir': './data/historical',
-                'max_retries': 3,
-                'retry_delay': 1.0
-            },
-
-            # Risk Management
-            'risk': {
-                'max_daily_loss': 0.05,  # 5% max daily loss
-                'max_total_loss': 0.10,  # 10% max total loss
-                'max_consecutive_losses': 5,
-                'circuit_breaker_enabled': True
-            },
-
-            # Logging
-            'logging': {
-                'level': 'INFO',
-                'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                'file': 'logs/supreme_system.log'
-            },
-
-            # Testing
-            'testing': {
-                'mock_api': False,
-                'test_data_dir': './tests/data'
-            }
-        })
+        # Setup logging using utility function
+        setup_logging(
+            level=log_config,
+            log_file=log_file
+        )
 
     def _load_from_env(self):
         """Load configuration from environment variables."""
-        # Binance API
+        # Binance API - ensure the section exists
+        if 'binance' not in self._config:
+            self._config['binance'] = {}
         self._config['binance']['api_key'] = os.getenv('BINANCE_API_KEY')
         self._config['binance']['api_secret'] = os.getenv('BINANCE_API_SECRET')
         self._config['binance']['testnet'] = os.getenv('BINANCE_TESTNET', 'true').lower() == 'true'
 
-        # Trading
+        # Trading - ensure the section exists
+        if 'trading' not in self._config:
+            self._config['trading'] = {}
         if 'MAX_POSITION_SIZE' in os.environ:
             self._config['trading']['max_position_size'] = float(os.getenv('MAX_POSITION_SIZE'))
         if 'STOP_LOSS_PCT' in os.environ:
             self._config['trading']['stop_loss_pct'] = float(os.getenv('STOP_LOSS_PCT'))
 
-        # Logging
+        # Logging - ensure the section exists
+        if 'logging' not in self._config:
+            self._config['logging'] = {}
         if 'LOG_LEVEL' in os.environ:
             self._config['logging']['level'] = os.getenv('LOG_LEVEL')
 
