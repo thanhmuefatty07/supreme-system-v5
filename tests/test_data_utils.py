@@ -16,27 +16,37 @@ try:
     from src.utils.data_utils import (
         optimize_dataframe_memory,
         chunk_dataframe,
-        validate_ohlcv_data,
+        validate_and_clean_data,
         calculate_returns,
         detect_outliers,
         resample_ohlcv,
-        align_dataframes,
-        calculate_rolling_stats,
-        find_data_gaps,
-        fill_missing_data
+        calculate_technical_indicators,
+        handle_missing_data,
+        calculate_correlation_matrix,
+        find_highly_correlated_pairs,
+        calculate_drawdowns,
+        calculate_roll_max_drawdown,
+        split_data_by_date,
+        calculate_beta,
+        calculate_alpha
     )
 except ImportError:
     # Fallback for testing
     optimize_dataframe_memory = None
     chunk_dataframe = None
-    validate_ohlcv_data = None
+    validate_and_clean_data = None
     calculate_returns = None
     detect_outliers = None
     resample_ohlcv = None
-    align_dataframes = None
-    calculate_rolling_stats = None
-    find_data_gaps = None
-    fill_missing_data = None
+    calculate_technical_indicators = None
+    handle_missing_data = None
+    calculate_correlation_matrix = None
+    find_highly_correlated_pairs = None
+    calculate_drawdowns = None
+    calculate_roll_max_drawdown = None
+    split_data_by_date = None
+    calculate_beta = None
+    calculate_alpha = None
 
 
 @pytest.fixture
@@ -102,9 +112,26 @@ class TestDataOptimization:
         # Should reduce memory usage
         assert optimized_memory <= original_memory
 
-        # Data should remain the same
-        pd.testing.assert_frame_equal(large_dataframe.reset_index(drop=True),
-                                    optimized_df.reset_index(drop=True))
+        # Data values should remain approximately the same (allowing dtype changes)
+        for col in large_dataframe.columns:
+            if col == 'volume':
+                # Volume conversion to int may truncate floats, check approximate equality
+                original_vals = large_dataframe[col].reset_index(drop=True)
+                optimized_vals = optimized_df[col].reset_index(drop=True).astype(float)
+                np.testing.assert_allclose(original_vals, optimized_vals, rtol=1e-10, atol=1e-10)
+            elif pd.api.types.is_numeric_dtype(large_dataframe[col]):
+                pd.testing.assert_series_equal(
+                    large_dataframe[col].reset_index(drop=True),
+                    optimized_df[col].reset_index(drop=True),
+                    check_dtype=False,  # Allow dtype changes
+                    check_names=False
+                )
+            else:
+                pd.testing.assert_series_equal(
+                    large_dataframe[col].reset_index(drop=True),
+                    optimized_df[col].reset_index(drop=True),
+                    check_dtype=False
+                )
 
     def test_optimize_dataframe_memory_categorical(self, large_dataframe):
         """Test memory optimization for categorical columns."""
@@ -152,57 +179,57 @@ class TestDataOptimization:
         pd.testing.assert_frame_equal(chunks[0], small_df)
 
 
-@pytest.mark.skipif(validate_ohlcv_data is None, reason="Data validation not available")
+@pytest.mark.skipif(validate_and_clean_data is None, reason="Data validation not available")
 class TestDataValidation:
     """Test data validation utilities."""
 
-    def test_validate_ohlcv_data_valid(self, sample_ohlcv_data):
+    def test_validate_and_clean_data_valid(self, sample_ohlcv_data):
         """Test validation of valid OHLCV data."""
-        is_valid, errors = validate_ohlcv_data(sample_ohlcv_data)
+        is_valid, errors = validate_and_clean_data(sample_ohlcv_data)
 
         assert is_valid
         assert len(errors) == 0
 
-    def test_validate_ohlcv_data_missing_columns(self):
+    def test_validate_and_clean_data_missing_columns(self):
         """Test validation with missing required columns."""
         invalid_data = pd.DataFrame({
             'timestamp': pd.date_range('2024-01-01', periods=10),
             'price': np.random.uniform(50000, 51000, 10)
         })
 
-        is_valid, errors = validate_ohlcv_data(invalid_data)
+        is_valid, errors = validate_and_clean_data(invalid_data)
 
         assert not is_valid
         assert len(errors) > 0
         assert any('missing' in error.lower() for error in errors)
 
-    def test_validate_ohlcv_data_ohlc_relationships(self, sample_ohlcv_data):
+    def test_validate_and_clean_data_ohlc_relationships(self, sample_ohlcv_data):
         """Test OHLC relationship validation."""
         # Create invalid OHLC data where high < close
         invalid_data = sample_ohlcv_data.copy()
         invalid_data.loc[0, 'high'] = invalid_data.loc[0, 'close'] * 0.9  # High < close
 
-        is_valid, errors = validate_ohlcv_data(invalid_data)
+        is_valid, errors = validate_and_clean_data(invalid_data)
 
         assert not is_valid
         assert len(errors) > 0
 
-    def test_validate_ohlcv_data_negative_values(self, sample_ohlcv_data):
+    def test_validate_and_clean_data_negative_values(self, sample_ohlcv_data):
         """Test validation of negative price/volume values."""
         invalid_data = sample_ohlcv_data.copy()
         invalid_data.loc[0, 'close'] = -100  # Negative price
 
-        is_valid, errors = validate_ohlcv_data(invalid_data)
+        is_valid, errors = validate_and_clean_data(invalid_data)
 
         assert not is_valid
         assert len(errors) > 0
 
-    def test_validate_ohlcv_data_nan_values(self, sample_ohlcv_data):
+    def test_validate_and_clean_data_nan_values(self, sample_ohlcv_data):
         """Test validation of NaN values."""
         invalid_data = sample_ohlcv_data.copy()
         invalid_data.loc[0, 'close'] = np.nan
 
-        is_valid, errors = validate_ohlcv_data(invalid_data)
+        is_valid, errors = validate_and_clean_data(invalid_data)
 
         assert not is_valid
         assert len(errors) > 0
@@ -331,187 +358,110 @@ class TestDataResampling:
         assert resampled['volume'].iloc[0] == expected_volume
 
 
-@pytest.mark.skipif(align_dataframes is None, reason="Data alignment not available")
-class TestDataAlignment:
-    """Test dataframe alignment utilities."""
+@pytest.mark.skipif(calculate_correlation_matrix is None, reason="Correlation analysis not available")
+class TestCorrelationAnalysis:
+    """Test correlation analysis utilities."""
 
-    def test_align_dataframes_same_index(self):
-        """Test alignment of dataframes with same index."""
-        df1 = pd.DataFrame({'A': [1, 2, 3]}, index=[0, 1, 2])
-        df2 = pd.DataFrame({'B': [4, 5, 6]}, index=[0, 1, 2])
+    def test_calculate_correlation_matrix_basic(self, sample_ohlcv_data):
+        """Test basic correlation matrix calculation."""
+        # Add some correlated columns
+        data = sample_ohlcv_data.copy()
+        data['close_shifted'] = data['close'].shift(1)
+        data['close_squared'] = data['close'] ** 2
 
-        aligned1, aligned2 = align_dataframes(df1, df2)
+        corr_matrix = calculate_correlation_matrix(data, columns=['close', 'volume', 'close_shifted', 'close_squared'])
 
-        pd.testing.assert_frame_equal(aligned1, df1)
-        pd.testing.assert_frame_equal(aligned2, df2)
+        assert isinstance(corr_matrix, pd.DataFrame)
+        assert corr_matrix.shape[0] == 4
+        assert corr_matrix.shape[1] == 4
 
-    def test_align_dataframes_different_index(self):
-        """Test alignment of dataframes with different indices."""
-        df1 = pd.DataFrame({'A': [1, 2, 3]}, index=[0, 1, 2])
-        df2 = pd.DataFrame({'B': [4, 5, 6]}, index=[1, 2, 3])
+        # Self-correlation should be 1
+        assert abs(corr_matrix.loc['close', 'close'] - 1.0) < 1e-10
 
-        aligned1, aligned2 = align_dataframes(df1, df2)
+    def test_find_highly_correlated_pairs(self, sample_ohlcv_data):
+        """Test finding highly correlated pairs."""
+        # Add highly correlated columns
+        data = sample_ohlcv_data.copy()
+        data['close_correlated'] = data['close'] * 1.01  # 99% correlation
+        data['close_uncorrelated'] = np.random.randn(len(data))  # Random
 
-        # Should align on common index [1, 2]
-        assert len(aligned1) == 2
-        assert len(aligned2) == 2
-        assert aligned1.index.equals(aligned2.index)
+        pairs = find_highly_correlated_pairs(data, threshold=0.95)
 
-    def test_align_dataframes_fill_values(self):
-        """Test alignment with custom fill values."""
-        df1 = pd.DataFrame({'A': [1, 2]}, index=[0, 1])
-        df2 = pd.DataFrame({'B': [4, 5]}, index=[1, 2])
+        assert isinstance(pairs, list)
 
-        aligned1, aligned2 = align_dataframes(df1, df2, fill_value=0)
+        # Should find the highly correlated pair
+        close_pairs = [pair for pair in pairs if 'close' in str(pair) and 'close_correlated' in str(pair)]
+        assert len(close_pairs) > 0
 
-        assert aligned1.loc[2, 'A'] == 0
-        assert aligned2.loc[0, 'B'] == 0
+    def test_calculate_beta(self, sample_ohlcv_data):
+        """Test beta calculation."""
+        asset_returns = sample_ohlcv_data['close'].pct_change().dropna()
+        market_returns = asset_returns * 0.8 + np.random.normal(0, 0.01, len(asset_returns))  # Similar but not identical
 
+        beta = calculate_beta(asset_returns, market_returns)
 
-@pytest.mark.skipif(calculate_rolling_stats is None, reason="Rolling stats not available")
-class TestRollingStatistics:
-    """Test rolling statistics calculations."""
+        assert isinstance(beta, float)
+        # Beta should be close to 1 since returns are similar
+        assert 0.5 < beta < 1.5
 
-    def test_calculate_rolling_stats_basic(self, sample_ohlcv_data):
-        """Test basic rolling statistics calculation."""
-        prices = sample_ohlcv_data['close']
+    def test_calculate_alpha(self, sample_ohlcv_data):
+        """Test alpha calculation."""
+        asset_returns = sample_ohlcv_data['close'].pct_change().dropna()
+        market_returns = asset_returns * 0.8 + np.random.normal(0, 0.01, len(asset_returns))
 
-        rolling_stats = calculate_rolling_stats(prices, window=20)
+        alpha = calculate_alpha(asset_returns, market_returns, risk_free_rate=0.02)
 
-        assert isinstance(rolling_stats, pd.DataFrame)
-        assert 'mean' in rolling_stats.columns
-        assert 'std' in rolling_stats.columns
-        assert len(rolling_stats) == len(prices)
-
-        # First 19 values should be NaN for 20-period rolling window
-        assert rolling_stats['mean'].isna().sum() >= 19
-
-    def test_calculate_rolling_stats_custom_metrics(self, sample_ohlcv_data):
-        """Test rolling statistics with custom metrics."""
-        prices = sample_ohlcv_data['close']
-
-        rolling_stats = calculate_rolling_stats(
-            prices,
-            window=10,
-            metrics=['mean', 'median', 'skew', 'kurtosis']
-        )
-
-        expected_columns = ['mean', 'median', 'skew', 'kurtosis']
-        for col in expected_columns:
-            assert col in rolling_stats.columns
-
-    def test_calculate_rolling_stats_min_periods(self, sample_ohlcv_data):
-        """Test rolling statistics with minimum periods."""
-        prices = sample_ohlcv_data['close'].head(50)
-
-        rolling_stats = calculate_rolling_stats(
-            prices,
-            window=20,
-            min_periods=5
-        )
-
-        # Should have fewer NaN values with min_periods=5
-        nan_count = rolling_stats['mean'].isna().sum()
-        assert nan_count < 20  # Less than window size
+        assert isinstance(alpha, float)
+        # Alpha can be positive or negative
+        assert -1.0 < alpha < 1.0
 
 
-@pytest.mark.skipif(find_data_gaps is None, reason="Gap detection not available")
-class TestGapDetection:
-    """Test data gap detection utilities."""
+@pytest.mark.skipif(calculate_drawdowns is None, reason="Drawdown analysis not available")
+class TestDrawdownAnalysis:
+    """Test drawdown analysis utilities."""
 
-    def test_find_data_gaps_regular_data(self, sample_ohlcv_data):
-        """Test gap detection on regular data."""
-        gaps = find_data_gaps(sample_ohlcv_data, freq='1H')
+    def test_calculate_drawdowns(self, sample_ohlcv_data):
+        """Test drawdown calculation."""
+        price_series = sample_ohlcv_data['close']
 
-        # Regular hourly data should have minimal gaps
-        assert isinstance(gaps, pd.DataFrame)
-        assert len(gaps) >= 0
+        drawdowns = calculate_drawdowns(price_series)
 
-    def test_find_data_gaps_with_missing_data(self):
-        """Test gap detection with missing timestamps."""
-        # Create data with gaps
-        dates = pd.date_range('2024-01-01', periods=10, freq='1H')
-        # Remove some timestamps to create gaps
-        incomplete_dates = dates[[0, 1, 2, 4, 5, 8, 9]]  # Missing 3, 6, 7
+        assert isinstance(drawdowns, pd.Series)
+        assert len(drawdowns) == len(price_series)
 
-        data = pd.DataFrame({
-            'timestamp': incomplete_dates,
-            'close': np.random.uniform(50000, 51000, len(incomplete_dates))
-        })
+        # Drawdowns should be <= 0 (negative or zero)
+        assert (drawdowns <= 0).all()
 
-        gaps = find_data_gaps(data, freq='1H')
+        # Maximum drawdown should be the most negative value
+        max_dd = drawdowns.min()
+        assert max_dd <= 0
 
-        assert len(gaps) > 0
-        # Should detect missing periods
+    def test_calculate_roll_max_drawdown(self, sample_ohlcv_data):
+        """Test rolling maximum drawdown calculation."""
+        price_series = sample_ohlcv_data['close']
 
-    def test_find_data_gaps_large_gaps(self):
-        """Test detection of large time gaps."""
-        # Create data with a large gap
-        early_dates = pd.date_range('2024-01-01', periods=5, freq='1H')
-        late_dates = pd.date_range('2024-01-02 12:00:00', periods=5, freq='1H')  # 12 hour gap
+        roll_max_dd = calculate_roll_max_drawdown(price_series, window=50)
 
-        dates = early_dates.append(late_dates)
-        data = pd.DataFrame({
-            'timestamp': dates,
-            'close': np.random.uniform(50000, 51000, len(dates))
-        })
+        assert isinstance(roll_max_dd, pd.Series)
+        assert len(roll_max_dd) == len(price_series)
 
-        gaps = find_data_gaps(data, freq='1H', max_gap_hours=6)
+        # Rolling max drawdown should be <= 0
+        assert (roll_max_dd <= 0).all()
 
-        assert len(gaps) > 0
+    def test_split_data_by_date(self, sample_ohlcv_data):
+        """Test data splitting by date."""
+        split_date = sample_ohlcv_data['timestamp'].iloc[len(sample_ohlcv_data) // 2]
 
+        train_data, test_data = split_data_by_date(sample_ohlcv_data, split_date)
 
-@pytest.mark.skipif(fill_missing_data is None, reason="Data filling not available")
-class TestMissingDataFilling:
-    """Test missing data filling utilities."""
+        assert isinstance(train_data, pd.DataFrame)
+        assert isinstance(test_data, pd.DataFrame)
 
-    def test_fill_missing_data_forward_fill(self):
-        """Test forward fill data filling."""
-        # Create data with missing values
-        data = pd.DataFrame({
-            'timestamp': pd.date_range('2024-01-01', periods=10, freq='1H'),
-            'close': [100, np.nan, np.nan, 103, np.nan, 105, np.nan, np.nan, np.nan, 109]
-        })
+        # Training data should end before split date
+        assert train_data['timestamp'].max() < split_date
 
-        filled_data = fill_missing_data(data, method='ffill')
-
-        # Should fill forward
-        assert filled_data.loc[1, 'close'] == 100  # Filled from previous
-        assert filled_data.loc[2, 'close'] == 100  # Filled from previous
-        assert filled_data.loc[4, 'close'] == 103  # Filled from previous
-
-    def test_fill_missing_data_interpolation(self):
-        """Test interpolation data filling."""
-        data = pd.DataFrame({
-            'timestamp': pd.date_range('2024-01-01', periods=5, freq='1H'),
-            'close': [100, np.nan, np.nan, np.nan, 110]
-        })
-
-        filled_data = fill_missing_data(data, method='interpolate')
-
-        # Should interpolate linearly
-        assert not filled_data['close'].isna().any()
-        assert filled_data.loc[0, 'close'] == 100
-        assert filled_data.loc[4, 'close'] == 110
-
-        # Check interpolated values are monotonic
-        assert filled_data['close'].is_monotonic_increasing
-
-    def test_fill_missing_data_limit(self):
-        """Test filling with gap limits."""
-        data = pd.DataFrame({
-            'timestamp': pd.date_range('2024-01-01', periods=10, freq='1H'),
-            'close': [100, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 110]
-        })
-
-        # Limit to 3 consecutive fills
-        filled_data = fill_missing_data(data, method='interpolate', limit=3)
-
-        # Should only fill first 3 NaN values
-        assert filled_data.loc[1, 'close'] != 100  # First NaN filled
-        assert filled_data.loc[2, 'close'] != 100  # Second NaN filled
-        assert filled_data.loc[3, 'close'] != 100  # Third NaN filled
-        assert np.isnan(filled_data.loc[4, 'close'])  # Fourth NaN not filled (limit exceeded)
+        # Test data should start at or after split date
+        assert test_data['timestamp'].min() >= split_date
 
 
 class TestPerformanceOptimization:
@@ -560,7 +510,7 @@ class TestPerformanceOptimization:
         ohlcv_data['volume'] = ohlcv_data['volume']
 
         start_time = time.time()
-        is_valid, errors = validate_ohlcv_data(ohlcv_data)
+        is_valid, errors = validate_and_clean_data(ohlcv_data)
         end_time = time.time()
 
         validation_time = end_time - start_time
