@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, Union
 import json
 import yaml
 import logging
+import threading
 
 try:
     from ..utils.constants import DEFAULT_CONFIG, LOGGING_CONFIG
@@ -55,6 +56,9 @@ class Config:
         # Setup logging if requested
         if setup_logging:
             self._setup_logging()
+
+        # Mark configuration as initialized (for immutability)
+        self._initialized = True
 
     def _load_defaults(self):
         """Load default configuration values."""
@@ -141,7 +145,20 @@ class Config:
             return default
 
     def set(self, key: str, value: Any):
-        """Set configuration value by dot-separated key."""
+        """
+        Set configuration value by dot-separated key.
+
+        Args:
+            key: Dot-separated configuration key (e.g., 'binance.api_key')
+            value: Value to set
+
+        Raises:
+            RuntimeError: If configuration has been initialized and is immutable
+        """
+        if hasattr(self, '_initialized') and self._initialized:
+            raise RuntimeError("Configuration is immutable after initialization. "
+                             "Use load_config() to create a new configuration instance.")
+
         keys = key.split('.')
         config = self._config
 
@@ -191,14 +208,57 @@ class Config:
     def __repr__(self) -> str:
         return self.__str__()
 
+    def validate_configuration(self) -> bool:
+        """
+        Validate the complete configuration for required values and consistency.
 
-# Global configuration instance
-config = Config()
+        Returns:
+            bool: True if configuration is valid
+        """
+        try:
+            # Validate required sections exist
+            required_sections = ['binance', 'trading', 'data', 'risk']
+            for section in required_sections:
+                if section not in self._config:
+                    logging.error(f"Missing required configuration section: {section}")
+                    return False
+
+            # Validate API credentials
+            if not self.validate_api_credentials():
+                logging.error("API credentials not properly configured")
+                return False
+
+            # Validate trading parameters
+            trading_config = self._config.get('trading', {})
+            if 'max_position_size' not in trading_config:
+                logging.warning("max_position_size not configured, using default")
+            if 'stop_loss_pct' not in trading_config:
+                logging.warning("stop_loss_pct not configured, using default")
+
+            # Validate data directories
+            data_config = self._config.get('data', {})
+            required_data_keys = ['cache_dir', 'historical_dir']
+            for key in required_data_keys:
+                if key not in data_config:
+                    logging.warning(f"Data configuration missing: {key}")
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Configuration validation failed: {e}")
+            return False
+
+
+# Thread-local storage for configuration instances
+_local = threading.local()
 
 
 def load_config(config_file: Optional[str] = None) -> Config:
     """
     Load configuration with optional file.
+
+    This creates a new Config instance and stores it in thread-local storage
+    for the current thread, avoiding global state issues.
 
     Args:
         config_file: Path to YAML configuration file
@@ -206,12 +266,40 @@ def load_config(config_file: Optional[str] = None) -> Config:
     Returns:
         Config instance
     """
-    global config
     config = Config(config_file)
     config.create_directories()
+
+    # Validate configuration after loading
+    if not config.validate_configuration():
+        logging.warning("Configuration validation failed - using defaults where possible")
+
+    # Store in thread-local storage
+    _local.config = config
     return config
 
 
 def get_config() -> Config:
-    """Get global configuration instance."""
-    return config
+    """
+    Get configuration instance for current thread.
+
+    Returns a configuration instance from thread-local storage,
+    or creates a new default instance if none exists.
+
+    Returns:
+        Config instance
+    """
+    if not hasattr(_local, 'config'):
+        # Create default configuration if none exists
+        _local.config = Config()
+
+    return _local.config
+
+
+def reset_config():
+    """
+    Reset configuration for current thread.
+
+    Useful for testing to ensure clean state between tests.
+    """
+    if hasattr(_local, 'config'):
+        delattr(_local, 'config')
