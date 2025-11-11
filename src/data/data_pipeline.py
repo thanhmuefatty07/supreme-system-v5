@@ -21,6 +21,8 @@ import pandas as pd
 from .binance_client import BinanceClient
 from .data_storage import DataStorage
 from .data_validator import DataValidator
+from ..utils.memory_optimizer import MemoryOptimizer, optimize_trading_data_pipeline
+from ..utils.vectorized_ops import VectorizedTradingOps
 
 
 class DataPipeline:
@@ -48,6 +50,10 @@ class DataPipeline:
         self.client = BinanceClient(config_file=config_file)
         self.validator = DataValidator()
         self.storage = DataStorage()
+
+        # Initialize performance optimization components
+        self.memory_optimizer = MemoryOptimizer()
+        self.vectorized_ops = VectorizedTradingOps()
 
         # Pipeline metrics
         self.metrics = {

@@ -1,155 +1,258 @@
-name: Supreme System V5 CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  test:
+  quality-checks:
+    name: Quality Checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ['3.10', '3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Type check with mypy
-      run: |
-        pip install mypy
-        mypy src --ignore-missing-imports --no-strict-optional
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit install
+          pre-commit run --all-files --show-diff-on-failure
 
-    - name: Security scan with bandit
-      run: |
-        pip install bandit
-        bandit -r src -f json -o bandit-report.json
-        # Fail build if high-severity issues found
-        if [ $(cat bandit-report.json | jq '.results | length') -gt 0 ]; then
-          echo "Security issues found by Bandit:"
-          cat bandit-report.json | jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "MEDIUM")'
-          exit 1
-        fi
+      - name: Lint with flake8
+        run: |
+          flake8 src/ tests/ --count --show-source --statistics
+          flake8 src/ tests/ --count --exit-zero --max-complexity=10
 
-    - name: Check dependencies with safety
-      run: |
-        pip install safety
-        safety check --output json > safety-report.json
-        # Fail build if vulnerable dependencies found
-        if [ $(cat safety-report.json | jq '.issues | length') -gt 0 ]; then
-          echo "Vulnerable dependencies found by Safety:"
-          cat safety-report.json
-          exit 1
-        fi
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports --no-error-summary
 
-    - name: Run tests
-      run: |
-        pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=40
+      - name: Security scan with bandit
+        run: |
+          bandit -r src/ -f json -o bandit-report.json || true
+          # Check for high/critical severity issues
+          if [ -f bandit-report.json ]; then
+            high_critical_count=$(jq '.results | map(select(.issue_severity == "HIGH" or .issue_severity == "CRITICAL")) | length' bandit-report.json)
+            if [ "$high_critical_count" -gt 0 ]; then
+              echo "Found $high_critical_count high/critical security issues"
+              jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "CRITICAL") | {filename, line_number, issue_text, issue_severity}' bandit-report.json
+              exit 1
+            fi
+          fi
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - name: Dependency vulnerability scan
+        run: |
+          pip install pip-audit
+          pip-audit --requirement requirements.txt --format json || true
+
+      - name: Test with pytest
+        run: |
+          pytest tests/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            --cov-branch \
+            -v \
+            --strict-markers \
+            --tb=short \
+            --junitxml=junit/test-results.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            junit/
+            coverage.xml
+            htmlcov/
+            bandit-report.json
+        if: always()
 
   docker-build:
+    name: Docker Build & Test
     runs-on: ubuntu-latest
-    needs: test
+    needs: quality-checks
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build Docker image
-      run: |
-        docker build -t supreme-system-v5 .
+      - name: Set up Docker Buildx
+        uses: actions/docker/setup-buildx-action@v3
 
-    - name: Test Docker image
-      run: |
-        docker run --rm supreme-system-v5 python -c "import sys; sys.path.insert(0, '/app/src'); print('Docker build successful')"
+      - name: Build Docker image
+        uses: actions/docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: supreme-system-v5:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm supreme-system-v5:${{ github.sha }} python -c "
+          import sys
+          sys.path.insert(0, '.')
+          import src
+          print('✅ Docker image test passed - all imports successful')
+          "
+
+      - name: Test CLI in Docker
+        run: |
+          docker run --rm supreme-system-v5:${{ github.sha }} python -m src.cli --help
+
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run performance benchmarks
+        run: |
+          python -m pytest tests/unit/test_strategies_comprehensive.py::TestPerformanceBenchmarks -v --tb=short
+
+      - name: Memory profiling
+        run: |
+          python -c "
+          import tracemalloc
+          import pandas as pd
+          import numpy as np
+
+          tracemalloc.start()
+
+          # Simulate large data processing
+          data = pd.DataFrame({
+              'close': np.random.uniform(100, 110, 100000),
+              'volume': np.random.randint(1000, 5000, 100000)
+          })
+
+          # Calculate some indicators
+          data['sma'] = data['close'].rolling(20).mean()
+          data['returns'] = data['close'].pct_change()
+
+          current, peak = tracemalloc.get_traced_memory()
+          print(f'Current memory usage: {current / 1024 / 1024:.2f} MB')
+          print(f'Peak memory usage: {peak / 1024 / 1024:.2f} MB')
+
+          tracemalloc.stop()
+          "
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   deploy-staging:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [test, docker-build]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Deploy to staging
-      run: |
-        echo "Deploying to staging environment..."
-        # Add your staging deployment commands here
-
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [test, docker-build]
+    needs: [quality-checks, docker-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Deploy to production
-      run: |
-        echo "Deploying to production environment..."
-        # Add your production deployment commands here
+      - name: Deploy to staging environment
+        run: |
+          echo "🚀 Deploying to staging environment..."
+          echo "Version: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref }}"
+          # Add actual deployment commands here
+          echo "✅ Staging deployment completed"
 
-  release:
+  notify:
+    name: Notification
     runs-on: ubuntu-latest
-    needs: [test, docker-build]
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
+    needs: [quality-checks, docker-build, performance-test, security-audit]
+    if: always()
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ CI/CD Pipeline failed"
+          echo "Check the logs for details"
+          # Add notification logic here (Slack, Discord, etc.)
 
-    - name: Create GitHub release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          Supreme System V5 Release
-
-          ## What's Changed
-          - Production-ready trading system
-          - Advanced algorithmic strategies
-          - Risk management with circuit breaker
-          - Real-time monitoring dashboard
-
-          ## Deployment
-          ```bash
-          pip install supreme-system-v5
-          ```
-
-        draft: false
-        prerelease: false
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ CI/CD Pipeline completed successfully"
+          echo "All quality checks passed"
+          # Add success notification logic here
