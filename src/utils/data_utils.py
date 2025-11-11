@@ -100,7 +100,7 @@ def get_memory_usage_mb(df: pd.DataFrame) -> float:
     return df.memory_usage(deep=True).sum() / 1024**2
 
 
-def validate_and_clean_data(df: pd.DataFrame, required_columns: List[str] = None) -> pd.DataFrame:
+def validate_and_clean_data(df: pd.DataFrame, required_columns: List[str] = None) -> Tuple[bool, List[str]]:
     """
     Validate and clean financial data with memory optimization.
 
@@ -109,41 +109,67 @@ def validate_and_clean_data(df: pd.DataFrame, required_columns: List[str] = None
         required_columns: List of required columns
 
     Returns:
-        Cleaned and validated DataFrame
+        Tuple of (is_valid: bool, errors: List[str])
     """
+    errors = []
+
     if required_columns is None:
         required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
     # Check required columns
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
-        raise ValueError(f"Missing required columns: {missing_cols}")
+        errors.append(f"Missing required columns: {missing_cols}")
+        return False, errors
 
     # Create copy to avoid warnings
-    df = df.copy()
+    df_copy = df.copy()
 
     # Convert timestamp
-    if not pd.api.types.is_datetime64_any_dtype(df['timestamp']):
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+    try:
+        if not pd.api.types.is_datetime64_any_dtype(df_copy['timestamp']):
+            df_copy['timestamp'] = pd.to_datetime(df_copy['timestamp'])
+    except Exception as e:
+        errors.append(f"Invalid timestamp format: {e}")
+        return False, errors
 
     # Convert numeric columns and handle NaN
     numeric_cols = ['open', 'high', 'low', 'close', 'volume']
     for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+        if col in df_copy.columns:
+            try:
+                pd.to_numeric(df_copy[col], errors='coerce')
+            except Exception as e:
+                errors.append(f"Invalid numeric data in column {col}: {e}")
+                return False, errors
 
-    # Remove rows with critical NaN values
+    # Check for negative prices
+    price_cols = ['open', 'high', 'low', 'close']
+    for col in price_cols:
+        if (df_copy[col] < 0).any():
+            errors.append(f"Negative values found in {col} column")
+            return False, errors
+
+    # Check OHLC relationships
+    if (df_copy['high'] < df_copy['low']).any():
+        errors.append("High price less than low price in some rows")
+        return False, errors
+
+    if (df_copy['close'] > df_copy['high']).any() or (df_copy['close'] < df_copy['low']).any():
+        errors.append("Close price outside high-low range in some rows")
+        return False, errors
+
+    # Check for NaN values in critical columns
     critical_cols = ['timestamp', 'close']
-    df = df.dropna(subset=critical_cols)
+    nan_counts = df_copy[critical_cols].isna().sum()
+    if nan_counts.any():
+        for col in critical_cols:
+            if nan_counts[col] > 0:
+                errors.append(f"NaN values found in critical column {col}: {nan_counts[col]} rows")
+        return False, errors
 
-    # Sort by timestamp
-    df = df.sort_values('timestamp').reset_index(drop=True)
-
-    # Optimize memory
-    df = optimize_dataframe_memory(df, copy=False)
-
-    logger.info(f"Validated and cleaned data: {len(df)} rows, {get_memory_usage_mb(df):.2f} MB")
-    return df
+    logger.info(f"Data validation successful: {len(df_copy)} rows")
+    return True, errors
 
 
 def resample_ohlcv(

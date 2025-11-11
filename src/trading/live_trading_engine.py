@@ -62,6 +62,27 @@ class LiveTradingPosition:
         self.status = 'CLOSED'
         return self.realized_pnl
 
+    def update_price(self, current_price: float) -> None:
+        """Update current price and recalculate P&L."""
+        self.current_price = current_price
+        self.update_pnl(current_price)
+
+    def should_exit(self, current_price: float) -> bool:
+        """Check if position should exit based on stop loss or take profit."""
+        if self.stop_loss and (
+            (self.side == 'LONG' and current_price <= self.stop_loss) or
+            (self.side == 'SHORT' and current_price >= self.stop_loss)
+        ):
+            return True
+
+        if self.take_profit and (
+            (self.side == 'LONG' and current_price >= self.take_profit) or
+            (self.side == 'SHORT' and current_price <= self.take_profit)
+        ):
+            return True
+
+        return False
+
 
 class LiveOrder:
     """Represents a live trading order."""
