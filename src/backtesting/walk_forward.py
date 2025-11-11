@@ -13,15 +13,16 @@ Based on cutting-edge research in algorithmic trading optimization:
 - Rolling window validation
 """
 
+import logging
+import warnings
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any, Optional, Tuple, Callable, Union
-from datetime import datetime, timedelta
-import logging
-from dataclasses import dataclass
 from scipy import stats
 from scipy.optimize import minimize
-import warnings
 
 from ..strategies.base_strategy import BaseStrategy
 
@@ -274,7 +275,7 @@ class AdvancedWalkForwardOptimizer:
         """
         try:
             from skopt import gp_minimize
-            from skopt.space import Real, Integer
+            from skopt.space import Integer, Real
             from skopt.utils import use_named_args
 
             # Define search space

@@ -6,11 +6,12 @@ Tests live trading functionality, order execution, risk management integration,
 and real-time decision making.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 try:
     from src.trading.live_trading_engine import LiveTradingEngine
@@ -184,7 +185,7 @@ class TestLiveTradingPositionManagement:
 
             # Simulate adding a position
             from src.trading.live_trading_engine import LiveTradingPosition
-            position = LiveTradingPosition('BTCUSDT', 0.01, 50000.0)
+            position = LiveTradingPosition('BTCUSDT', 'LONG', 0.01, 50000.0)
             engine.positions['BTCUSDT'] = position
 
             assert len(engine.positions) == 1
@@ -199,7 +200,7 @@ class TestLiveTradingPositionManagement:
 
             # Create a position
             from src.trading.live_trading_engine import LiveTradingPosition
-            position = LiveTradingPosition('BTCUSDT', 0.01, 50000.0)
+            position = LiveTradingPosition('BTCUSDT', 'LONG', 0.01, 50000.0)
             engine.positions['BTCUSDT'] = position
 
             # Update with new price
@@ -219,7 +220,7 @@ class TestLiveTradingPositionManagement:
 
             # Create a position
             from src.trading.live_trading_engine import LiveTradingPosition
-            position = LiveTradingPosition('BTCUSDT', 0.01, 50000.0)
+            position = LiveTradingPosition('BTCUSDT', 'LONG', 0.01, 50000.0)
             engine.positions['BTCUSDT'] = position
 
             # Test stop loss
@@ -380,8 +381,9 @@ class TestLiveTradingPerformance:
     @pytest.mark.skipif(not LIVE_TRADING_AVAILABLE, reason="Live trading engine not available")
     def test_memory_usage_under_load(self):
         """Test memory usage during high-frequency trading simulation."""
-        import psutil
         import os
+
+        import psutil
 
         with patch('src.config.config.get_config', return_value=Mock()):
             engine = LiveTradingEngine()

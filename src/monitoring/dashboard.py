@@ -6,24 +6,25 @@ Interactive dashboard for monitoring trading system performance,
 real-time data streams, and system health.
 """
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+import sys
+import threading
 import time
 from datetime import datetime, timedelta
-import threading
-import sys
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+from plotly.subplots import make_subplots
 
 from ..data.data_pipeline import DataPipeline
 from ..data.realtime_client import BinanceWebSocketClient
-from ..strategies.moving_average import MovingAverageStrategy
+from ..strategies.breakout import BreakoutStrategy
 from ..strategies.mean_reversion import MeanReversionStrategy
 from ..strategies.momentum import MomentumStrategy
-from ..strategies.breakout import BreakoutStrategy
+from ..strategies.moving_average import MovingAverageStrategy
 
 
 class MonitoringDashboard:

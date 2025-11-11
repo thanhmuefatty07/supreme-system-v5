@@ -3,12 +3,12 @@
 Tests for Binance API client
 """
 
-import pytest
-import pandas as pd
-from unittest.mock import Mock, patch
-
 import sys
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pandas as pd
+import pytest
 
 # Add src to path for imports
 src_path = Path(__file__).parent.parent / 'src'

@@ -6,10 +6,11 @@ Real implementation of momentum-based trading strategy.
 Trades based on the principle that trending assets continue to trend.
 """
 
-import pandas as pd
-import numpy as np
-from typing import Optional, Dict, Any, Tuple, List
 import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 
 from .base_strategy import BaseStrategy
 
@@ -391,12 +392,22 @@ class MomentumStrategy(BaseStrategy):
             # ROC calculation
             df['roc'] = ((prices - prices.shift(self.roc_period)) / prices.shift(self.roc_period)) * 100
 
-            # Trend strength (simple slope)
+            # Trend strength (vectorized slope calculation)
             lookback = 10
-            df['trend_strength'] = prices.rolling(window=lookback).apply(
-                lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) > 1 else 0,
-                raw=True
-            )
+            # Use linear regression slope: cov(x,y) / var(x)
+            x = np.arange(lookback)
+            x_mean = np.mean(x)
+            x_var = np.var(x)
+
+            def vectorized_slope(window_data):
+                if len(window_data) < lookback:
+                    return np.nan
+                y = window_data.values
+                y_mean = np.mean(y)
+                cov_xy = np.sum((x - x_mean) * (y - y_mean))
+                return cov_xy / (len(x) * x_var) if x_var > 0 else 0
+
+            df['trend_strength'] = prices.rolling(window=lookback).apply(vectorized_slope, raw=False)
 
             # Volume momentum (if volume available)
             if 'volume' in df.columns:

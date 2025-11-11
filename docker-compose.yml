@@ -51,39 +51,38 @@ services:
     profiles:
       - full
 
-  # Monitoring stack (optional)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: supreme-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-    restart: unless-stopped
-    profiles:
-      - monitoring
+  # Optional: Health monitoring service
+  health-monitor:
+    build: .
+    container_name: supreme-health-monitor
+    command: ["python", "-c", "
+import time
+import requests
+from src.monitoring.dashboard import MonitoringDashboard
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: supreme-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+def health_check():
+    try:
+        # Test data pipeline
+        from src.data.data_pipeline import DataPipeline
+        dp = DataPipeline()
+        print('✓ Data pipeline initialized')
+
+        # Test monitoring dashboard
+        dashboard = MonitoringDashboard()
+        print('✓ Monitoring dashboard initialized')
+
+        print('✓ Health check passed')
+        return True
+    except Exception as e:
+        print(f'✗ Health check failed: {e}')
+        return False
+
+if __name__ == '__main__':
+    health_check()
+    "]
     restart: unless-stopped
-    depends_on:
-      - prometheus
     profiles:
-      - monitoring
+      - health
 
 volumes:
   postgres_data:

@@ -5,7 +5,7 @@ Supreme System V5 - Constants and Configuration
 Shared constants, default configurations, and system-wide settings.
 """
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 # Trading Constants
 REQUIRED_OHLCV_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']

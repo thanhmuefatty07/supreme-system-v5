@@ -6,9 +6,10 @@ Tests position sizing, risk assessment, portfolio optimization,
 and circuit breaker functionality.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from src.risk.advanced_risk_manager import AdvancedRiskManager, PortfolioMetrics
 from src.risk.risk_manager import RiskManager
 

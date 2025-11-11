@@ -50,12 +50,24 @@ jobs:
     - name: Security scan with bandit
       run: |
         pip install bandit
-        bandit -r src -f json -o bandit-report.json || true
+        bandit -r src -f json -o bandit-report.json
+        # Fail build if high-severity issues found
+        if [ $(cat bandit-report.json | jq '.results | length') -gt 0 ]; then
+          echo "Security issues found by Bandit:"
+          cat bandit-report.json | jq '.results[] | select(.issue_severity == "HIGH" or .issue_severity == "MEDIUM")'
+          exit 1
+        fi
 
     - name: Check dependencies with safety
       run: |
         pip install safety
-        safety check --output json || true
+        safety check --output json > safety-report.json
+        # Fail build if vulnerable dependencies found
+        if [ $(cat safety-report.json | jq '.issues | length') -gt 0 ]; then
+          echo "Vulnerable dependencies found by Safety:"
+          cat safety-report.json
+          exit 1
+        fi
 
     - name: Run tests
       run: |

@@ -6,17 +6,18 @@ Tests integration between live trading engine, data pipeline, and risk managemen
 with simulated market conditions.
 """
 
-import pytest
 import asyncio
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from src.trading.live_trading_engine import LiveTradingEngine
+import numpy as np
+import pandas as pd
+import pytest
+
 from src.data.realtime_client import BinanceWebSocketClient
 from src.risk.circuit_breaker import CircuitBreaker
 from src.strategies.momentum import MomentumStrategy
+from src.trading.live_trading_engine import LiveTradingEngine
 
 
 class TestLiveMarketIntegration:

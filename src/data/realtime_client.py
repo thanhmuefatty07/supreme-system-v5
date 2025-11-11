@@ -8,12 +8,13 @@ Handles live market data, order book updates, and trade streams.
 
 import asyncio
 import json
-import websockets
+import logging
 import threading
 import time
-from typing import Dict, List, Optional, Callable, Any
 from datetime import datetime
-import logging
+from typing import Any, Callable, Dict, List, Optional
+
+import websockets
 
 try:
     from ..config.config import get_config

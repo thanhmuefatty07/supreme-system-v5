@@ -6,13 +6,14 @@ Tests system resilience under various network failure scenarios including
 connection drops, timeouts, rate limiting, and API outages.
 """
 
-import pytest
-import time
 import asyncio
-from unittest.mock import Mock, patch, MagicMock
-from requests.exceptions import ConnectionError, Timeout, HTTPError
-import pandas as pd
+import time
+from unittest.mock import MagicMock, Mock, patch
+
 import numpy as np
+import pandas as pd
+import pytest
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from src.data.binance_client import BinanceClient
 from src.data.realtime_client import BinanceWebSocketClient

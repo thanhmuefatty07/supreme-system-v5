@@ -6,27 +6,28 @@ Consolidated paper trading system supporting both real-time WebSocket data
 and simulated market data for comprehensive testing and development.
 """
 
-import time
-import logging
 import json
-import threading
-import signal
-import sys
+import logging
 import os
 import random
+import signal
+import sys
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, List, Optional, Union
 
-from ..data.realtime_client import BinanceWebSocketClient
+import numpy as np
+import pandas as pd
+
 from ..data.data_pipeline import DataPipeline
-from ..strategies.moving_average import MovingAverageStrategy
+from ..data.realtime_client import BinanceWebSocketClient
+from ..risk.advanced_risk_manager import AdvancedRiskManager
+from ..strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 from ..strategies.mean_reversion import MeanReversionStrategy
 from ..strategies.momentum import MomentumStrategy
-from ..strategies.breakout import ImprovedBreakoutStrategy as BreakoutStrategy
-from ..risk.advanced_risk_manager import AdvancedRiskManager
+from ..strategies.moving_average import MovingAverageStrategy
 
 
 class PaperTradingPosition:

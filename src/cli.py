@@ -9,11 +9,12 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+
 import pandas as pd
 
 from .data.binance_client import BinanceClient
-from .strategies.moving_average import MovingAverageStrategy
 from .risk.risk_manager import RiskManager
+from .strategies.moving_average import MovingAverageStrategy
 
 
 def setup_logging(verbose: bool = False):

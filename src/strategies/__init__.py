@@ -5,10 +5,10 @@ Contains various trading strategies for algorithmic trading.
 """
 
 from .base_strategy import BaseStrategy
-from .moving_average import MovingAverageStrategy
+from .breakout import ImprovedBreakoutStrategy as BreakoutStrategy
 from .mean_reversion import MeanReversionStrategy
 from .momentum import MomentumStrategy
-from .breakout import ImprovedBreakoutStrategy as BreakoutStrategy
+from .moving_average import MovingAverageStrategy
 
 __all__ = [
     "BaseStrategy",

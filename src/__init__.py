@@ -10,9 +10,9 @@ __description__ = "Real algorithmic trading system for ETH-USDT scalping"
 
 # Import main components for easy access
 from .data.binance_client import BinanceClient
+from .risk.risk_manager import RiskManager
 from .strategies.base_strategy import BaseStrategy
 from .strategies.moving_average import MovingAverageStrategy
-from .risk.risk_manager import RiskManager
 
 __all__ = [
     "BinanceClient",

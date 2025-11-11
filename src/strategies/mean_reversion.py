@@ -6,9 +6,10 @@ Real implementation of mean reversion trading strategy.
 Trades based on the assumption that prices tend to revert to their mean.
 """
 
-import pandas as pd
-import numpy as np
 from typing import Optional
+
+import numpy as np
+import pandas as pd
 
 from .base_strategy import BaseStrategy
 

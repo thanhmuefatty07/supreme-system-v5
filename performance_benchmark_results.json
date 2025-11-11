@@ -1,0 +1,309 @@
+{
+  "results": [
+    {
+      "operation_name": "data_pipeline_validation_1000",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.00390625,
+      "cpu_percent": 0.0,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:18.277920",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "DataFrame",
+        "data_size": 1000,
+        "operation_type": "validation"
+      }
+    },
+    {
+      "operation_name": "data_storage_1000",
+      "execution_time": 4.473581552505493,
+      "memory_usage_mb": 41.296875,
+      "cpu_percent": 23.3,
+      "throughput": null,
+      "latency_ms": 4473.581552505493,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:22.751502",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "bool",
+        "data_size": 1000,
+        "operation_type": "storage"
+      }
+    },
+    {
+      "operation_name": "data_pipeline_validation_5000",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.0,
+      "cpu_percent": 104.2,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:22.769434",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "DataFrame",
+        "data_size": 5000,
+        "operation_type": "validation"
+      }
+    },
+    {
+      "operation_name": "data_storage_5000",
+      "execution_time": 0.42444300651550293,
+      "memory_usage_mb": 4.81640625,
+      "cpu_percent": 170.3,
+      "throughput": null,
+      "latency_ms": 424.44300651550293,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:23.193877",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "bool",
+        "data_size": 5000,
+        "operation_type": "storage"
+      }
+    },
+    {
+      "operation_name": "data_pipeline_validation_10000",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.0,
+      "cpu_percent": 195.3,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:23.218724",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "DataFrame",
+        "data_size": 10000,
+        "operation_type": "validation"
+      }
+    },
+    {
+      "operation_name": "data_storage_10000",
+      "execution_time": 0.6177170276641846,
+      "memory_usage_mb": 4.140625,
+      "cpu_percent": 230.0,
+      "throughput": null,
+      "latency_ms": 617.7170276641846,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:23.838452",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "bool",
+        "data_size": 10000,
+        "operation_type": "storage"
+      }
+    },
+    {
+      "operation_name": "strategy_signals_ImprovedBreakoutStrategy",
+      "execution_time": 4.940732955932617,
+      "memory_usage_mb": 0.30078125,
+      "cpu_percent": 50.4,
+      "throughput": 19.835113711686414,
+      "latency_ms": 4940.732955932617,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:28.809563",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "list",
+        "strategy": "ImprovedBreakoutStrategy",
+        "data_points": 5000,
+        "signal_windows": 98
+      }
+    },
+    {
+      "operation_name": "strategy_signals_MomentumStrategy",
+      "execution_time": 2.7632594108581543,
+      "memory_usage_mb": 0.10546875,
+      "cpu_percent": 59.3,
+      "throughput": 35.46536369872174,
+      "latency_ms": 2763.2594108581543,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.573853",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "list",
+        "strategy": "MomentumStrategy",
+        "data_points": 5000,
+        "signal_windows": 98
+      }
+    },
+    {
+      "operation_name": "backtest_1000",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.0,
+      "cpu_percent": 0.0,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.583503",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "dict",
+        "data_size": 1000,
+        "strategy": "ImprovedBreakoutStrategy"
+      }
+    },
+    {
+      "operation_name": "backtest_2500",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.0,
+      "cpu_percent": 0.0,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.588534",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "dict",
+        "data_size": 2500,
+        "strategy": "ImprovedBreakoutStrategy"
+      }
+    },
+    {
+      "operation_name": "backtest_5000",
+      "execution_time": 0.0,
+      "memory_usage_mb": 0.0,
+      "cpu_percent": 0.0,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.600259",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "dict",
+        "data_size": 5000,
+        "strategy": "ImprovedBreakoutStrategy"
+      }
+    },
+    {
+      "operation_name": "memory_optimization",
+      "execution_time": 0.0187532901763916,
+      "memory_usage_mb": 3.1015625,
+      "cpu_percent": 104.2,
+      "throughput": 2666198.8125659507,
+      "latency_ms": 18.7532901763916,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.734445",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "DataFrame",
+        "original_size_mb": 2.2889442443847656,
+        "operation_type": "optimization"
+      }
+    },
+    {
+      "operation_name": "data_chunking",
+      "execution_time": 0.0,
+      "memory_usage_mb": 2.4921875,
+      "cpu_percent": 0.0,
+      "throughput": null,
+      "latency_ms": 0.0,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.735446",
+      "metadata": {
+        "args_count": 0,
+        "kwargs_count": 0,
+        "result_type": "list",
+        "chunk_size": 5000,
+        "total_chunks": 10
+      }
+    },
+    {
+      "operation_name": "async_processing",
+      "execution_time": 0.024587392807006836,
+      "memory_usage_mb": 0.015625,
+      "cpu_percent": 0.0,
+      "throughput": 406.71250012120976,
+      "latency_ms": null,
+      "memory_efficiency": null,
+      "timestamp": "2025-11-11T10:42:31.775815",
+      "metadata": {
+        "concurrent_tasks": 10,
+        "processing_type": "async"
+      }
+    }
+  ],
+  "summary": {
+    "total_operations": 14,
+    "operation_types": {
+      "data": {
+        "count": 7,
+        "avg_execution_time": 0.7879630838121686,
+        "avg_memory_usage_mb": 7.535714285714286,
+        "max_execution_time": 4.473581552505493,
+        "max_memory_usage_mb": 41.296875,
+        "throughput_avg": NaN
+      },
+      "strategy": {
+        "count": 2,
+        "avg_execution_time": 3.8519961833953857,
+        "avg_memory_usage_mb": 0.203125,
+        "max_execution_time": 4.940732955932617,
+        "max_memory_usage_mb": 0.30078125,
+        "throughput_avg": 27.650238705204075
+      },
+      "backtest": {
+        "count": 3,
+        "avg_execution_time": 0.0,
+        "avg_memory_usage_mb": 0.0,
+        "max_execution_time": 0.0,
+        "max_memory_usage_mb": 0.0,
+        "throughput_avg": NaN
+      },
+      "memory": {
+        "count": 1,
+        "avg_execution_time": 0.0187532901763916,
+        "avg_memory_usage_mb": 3.1015625,
+        "max_execution_time": 0.0187532901763916,
+        "max_memory_usage_mb": 3.1015625,
+        "throughput_avg": 2666198.8125659507
+      },
+      "async": {
+        "count": 1,
+        "avg_execution_time": 0.024587392807006836,
+        "avg_memory_usage_mb": 0.015625,
+        "max_execution_time": 0.024587392807006836,
+        "max_memory_usage_mb": 0.015625,
+        "throughput_avg": 406.71250012120976
+      }
+    },
+    "performance_insights": {
+      "fastest_operation": "data_pipeline_validation_1000",
+      "slowest_operation": "strategy_signals_ImprovedBreakoutStrategy",
+      "highest_memory_usage": "data_storage_1000",
+      "best_throughput": "memory_optimization",
+      "total_benchmark_time": 13.26307463645935
+    },
+    "optimization_recommendations": [
+      "Slow operations detected: ['data_storage_1000', 'strategy_signals_ImprovedBreakoutStrategy', 'strategy_signals_MomentumStrategy']. Consider async processing or algorithm optimization.",
+      "CPU-intensive operations: ['data_pipeline_validation_5000', 'data_storage_5000', 'data_pipeline_validation_10000']. Consider parallel processing or Cython optimization.",
+      "Low throughput operations: ['strategy_signals_ImprovedBreakoutStrategy', 'strategy_signals_MomentumStrategy']. Consider vectorization or batch processing."
+    ]
+  },
+  "config": {
+    "enable_memory_profiling": true,
+    "enable_cpu_profiling": true,
+    "data_sizes": [
+      1000,
+      5000,
+      10000
+    ],
+    "iterations": 3
+  },
+  "timestamp": "2025-11-11T10:42:31.816202"
+}

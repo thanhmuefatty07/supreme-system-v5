@@ -6,14 +6,12 @@ Tests financial risk limits and regulatory compliance.
 Based on SEC/ESMA requirements and circuit breaker patterns.
 """
 
-import pytest
 import time
-from unittest.mock import Mock, MagicMock
-from src.risk.circuit_breaker import (
-    CircuitBreaker,
-    CircuitBreakerState,
-    CircuitBreakerOpen
-)
+from unittest.mock import MagicMock, Mock
+
+import pytest
+
+from src.risk.circuit_breaker import CircuitBreaker, CircuitBreakerOpen, CircuitBreakerState
 
 
 class TestCircuitBreaker:
