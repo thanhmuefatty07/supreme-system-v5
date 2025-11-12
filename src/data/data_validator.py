@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from pydantic import ValidationError
 
 
@@ -49,7 +49,8 @@ class OHLCVDataPoint(BaseModel):
 
         return self
 
-    @validator('timestamp')
+    @field_validator('timestamp')
+    @classmethod
     def validate_timestamp(cls, v):
         """Validate timestamp is not in future and not too old."""
         now = datetime.now()
@@ -74,7 +75,8 @@ class TradingSymbol(BaseModel):
     """Trading symbol validation."""
     symbol: str = Field(..., min_length=1, max_length=20, pattern=r'^[A-Z0-9]+$')
 
-    @validator('symbol')
+    @field_validator('symbol')
+    @classmethod
     def validate_symbol_format(cls, v):
         """Validate symbol format for common exchanges."""
         # Remove common separators
@@ -97,7 +99,8 @@ class KlineInterval(BaseModel):
     """Kline/candlestick interval validation."""
     interval: str = Field(..., pattern=r'^\d+[mhdwM]$')
 
-    @validator('interval')
+    @field_validator('interval')
+    @classmethod
     def validate_interval(cls, v):
         """Validate interval format."""
         valid_intervals = [
@@ -149,7 +152,8 @@ class APIRequestConfig(BaseModel):
     timeout: int = Field(..., ge=1, le=300)  # 1-300 seconds
     max_retries: int = Field(..., ge=0, le=10)
 
-    @validator('api_key', 'api_secret')
+    @field_validator('api_key', 'api_secret')
+    @classmethod
     def validate_api_credentials(cls, v):
         """Validate API credentials format."""
         # Should be alphanumeric with possible special chars
@@ -193,7 +197,8 @@ class DataQueryParams(BaseModel):
 
         return self
 
-    @validator('start_date', 'end_date')
+    @field_validator('start_date', 'end_date')
+    @classmethod
     def validate_date_format(cls, v):
         """Validate date string format."""
         if v is None:
