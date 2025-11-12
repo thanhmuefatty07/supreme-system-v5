@@ -339,15 +339,15 @@ class TestPerformanceBenchmarks:
 
         # Should return comprehensive results
         required_keys = [
-            'sma_numba_time', 'sma_pandas_time', 'sma_numba_speedup',
-            'ema_numba_time', 'ema_pandas_time', 'ema_numba_speedup',
-            'rsi_numba_time', 'rsi_pandas_time', 'rsi_numba_speedup',
-            'macd_numba_time', 'macd_pandas_time', 'macd_numba_speedup',
+                'sma_numba_time', 'sma_pandas_time', 'sma_numba_speedup',
+                'ema_numba_time', 'ema_pandas_time', 'ema_numba_speedup',
+                'rsi_numba_time', 'rsi_pandas_time', 'rsi_numba_speedup',
+                'macd_numba_time', 'macd_pandas_time', 'macd_numba_speedup',
             'batch_processing_time', 'overall_speedup', 'data_points'
-        ]
+            ]
 
         for key in required_keys:
-            assert key in results
+                assert key in results
 
         # Speedups should be positive
         assert results['sma_numba_speedup'] > 0

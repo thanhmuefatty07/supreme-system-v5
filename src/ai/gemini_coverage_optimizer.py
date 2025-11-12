@@ -28,6 +28,13 @@ import re
 from datetime import datetime, timedelta
 from enum import Enum
 
+# Import multi-key configuration
+try:
+    from config.multi_key_config import MultiKeyConfig
+except ImportError:
+    # Fallback if config not available
+    MultiKeyConfig = None
+
 # Gemini API
 import google.generativeai as genai
 
@@ -210,20 +217,33 @@ class GeminiCoverageOptimizer:
 
     def __init__(
         self,
-        gemini_keys: List[str],
+        gemini_keys: Optional[List[str]] = None,
         openai_api_key: Optional[str] = None,
         claude_api_key: Optional[str] = None,
-        batch_size: int = 3,
-        max_concurrent_batches: int = 2
+        batch_size: Optional[int] = None,
+        max_concurrent_batches: Optional[int] = None,
+        use_config: bool = True
     ):
         """Initialize enterprise optimizer with multi-key support."""
+
+        # Load configuration from MultiKeyConfig if available and requested
+        if use_config and MultiKeyConfig:
+            gemini_keys = gemini_keys or MultiKeyConfig.GEMINI_KEYS
+            openai_api_key = openai_api_key or MultiKeyConfig.OPENAI_API_KEY
+            claude_api_key = claude_api_key or MultiKeyConfig.CLAUDE_API_KEY
+            batch_size = batch_size or MultiKeyConfig.BATCH_SIZE
+            max_concurrent_batches = max_concurrent_batches or MultiKeyConfig.MAX_CONCURRENT_BATCHES
+
+        # Validate we have keys
+        if not gemini_keys:
+            raise ValueError("No Gemini API keys provided. Configure in config/multi_key_config.py or pass directly.")
 
         # Enterprise Quota Management
         self.quota_manager = QuotaManager(gemini_keys, openai_api_key, claude_api_key)
 
         # Batch processing configuration
-        self.batch_size = batch_size  # 3-5 requests per batch to avoid quota spam
-        self.max_concurrent_batches = max_concurrent_batches
+        self.batch_size = batch_size or 3  # 3-5 requests per batch to avoid quota spam
+        self.max_concurrent_batches = max_concurrent_batches or 2
 
         # Models cache
         self.models_cache = {}
@@ -235,9 +255,13 @@ class GeminiCoverageOptimizer:
 
         logger.info(f"🚀 Enterprise Gemini Coverage Optimizer initialized")
         logger.info(f"🔑 Multi-key system: {len(gemini_keys)} Gemini keys")
-        logger.info(f"📦 Batch size: {batch_size} requests per batch")
-        logger.info(f"⚡ Max concurrent batches: {max_concurrent_batches}")
+        logger.info(f"📦 Batch size: {self.batch_size} requests per batch")
+        logger.info(f"⚡ Max concurrent batches: {self.max_concurrent_batches}")
         logger.info(f"🔄 Fallback providers: OpenAI={'✅' if openai_api_key else '❌'}, Claude={'✅' if claude_api_key else '❌'}")
+
+        # Validate configuration
+        if MultiKeyConfig:
+            MultiKeyConfig.validate_config()
 
     def get_model(self, provider: Provider) -> Any:
         """Get or create AI model instance."""
