@@ -1,0 +1,53 @@
+# ArgoCD Application for Supreme System V5
+# GitOps continuous deployment
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: supreme-system-v5
+  namespace: argocd
+  labels:
+    app: supreme-system-v5
+    environment: production
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: trading-prod
+  
+  source:
+    repoURL: https://github.com/thanhmuefatty07/supreme-system-v5
+    targetRevision: main
+    path: prod
+    directory:
+      recurse: true
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trading-prod
+  
+  syncPolicy:
+    automated:
+      prune: true       # Delete resources not in Git
+      selfHeal: true    # Automatically sync when drift detected
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  revisionHistoryLimit: 10
+  
+  # Health assessment
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas  # Ignore HPA-managed replicas
