@@ -20,14 +20,31 @@ except ImportError:
     from data.binance_client import BinanceClient
 
 
+@pytest.fixture(autouse=True)
+def mock_secrets_manager():
+    """Mock secrets manager for all tests"""
+    from unittest.mock import MagicMock
+    with patch('data.binance_client.get_secrets_manager') as mock_get_secrets:
+        mock_secrets = MagicMock()
+        mock_secrets.get_binance_credentials.return_value = {
+            'api_key': None,
+            'api_secret': None,
+            'testnet': True
+        }
+        mock_get_secrets.return_value = mock_secrets
+        yield mock_secrets
+
+
 class TestBinanceClient:
     """Test Binance API client functionality"""
 
     def test_initialization_without_credentials(self):
         """Test client initialization without API credentials"""
         client = BinanceClient()
-        assert client.client is None
-        assert client.testnet is True
+        assert hasattr(client, 'async_client')
+        assert client.async_client.api_key is None
+        assert client.async_client.api_secret is None
+        assert client.async_client.testnet is True
 
     def test_initialization_with_credentials(self):
         """Test client initialization with API credentials"""
@@ -36,9 +53,9 @@ class TestBinanceClient:
             api_secret="test_secret",
             testnet=False
         )
-        assert client.api_key == "test_key"
-        assert client.api_secret == "test_secret"
-        assert client.testnet is False
+        assert client.async_client.api_key == "test_key"
+        assert client.async_client.api_secret == "test_secret"
+        assert client.async_client.testnet is False
 
     @patch('src.data.binance_client.Client')
     def test_test_connection_success(self, mock_client_class):

@@ -87,8 +87,14 @@ class SecretsManager:
 
         Uses PBKDF2 with system-specific salt for consistent key derivation.
         """
-        # System fingerprint for salt
-        system_info = f"{os.uname().sysname}_{os.uname().machine}_{os.getlogin()}"
+        # System fingerprint for salt (cross-platform)
+        try:
+            # Try Unix-like systems
+            system_info = f"{os.uname().sysname}_{os.uname().machine}_{os.getlogin()}"
+        except AttributeError:
+            # Windows fallback
+            import platform
+            system_info = f"{platform.system()}_{platform.machine()}_{os.getlogin()}"
         salt = hashlib.sha256(system_info.encode()).digest()
 
         # PBKDF2 key derivation
@@ -379,10 +385,11 @@ class SecretsManager:
         api_key = self.get_secret('binance_api_key') or self.get_secret('BINANCE_API_KEY')
         api_secret = self.get_secret('binance_api_secret') or self.get_secret('BINANCE_API_SECRET')
 
+        testnet_str = self.get_secret('binance_testnet') or self.get_secret('BINANCE_TESTNET') or 'true'
         return {
             'api_key': api_key,
             'api_secret': api_secret,
-            'testnet': self.get_secret('binance_testnet', 'true').lower() == 'true'
+            'testnet': (testnet_str or 'true').lower() == 'true'
         }
 
     def setup_secure_config(self, api_key: str, api_secret: str, testnet: bool = True):
