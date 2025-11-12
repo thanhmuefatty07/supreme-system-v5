@@ -1,0 +1,233 @@
+name: 🤖 AI Coverage Optimization
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      target_coverage:
+        description: 'Target coverage percentage'
+        required: false
+        default: '80'
+      ai_provider:
+        description: 'AI provider (openai/anthropic/google)'
+        required: false
+        default: 'openai'
+
+jobs:
+  ai-coverage-optimization:
+    name: AI-Powered Coverage Optimization
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    strategy:
+      matrix:
+        python-version: ['3.12']  # Use latest Python for performance
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: 🐍 Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-xdist  # Parallel testing
+
+      - name: 📋 Analyze current coverage
+        run: |
+          echo "📈 Running initial coverage analysis..."
+          pytest --cov=src --cov-report=xml:initial_coverage.xml --cov-report=term
+          
+          # Extract coverage percentage
+          INITIAL_COV=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('initial_coverage.xml'); print(f\"{float(tree.getroot().attrib['line-rate'])*100:.2f}\")")
+          echo "INITIAL_COVERAGE=$INITIAL_COV" >> $GITHUB_ENV
+          echo "📉 Initial Coverage: $INITIAL_COV%"
+
+      - name: 🤖 Run AI Coverage Optimizer
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          TARGET_COVERAGE: ${{ github.event.inputs.target_coverage || '80' }}
+          AI_PROVIDER: ${{ github.event.inputs.ai_provider || 'openai' }}
+          COVERAGE_CORE: sysmon  # Python 3.12 fast coverage
+        run: |
+          echo "🤖 Starting AI-powered test generation..."
+          echo "Target: ${TARGET_COVERAGE}% coverage"
+          echo "AI Provider: ${AI_PROVIDER}"
+          
+          python -m src.ai.coverage_optimizer \
+            --source-dir src \
+            --target-coverage ${TARGET_COVERAGE} \
+            --ai-provider ${AI_PROVIDER} \
+            --output-dir tests/unit \
+            --max-iterations 5 \
+            --verbose
+
+      - name: ✅ Validate generated tests
+        run: |
+          echo "🔍 Validating AI-generated tests..."
+          python scripts/validate_ai_tests.py
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Test validation failed"
+            exit 1
+          fi
+          
+          echo "✅ All generated tests validated"
+
+      - name: 🧪 Run comprehensive test suite
+        run: |
+          echo "🧪 Running comprehensive tests with coverage..."
+          
+          # Run tests in parallel with coverage
+          pytest \
+            --cov=src \
+            --cov-report=xml:final_coverage.xml \
+            --cov-report=html:htmlcov \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ github.event.inputs.target_coverage || '80' }} \
+            -n auto \
+            --maxfail=10 \
+            -v
+
+      - name: 📈 Coverage analysis and reporting
+        if: always()
+        run: |
+          echo "📈 Analyzing coverage results..."
+          
+          # Extract final coverage
+          FINAL_COV=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('final_coverage.xml'); print(f\"{float(tree.getroot().attrib['line-rate'])*100:.2f}\")")
+          echo "FINAL_COVERAGE=$FINAL_COV" >> $GITHUB_ENV
+          
+          # Calculate improvement
+          IMPROVEMENT=$(python -c "print(f\"{$FINAL_COV - $INITIAL_COVERAGE:.2f}\")")
+          echo "COVERAGE_IMPROVEMENT=$IMPROVEMENT" >> $GITHUB_ENV
+          
+          # Generate report
+          cat << EOF > coverage_report.md
+          ## 📈 Coverage Optimization Report
+          
+          | Metric | Value |
+          |--------|-------|
+          | **Initial Coverage** | $INITIAL_COVERAGE% |
+          | **Final Coverage** | $FINAL_COV% |
+          | **Improvement** | +$IMPROVEMENT% |
+          | **Target** | ${{ github.event.inputs.target_coverage || '80' }}% |
+          | **Status** | $(if [ $(echo "$FINAL_COV >= ${{ github.event.inputs.target_coverage || '80' }}" | bc) -eq 1 ]; then echo "✅ ACHIEVED"; else echo "❌ NOT ACHIEVED"; fi) |
+          
+          ### AI Provider: ${{ github.event.inputs.ai_provider || 'openai' }}
+          
+          EOF
+          
+          cat coverage_report.md
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./final_coverage.xml
+          flags: ai-optimized
+          name: ai-coverage-optimization
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 📝 Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-html
+          path: htmlcov/
+          retention-days: 30
+
+      - name: 📄 Upload AI-generated tests
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-generated-tests
+          path: tests/unit/*_generated.py
+          retention-days: 30
+
+      - name: 📊 Create coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Create coverage badge JSON
+          cat << EOF > coverage-badge.json
+          {
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "${FINAL_COVERAGE}%",
+            "color": $(if [ $(echo "$FINAL_COVERAGE >= 80" | bc) -eq 1 ]; then echo "\"brightgreen\""; else echo "\"orange\""; fi)
+          }
+          EOF
+
+      - name: ✅ Coverage gate check
+        run: |
+          TARGET=${{ github.event.inputs.target_coverage || '80' }}
+          
+          if [ $(echo "$FINAL_COVERAGE >= $TARGET" | bc) -eq 1 ]; then
+            echo "✅ Coverage gate PASSED: $FINAL_COVERAGE% >= $TARGET%"
+            exit 0
+          else
+            echo "❌ Coverage gate FAILED: $FINAL_COVERAGE% < $TARGET%"
+            echo "Coverage improvement: +$COVERAGE_IMPROVEMENT%"
+            echo "Additional coverage needed: $(echo "$TARGET - $FINAL_COVERAGE" | bc)%"
+            exit 1
+          fi
+
+      - name: 📢 Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('coverage_report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: ai-coverage-optimization
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-benchmark
+
+      - name: 🚀 Run performance benchmarks
+        run: |
+          pytest tests/ --benchmark-only --benchmark-json=benchmark.json
+
+      - name: 📊 Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: benchmark.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
