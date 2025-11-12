@@ -48,8 +48,12 @@ class TestCLISetup:
 
         # Use a simple file path for testing
         import tempfile
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = os.path.join(tmp_dir, "test_log.txt")
+        import os
+
+        # Create a temporary file that gets cleaned up
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix='.log')
+        try:
+            os.close(tmp_fd)  # Close the file descriptor
 
             try:
                 logger = setup_logging("INFO", tmp_path)
@@ -60,6 +64,12 @@ class TestCLISetup:
             except Exception:
                 # Logging setup might have dependencies, that's OK
                 pass
+        finally:
+            # Clean up the temporary file
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass  # File might already be deleted
 
 
 class TestDataCommands:
