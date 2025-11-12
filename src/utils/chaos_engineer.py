@@ -243,40 +243,78 @@ class ChaosInjector:
         # In real implementation, this might send SIGKILL or similar
         await asyncio.sleep(0.1)
 
-    async def _exhaust_cpu(self, intensity: float):
-        """Exhaust CPU resources."""
+    async def _exhaust_cpu(self, intensity: float, duration: float = 30.0):
+        """Exhaust CPU resources using Enterprise Concurrency Manager."""
+        from ..enterprise.concurrency import EnterpriseConcurrencyManager
+
+        # Use enterprise concurrency manager
+        concurrency_manager = EnterpriseConcurrencyManager()
+
         def cpu_intensive_task():
-            while True:
+            """CPU intensive task with proper termination."""
+            import time
+            start_time = time.time()
+            while time.time() - start_time < duration:
                 [x**2 for x in range(1000)]
 
-        threads = int(intensity * 4)  # Up to 4 CPU-intensive threads
+        threads = min(int(intensity * 4), 4)
 
-        for _ in range(threads):
-            thread = threading.Thread(target=cpu_intensive_task)
-            thread.daemon = True
-            thread.start()
+        # Execute with proper concurrency control
+        await concurrency_manager.execute_threaded_tasks(
+            [cpu_intensive_task] * threads,
+            max_concurrent=threads,
+            timeout=duration
+        )
 
-        await asyncio.sleep(1)  # Let threads start
+    async def _exhaust_memory(self, intensity: float, duration: float = 30.0):
+        """Exhaust memory resources using Enterprise Memory Manager."""
+        from ..enterprise.memory import EnterpriseMemoryManager
 
-    async def _exhaust_memory(self, intensity: float):
-        """Exhaust memory resources."""
-        memory_chunks = []
+        memory_manager = EnterpriseMemoryManager()
+        allocated_blocks = []
 
         try:
-            chunk_size = int(intensity * 100 * 1024 * 1024)  # Up to 100MB per chunk
+            # Calculate safe allocation parameters
+            max_memory_mb = min(int(intensity * 100), 200)  # Max 200MB
+            chunk_size = min(int(intensity * 10 * 1024 * 1024), 20 * 1024 * 1024)  # Max 20MB per chunk
+            num_chunks = min(int(max_memory_mb * 1024 * 1024 / chunk_size), 10)  # Max 10 chunks
 
-            while True:
-                chunk = bytearray(chunk_size)
-                memory_chunks.append(chunk)
+            # Allocate memory using enterprise memory manager
+            for i in range(num_chunks):
+                try:
+                    # Use appropriate pool based on chunk size
+                    if chunk_size <= 1024:  # 1KB
+                        pool_name = 'small'
+                    elif chunk_size <= 65536:  # 64KB
+                        pool_name = 'medium'
+                    else:
+                        pool_name = 'large'
 
-                if len(memory_chunks) * chunk_size > 500 * 1024 * 1024:  # Stop at 500MB
+                    async with memory_manager.managed_memory_context(pool_name):
+                        block = await memory_manager.allocate_from_pool(chunk_size, pool_name)
+                        allocated_blocks.append((block, pool_name))
+
+                except Exception as e:
+                    logger.warning(f"Memory allocation {i+1} failed: {e}")
                     break
 
-        except MemoryError:
-            logger.warning("Memory exhaustion simulation hit memory limit")
+            # Hold memory pressure for specified duration
+            await asyncio.sleep(min(duration, 15.0))  # Max 15 seconds
 
-        # Keep references to maintain memory pressure
-        await asyncio.sleep(1)
+        except Exception as e:
+            logger.error(f"Memory exhaustion simulation failed: {e}")
+
+        finally:
+            # Clean up using enterprise memory manager
+            for block, pool_name in allocated_blocks:
+                try:
+                    await memory_manager.deallocate_to_pool(block, pool_name)
+                except Exception as e:
+                    logger.warning(f"Memory deallocation failed: {e}")
+
+            # Get final memory stats
+            final_stats = await memory_manager.get_memory_stats()
+            logger.info(f"Memory exhaustion simulation completed. Final memory: {final_stats['process_memory']['rss'] / 1024 / 1024:.1f}MB")
 
     async def _exhaust_disk(self, intensity: float):
         """Exhaust disk resources."""

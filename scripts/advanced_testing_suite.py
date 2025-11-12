@@ -23,6 +23,14 @@ from utils.chaos_engineer import ChaosEngineeringManager
 from utils.fuzz_tester import fuzz_test_module
 from utils.regression_tester import full_regression_cycle
 
+# Import AI Coverage Optimizer for primary coverage achievement
+try:
+    from ai.coverage_optimizer import AICoverageOptimizer
+    AI_COVERAGE_AVAILABLE = True
+except ImportError:
+    AI_COVERAGE_AVAILABLE = False
+    AICoverageOptimizer = None
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -35,7 +43,7 @@ class AdvancedTestingSuite:
         self.coverage_target = 80.0
 
     async def run_comprehensive_test_suite(self, target_modules: List[str] = None) -> Dict[str, Any]:
-        """Run the complete advanced testing suite."""
+        """Run the complete advanced testing suite with AI-driven coverage optimization."""
         logger.info("🚀 Starting Advanced Testing Suite for Supreme System V5")
 
         if target_modules is None:
@@ -46,6 +54,22 @@ class AdvancedTestingSuite:
                 "src/trading",
                 "src/utils"
             ]
+
+        # PHASE 0: AI Coverage Optimization (PRIMARY GOAL: 80% Coverage)
+        if AI_COVERAGE_AVAILABLE and AICoverageOptimizer:
+            logger.info("🎯 Phase 0: AI Coverage Optimization (Target: 80%+)")
+            coverage_results = await self._run_ai_coverage_optimization(target_modules)
+            self.results["ai_coverage_optimization"] = coverage_results
+
+            # Check if we achieved 80% coverage
+            if coverage_results.get('target_achieved', False):
+                logger.info("🎉 80% Coverage Target ACHIEVED! Skipping additional test generation.")
+                # Still run other techniques for quality assurance
+            else:
+                current_coverage = coverage_results.get('final_coverage', 0)
+                logger.warning(f"⚠️ Coverage target not achieved. Current: {current_coverage:.2f}, Target: 80.00")
+        else:
+            logger.warning("⚠️  AI Coverage Optimizer not available, using traditional approach")
 
         # 1. AI-Powered Test Generation
         logger.info("🤖 Phase 1: AI-Powered Test Generation")
@@ -87,6 +111,30 @@ class AdvancedTestingSuite:
             "coverage_achieved": self._calculate_overall_coverage(),
             "recommendations": self._generate_recommendations()
         }
+
+    async def _run_ai_coverage_optimization(self, target_modules: List[str]) -> Dict[str, Any]:
+        """Run AI-powered coverage optimization to achieve 80%+ coverage."""
+        try:
+            optimizer = AICoverageOptimizer()
+            source_directory = "src"
+
+            logger.info(f"🎯 Starting AI coverage optimization for {source_directory}")
+            results = await optimizer.achieve_80_percent_coverage(source_directory)
+
+            logger.info("🎯 AI Coverage Optimization Results:")
+            initial_cov = results.get('initial_coverage', 0)
+            final_cov = results.get('final_coverage', 0)
+            logger.info(f"📊 Coverage Improvement: {initial_cov:.2f}% → {final_cov:.2f}%")
+            logger.info(f"📈 Coverage Gain: {final_cov - initial_cov:.2f}%")
+            logger.info(f"🤖 Tests Generated: {results.get('tests_generated', 0)}")
+            logger.info(f"📄 Test Files Created: {results.get('test_files_created', 0)}")
+            logger.info(f"🎯 Target Achieved: {results.get('target_achieved', False)}")
+
+            return results
+
+        except Exception as e:
+            logger.error(f"AI coverage optimization failed: {e}")
+            return {"success": False, "error": str(e), "target_achieved": False}
 
     async def _run_ai_test_generation(self, target_modules: List[str]) -> Dict[str, Any]:
         """Run AI-powered test generation."""
