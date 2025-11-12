@@ -69,8 +69,8 @@ def check_docker() -> Tuple[bool, str]:
 
 def check_docker_compose() -> Tuple[bool, str]:
     """Check if Docker Compose is available."""
+    # Try docker compose (v2)
     try:
-        # Try docker compose (v2)
         result = subprocess.run(
             ['docker', 'compose', 'version'],
             capture_output=True,
@@ -80,8 +80,15 @@ def check_docker_compose() -> Tuple[bool, str]:
         if result.returncode == 0:
             version = result.stdout.strip()
             return True, f"Docker Compose available: {version}"
-        
-        # Try docker-compose (v1)
+    except FileNotFoundError:
+        # docker compose command not found, try v1 fallback
+        pass
+    except Exception as e:
+        # Other exceptions (TimeoutError, OSError, etc.) - still try v1 fallback
+        pass
+    
+    # Try docker-compose (v1) as fallback
+    try:
         result = subprocess.run(
             ['docker-compose', '--version'],
             capture_output=True,
@@ -91,10 +98,15 @@ def check_docker_compose() -> Tuple[bool, str]:
         if result.returncode == 0:
             version = result.stdout.strip()
             return True, f"Docker Compose (v1) available: {version}"
-        
-        return False, "Docker Compose not available"
+    except FileNotFoundError:
+        # docker-compose v1 also not found
+        return False, "Docker Compose not installed"
     except Exception as e:
+        # Other exceptions during v1 check
         return False, f"Docker Compose check failed: {e}"
+    
+    # Both attempts failed (non-zero return codes)
+    return False, "Docker Compose not available"
 
 
 def check_kubectl() -> Tuple[bool, str]:
