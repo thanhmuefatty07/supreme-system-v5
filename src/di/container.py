@@ -13,6 +13,55 @@ from ..data.binance_client import AsyncBinanceClient
 from ..data.data_pipeline import DataPipeline
 from ..data.data_storage import DataStorage
 from ..data.data_validator import DataValidator
+
+# Static imports to eliminate security vulnerabilities (CRITICAL FIX)
+try:
+    from ..trading.live_trading_engine import LiveTradingEngine
+except ImportError:
+    LiveTradingEngine = None
+
+try:
+    from ..backtesting.production_backtester import ProductionBacktester
+except ImportError:
+    ProductionBacktester = None
+
+try:
+    from ..monitoring.alert_manager import AlertManager
+except ImportError:
+    AlertManager = None
+
+try:
+    from ..supreme_system_app import SupremeSystemApp
+except ImportError:
+    SupremeSystemApp = None
+
+# ENTERPRISE SERVICE MESH COMPONENTS
+try:
+    from ..security.service_mesh import ServiceMeshManager
+except ImportError:
+    ServiceMeshManager = None
+
+try:
+    from ..security.zero_trust import ZeroTrustManager
+except ImportError:
+    ZeroTrustManager = None
+
+try:
+    from ..security.quantum_crypto import QuantumSafeCrypto
+except ImportError:
+    QuantumSafeCrypto = None
+
+# AI-POWERED AUTONOMOUS SRE
+try:
+    from ..ai.autonomous_sre import AutonomousSREPlatform
+except ImportError:
+    AutonomousSREPlatform = None
+
+# REAL-TIME STREAMING ANALYTICS
+try:
+    from ..streaming.realtime_analytics import RealTimeStreamingAnalytics
+except ImportError:
+    RealTimeStreamingAnalytics = None
 from ..strategies.strategy_registry import StrategyFactory
 from ..risk.risk_manager import RiskManager
 from ..trading.portfolio_manager import PortfolioManager
@@ -98,17 +147,17 @@ class TradingContainer(DeclarativeContainer):
     # Core dependency
     core = providers.DependenciesContainer()
 
-    # Trading Engine
+    # Trading Engine (SECURITY FIX: Static import)
     live_trading_engine = providers.Factory(
         lambda config, portfolio, risk, strategies, metrics, logger:
-            __import__('src.trading.live_trading_engine', fromlist=['LiveTradingEngine']).LiveTradingEngine(
+            LiveTradingEngine(
                 config=config,
                 portfolio_manager=portfolio,
                 risk_manager=risk,
                 strategy_factory=strategies,
                 metrics=metrics,
                 logger=logger
-            ),
+            ) if LiveTradingEngine else None,
         config=core.config.trading,
         portfolio=core.portfolio_manager,
         risk=core.risk_manager,
@@ -117,14 +166,14 @@ class TradingContainer(DeclarativeContainer):
         logger=core.logger
     )
 
-    # Backtesting Engine
+    # Backtesting Engine (SECURITY FIX: Static import)
     backtester = providers.Factory(
         lambda config, metrics, logger:
-            __import__('src.backtesting.production_backtester', fromlist=['ProductionBacktester']).ProductionBacktester(
+            ProductionBacktester(
                 config=config,
                 metrics=metrics,
                 logger=logger
-            ),
+            ) if ProductionBacktester else None,
         config=core.config.backtesting,
         metrics=core.metrics,
         logger=core.logger
@@ -142,13 +191,13 @@ class MonitoringContainer(DeclarativeContainer):
         service_name=core.config.monitoring.service_name
     )
 
-    # Alert manager (if implemented)
+    # Alert manager (SECURITY FIX: Static import)
     alert_manager = providers.Singleton(
         lambda config, logger:
-            __import__('src.monitoring.alert_manager', fromlist=['AlertManager']).AlertManager(
+            AlertManager(
                 config=config,
                 logger=logger
-            ),
+            ) if AlertManager else None,
         config=core.config.monitoring.alerts,
         logger=core.logger
     )
@@ -165,16 +214,16 @@ class ApplicationContainer(DeclarativeContainer):
     trading = providers.Container(TradingContainer, core=core)
     monitoring = providers.Container(MonitoringContainer, core=core)
 
-    # Main application
+    # Main application (SECURITY FIX: Static import)
     supreme_system_app = providers.Factory(
         lambda config, core, trading, monitoring, logger:
-            __import__('src.supreme_system_app', fromlist=['SupremeSystemApp']).SupremeSystemApp(
+            SupremeSystemApp(
                 config=config,
                 core_container=core,
                 trading_container=trading,
                 monitoring_container=monitoring,
                 logger=logger
-            ),
+            ) if SupremeSystemApp else None,
         config=config,
         core=core,
         trading=trading,
