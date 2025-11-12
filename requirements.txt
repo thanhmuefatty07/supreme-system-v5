@@ -125,3 +125,9 @@ loguru>=0.7.2           # Latest structured logging
 python-logstash>=0.4.8  # Latest Logstash integration
 graylog>=2.4.0          # Latest Graylog integration
 fluent-logger>=0.11.0   # Latest Fluentd integration
+
+# Enterprise AI/ML Dependencies - Multi-Provider Support
+openai>=1.0.0              # Latest OpenAI API client for fallback
+anthropic>=0.40.0          # Latest Anthropic Claude API for fallback
+google-generativeai>=0.8.0 # Latest Gemini API for primary AI
+instructor>=1.0.0           # Latest structured AI response parsing
