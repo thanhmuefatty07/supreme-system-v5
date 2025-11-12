@@ -42,14 +42,14 @@ except ImportError:
     ServiceMeshManager = None
 
 try:
-    from ..security.zero_trust import ZeroTrustManager
+    from ..security.zero_trust import ZeroTrustSecurity
 except ImportError:
-    ZeroTrustManager = None
+    ZeroTrustSecurity = None
 
 try:
-    from ..security.quantum_crypto import QuantumSafeCrypto
+    from ..security.quantum_crypto import QuantumCryptography
 except ImportError:
-    QuantumSafeCrypto = None
+    QuantumCryptography = None
 
 # AI-POWERED AUTONOMOUS SRE
 try:
@@ -203,6 +203,34 @@ class MonitoringContainer(DeclarativeContainer):
     )
 
 
+class SecurityContainer(DeclarativeContainer):
+    """Security and compliance components."""
+
+    core = providers.DependenciesContainer()
+
+    # Zero Trust Security
+    zero_trust_security = providers.Singleton(
+        lambda logger:
+            ZeroTrustSecurity() if ZeroTrustSecurity else None,
+        logger=core.logger
+    )
+
+    # Quantum Cryptography
+    quantum_cryptography = providers.Singleton(
+        lambda logger:
+            QuantumCryptography() if QuantumCryptography else None,
+        logger=core.logger
+    )
+
+    # Service Mesh (if implemented)
+    service_mesh = providers.Singleton(
+        lambda config, logger:
+            ServiceMeshManager(config=config, logger=logger) if ServiceMeshManager else None,
+        config=core.config.security.service_mesh,
+        logger=core.logger
+    )
+
+
 class ApplicationContainer(DeclarativeContainer):
     """Main application container combining all components."""
 
@@ -213,21 +241,24 @@ class ApplicationContainer(DeclarativeContainer):
     core = providers.Container(CoreContainer, config=config)
     trading = providers.Container(TradingContainer, core=core)
     monitoring = providers.Container(MonitoringContainer, core=core)
+    security = providers.Container(SecurityContainer, core=core)
 
     # Main application (SECURITY FIX: Static import)
     supreme_system_app = providers.Factory(
-        lambda config, core, trading, monitoring, logger:
+        lambda config, core, trading, monitoring, security, logger:
             SupremeSystemApp(
                 config=config,
                 core_container=core,
                 trading_container=trading,
                 monitoring_container=monitoring,
+                security_container=security,
                 logger=logger
             ) if SupremeSystemApp else None,
         config=config,
         core=core,
         trading=trading,
         monitoring=monitoring,
+        security=security,
         logger=core.logger
     )
 

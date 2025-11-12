@@ -51,26 +51,7 @@ opentelemetry-sdk>=1.27.0  # Latest version
 # Architecture improvements - SECURITY UPDATED
 dependency-injector>=4.45.0  # Latest version
 
-# ============================================================================
-# 🤖 AI-POWERED COVERAGE OPTIMIZATION - CRITICAL DEPENDENCIES
-# ============================================================================
-# Required for src/ai/coverage_optimizer.py execution
-# Enables automated test generation to achieve 80%+ coverage target
-
-instructor>=1.13.0        # Unified AI provider interface with structured outputs
-openai>=2.7.2            # GPT-4 Turbo API for intelligent test generation
-anthropic>=0.72.1        # Claude-3.5 Sonnet API for edge case analysis
-google-generativeai>=0.8.5  # Gemini-1.5 Pro API for multimodal test reasoning
-
-# AI/ML for test optimization
-transformers>=4.44.0     # Hugging Face transformers for code analysis
-torch>=2.4.0            # PyTorch for ML-powered test prioritization
-tensorflow>=2.17.0       # TensorFlow for advanced test quality analysis
-
-# ============================================================================
-# ENTERPRISE-GRADE SECURITY DEPENDENCIES
-# ============================================================================
-
+# NEW ENTERPRISE-GRADE SECURITY DEPENDENCIES
 # Zero-Trust Security
 PyJWT>=2.9.0              # Latest secure version
 bcrypt>=4.2.0             # Latest secure password hashing
@@ -95,7 +76,10 @@ modin>=0.31.0           # Latest distributed pandas
 polars>=1.7.0           # Latest high-performance DataFrame
 duckdb>=1.1.0           # Latest analytical database
 
-# AI/ML Performance Enhancement
+# AI/ML Security & Performance
+transformers>=4.44.0     # Latest Hugging Face transformers
+torch>=2.4.0            # Latest PyTorch with security fixes
+tensorflow>=2.17.0       # Latest TensorFlow with security fixes
 xgboost>=2.1.0          # Latest gradient boosting
 lightgbm>=4.5.0         # Latest gradient boosting
 
@@ -104,23 +88,30 @@ coverage>=7.6.0         # Latest coverage analysis
 bandit>=1.8.0           # Latest security linting
 safety>=3.2.0           # Latest dependency vulnerability scanning
 semgrep>=1.88.0         # Latest static analysis
+mypy>=1.11.0            # Latest type checking
 
 # Container & Orchestration Security
 docker>=7.1.0           # Latest Docker SDK
 kubernetes>=30.1.0      # Latest Kubernetes client
+helm>=3.15.0            # Latest Helm client
+istioctl>=1.23.0        # Latest Istio CLI
 
 # Cloud Security & Compliance
 boto3>=1.35.0           # Latest AWS SDK with security fixes
 azure-identity>=1.17.0  # Latest Azure authentication
 google-cloud-securitycenter>=1.35.0  # Latest GCP security
+aws-securityhub>=0.13.0  # Latest AWS Security Hub
 
 # Advanced Cryptography
 pycryptodome>=3.20.0    # Latest cryptographic library
 ecdsa>=0.19.0           # Latest ECDSA signatures
 pynacl>=1.5.0           # Latest NaCl cryptography
+oqs>=0.10.0             # Open Quantum Safe - NIST PQC algorithms
 
 # Real-time Streaming & Analytics
 confluent-kafka>=2.6.0  # Latest Kafka client
+faust-streaming>=0.11.0  # Latest streaming framework
+apache-flink>=1.19.0    # Latest Flink Python API
 clickhouse-driver>=0.2.7  # Latest ClickHouse client
 
 # Enterprise API Security
@@ -132,4 +123,5 @@ python-multipart>=0.0.9  # Latest multipart handling
 # Advanced Logging & Auditing
 loguru>=0.7.2           # Latest structured logging
 python-logstash>=0.4.8  # Latest Logstash integration
+graylog>=2.4.0          # Latest Graylog integration
 fluent-logger>=0.11.0   # Latest Fluentd integration
