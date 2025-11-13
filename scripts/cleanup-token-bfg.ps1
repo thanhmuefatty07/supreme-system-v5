@@ -122,7 +122,7 @@ if ($confirm -ne "YES") {
 
 # Step 6: Run BFG
 Write-Host ""
-Write-Host "Step 5: Running BFG Repo-Cleaner..." -ForegroundColor Blue
+Write-Host "Step 6: Running BFG Repo-Cleaner..." -ForegroundColor Blue
 Write-Host "This may take several minutes depending on repository size..." -ForegroundColor Yellow
 Write-Host ""
 
@@ -137,21 +137,37 @@ try {
 
 # Step 7: Clean up Git
 Write-Host ""
-Write-Host "Step 6: Cleaning up Git references..." -ForegroundColor Blue
+Write-Host "Step 7: Cleaning up Git references..." -ForegroundColor Blue
 git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 Write-Host "✅ Git cleanup completed" -ForegroundColor Green
 
 # Step 8: Verify cleanup
 Write-Host ""
-Write-Host "Step 7: Verifying token removal..." -ForegroundColor Blue
-$tokenStillExists = git log --all -p | Select-String -Pattern $tokenToRemove -Quiet
-if ($tokenStillExists) {
-    Write-Host "⚠️  WARNING: Token may still exist in history!" -ForegroundColor Yellow
-    Write-Host "   Please verify manually:" -ForegroundColor Yellow
-    Write-Host "   git log --all -p | Select-String -Pattern '$tokenToRemove'" -ForegroundColor Gray
+Write-Host "Step 8: Verifying token removal..." -ForegroundColor Blue
+
+# Skip verification if placeholder token was used (to avoid false positives from documentation)
+if ($tokenToRemove -eq "YOUR_EXPOSED_TOKEN_HERE") {
+    Write-Host "⚠️  Skipping verification - placeholder token used." -ForegroundColor Yellow
+    Write-Host "   To verify cleanup, run with actual token or check manually:" -ForegroundColor Yellow
+    Write-Host "   git log --all -p | Select-String -Pattern 'ghp_[A-Za-z0-9]{36}'" -ForegroundColor Gray
 } else {
-    Write-Host "✅ Token not found in Git history" -ForegroundColor Green
+    # Only search for actual GitHub token pattern to avoid false positives
+    # Check if token looks like a real GitHub token (starts with ghp_)
+    if ($tokenToRemove -match "^ghp_") {
+        $tokenStillExists = git log --all -p | Select-String -Pattern [regex]::Escape($tokenToRemove) -Quiet
+        if ($tokenStillExists) {
+            Write-Host "⚠️  WARNING: Token may still exist in history!" -ForegroundColor Yellow
+            Write-Host "   Please verify manually:" -ForegroundColor Yellow
+            Write-Host "   git log --all -p | Select-String -Pattern 'ghp_[A-Za-z0-9]{36}'" -ForegroundColor Gray
+        } else {
+            Write-Host "✅ Token not found in Git history" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "⚠️  Token pattern not recognized. Skipping verification." -ForegroundColor Yellow
+        Write-Host "   Please verify manually:" -ForegroundColor Yellow
+        Write-Host "   git log --all -p | Select-String -Pattern 'ghp_[A-Za-z0-9]{36}'" -ForegroundColor Gray
+    }
 }
 
 # Step 9: Instructions for force push
