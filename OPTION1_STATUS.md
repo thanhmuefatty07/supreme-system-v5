@@ -18,7 +18,7 @@
 - ✅ `TOKEN_EXPOSURE_SUMMARY.md` - Status summary
 
 ### **3. Token Information**
-- ✅ Token identified: `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`
+- ✅ Token identified: `YOUR_EXPOSED_TOKEN_HERE`
 - ✅ Location: Commit `9f17cd6d` - `GITHUB_TOKEN_SECURITY.md` (lines 66, 78)
 - ✅ Current files: ✅ CLEAN (token removed)
 
