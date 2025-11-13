@@ -5,7 +5,7 @@
 **Advanced Algorithmic Trading System with Multi-Agent Architecture**
 
 [![CI/CD Pipeline](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml/badge.svg)](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-78%25-brightgreen)](https://supreme-system-v5.readthedocs.io/)
+[![Coverage](https://img.shields.io/badge/coverage-25%25-yellow)](https://supreme-system-v5.readthedocs.io/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -15,7 +15,7 @@
 
 Supreme System V5 is a **production-grade algorithmic trading platform** that implements advanced quantitative strategies with institutional-level risk management. Built using cutting-edge technologies and following industry best practices, the system delivers:
 
-- **78% Test Coverage** with comprehensive automated testing
+- **25% Test Coverage** (targeting 78% with ongoing optimization)
 - **Sub-500ms Response Times** with vectorized operations
 - **Enterprise Security** with hardened containers and encrypted communications
 - **24/7 Monitoring** with Prometheus metrics and alerting
@@ -152,7 +152,7 @@ docker-compose -f docker-compose.prod.yml up -d
 | **Strategy Execution** | P95 Latency | <500ms | 45ms | ✅ |
 | **Data Processing** | Throughput | >1000 signals/sec | 2500 signals/sec | ✅ |
 | **Memory Usage** | Peak Usage | <2GB | 1.2GB | ✅ |
-| **Test Coverage** | Code Coverage | >70% | 78% | ✅ |
+| **Test Coverage** | Code Coverage | >70% | 25% (targeting 78%) | ⚠️ |
 | **Error Rate** | Application Errors | <1% | 0.05% | ✅ |
 | **CPU Efficiency** | Resource Usage | <70% | 35% | ✅ |
 
