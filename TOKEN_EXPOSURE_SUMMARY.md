@@ -78,26 +78,32 @@ git show 9f17cd6d:GITHUB_TOKEN_SECURITY.md | Select-String -Pattern "ghp_"
 
 **After cleanup, verify token is removed:**
 ```powershell
-# Should return no matches
-git log --all -p | Select-String -Pattern "YOUR_TOKEN_HERE"
+# Should return no matches - Search for GitHub token pattern
+git log --all -p | Select-String -Pattern "ghp_[A-Za-z0-9]{36}"
 
 # Check specific commit
 git show 9f17cd6d:GITHUB_TOKEN_SECURITY.md | Select-String -Pattern "ghp_"
 
-# Check all files
+# Check all files in history
 git log --all --name-only --pretty=format:"" | Sort-Object -Unique | ForEach-Object { git log --all -p -- $_ | Select-String -Pattern "ghp_" }
+
+# Check remote URL (should not contain token)
+git remote get-url origin | Select-String -Pattern "ghp_"
 ```
 
 ---
 
 ## 📊 **CURRENT STATUS**
 
-**Files:** ✅ **CLEAN** (no tokens in current files)  
+**Repository Files:** ✅ **CLEAN** (no tokens in tracked files)  
 **Git History:** ⚠️ **CONTAINS TOKEN** (commit `9f17cd6d`)  
-**Remote URL:** ⚠️ **CONTAINS TOKEN** (local config only)  
+**Remote URL (.git/config):** ⚠️ **CONTAINS TOKEN** - Token is embedded in remote URL (check with `git remote get-url origin`)  
 **Token Status:** ⚠️ **NOT REVOKED** (as of this report)
 
-**Risk Level:** 🔴 **HIGH** - Token accessible to anyone with repo access
+**Risk Level:** 🔴 **HIGH** - Token accessible to:
+- Anyone with repository access (Git history)
+- Anyone with local machine access (`.git/config`)
+- Token provides full GitHub account access
 
 ---
 
