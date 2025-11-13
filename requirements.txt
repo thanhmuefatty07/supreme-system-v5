@@ -7,7 +7,7 @@ ta>=0.11.0     # Latest version
 scikit-learn>=1.5.0  # Latest secure version
 pytest>=8.3.0  # Latest version with security fixes
 pytest-cov>=6.2.1  # Latest secure version
-black>=24.8.0  # Latest version
+black>=24.3.0  # Latest version (fixes CVE-2024-21503 ReDoS)
 flake8>=7.1.0  # Latest version
 mypy>=1.11.0  # Latest version with security fixes
 
@@ -54,12 +54,14 @@ dependency-injector>=4.45.0  # Latest version
 # NEW ENTERPRISE-GRADE SECURITY DEPENDENCIES
 # Zero-Trust Security
 PyJWT>=2.9.0              # Latest secure version
+pyotp>=2.9.0              # TOTP for 2FA (required for Zero Trust)
 bcrypt>=4.2.0             # Latest secure password hashing
 argon2-cffi>=23.1.0       # Latest memory-hard password hashing
 pyOpenSSL>=24.2.0         # Latest SSL/TLS security
 
 # Service Mesh & Microservices
 fastapi>=0.115.0          # Latest async web framework
+starlette>=0.40.0        # Latest Starlette (fixes CVE-2024-47874, CVE-2025-54121)
 uvicorn>=0.31.0          # Latest ASGI server
 httpx>=0.27.0            # Latest async HTTP client
 pydantic-settings>=2.5.0  # Latest configuration management
@@ -116,7 +118,7 @@ clickhouse-driver>=0.2.7  # Latest ClickHouse client
 
 # Enterprise API Security
 fastapi-security>=0.8.0  # Latest FastAPI security
-authlib>=1.3.0          # Latest OAuth/JWT library
+authlib>=1.6.5          # Latest OAuth/JWT library (fixes CVE-2025-59420, CVE-2025-61920, CVE-2025-62706)
 python-jose>=3.3.0      # Latest JOSE implementation
 python-multipart>=0.0.9  # Latest multipart handling
 
