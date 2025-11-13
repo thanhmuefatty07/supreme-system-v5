@@ -82,8 +82,10 @@ duckdb>=1.1.0           # Latest analytical database
 transformers>=4.44.0     # Latest Hugging Face transformers
 torch>=2.4.0            # Latest PyTorch with security fixes
 tensorflow>=2.17.0       # Latest TensorFlow with security fixes
+keras>=3.12.0           # Latest Keras (fixes CVE-2025-12058, CVE-2025-12060)
 xgboost>=2.1.0          # Latest gradient boosting
 lightgbm>=4.5.0         # Latest gradient boosting
+mlflow>=2.19.0          # Latest MLflow (fixes 15 CVEs - remove if not used)
 
 # Advanced Testing & Quality Assurance
 coverage>=7.6.0         # Latest coverage analysis
@@ -91,6 +93,7 @@ bandit>=1.8.0           # Latest security linting
 safety>=3.2.0           # Latest dependency vulnerability scanning
 semgrep>=1.88.0         # Latest static analysis
 mypy>=1.11.0            # Latest type checking
+uv>=0.9.6               # Latest uv package manager (fixes ZIP parsing vulnerability)
 
 # Container & Orchestration Security
 docker>=7.1.0           # Latest Docker SDK

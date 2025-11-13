@@ -36,27 +36,21 @@ class MultiKeyConfig:
     """
     
     # ===================================================================
-    # 🔑 GEMINI API KEYS - 6 KEYS ACTIVE
+    # 🔑 GEMINI API KEYS - Loaded from Environment Variables
     # ===================================================================
+    # SECURITY: Never hardcode API keys in source code!
+    # Keys are loaded from environment variables for security.
     
     GEMINI_KEYS: List[str] = [
-        # Key 1 - Original key from initial setup
-        "AIzaSyBH8mRSlNVKQoRi5uCrEJikTJlqhRhPA-g",
-        
-        # Key 2 - User provided key
-        "AIzaSyAporcskLK6R4Ky67c34YUTrtJhwhjg-2I",
-        
-        # Key 3 - User provided key
-        "AIzaSyB5v7LHHgdj7AMpi8Drngi7UsRhb4tLvcE",
-        
-        # Key 4 - User provided key
-        "AIzaSyA5MHJ6upgVIM8-SSqqbw5mVeam50mMOLo",
-        
-        # Key 5 - User provided key
-        "AIzaSyD0AC3iwBEPT54h6i2lOmAN9W-pOUWw-Es",
-        
-        # Key 6 - User provided key
-        "AIzaSyAgakXQVcSD5BadqMsNwxgZ86qs01natAI",
+        # Load from environment variables (filter out empty values)
+        key for key in [
+            os.getenv("GEMINI_KEY_1", ""),
+            os.getenv("GEMINI_KEY_2", ""),
+            os.getenv("GEMINI_KEY_3", ""),
+            os.getenv("GEMINI_KEY_4", ""),
+            os.getenv("GEMINI_KEY_5", ""),
+            os.getenv("GEMINI_KEY_6", ""),
+        ] if key and key.startswith("AIzaSy") and len(key) > 30
     ]
     
     # ===================================================================

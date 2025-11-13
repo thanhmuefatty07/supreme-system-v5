@@ -726,3 +726,8 @@ def get_zero_trust_manager() -> ZeroTrustManager:
     if _zero_trust_manager is None:
         _zero_trust_manager = ZeroTrustManager()
     return _zero_trust_manager
+
+
+# Backward compatibility alias
+# Some code may import ZeroTrustSecurity instead of ZeroTrustManager
+ZeroTrustSecurity = ZeroTrustManager

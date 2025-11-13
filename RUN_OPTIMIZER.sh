@@ -26,17 +26,38 @@ NC='\033[0m' # No Color
 # ==========================================================================
 # Using 6 Gemini API keys for 90 RPM total throughput
 # No more 429 errors with round-robin rotation!
+#
+# SECURITY: Keys are loaded from environment variables or .env file
+# Never hardcode API keys in source code!
 
-export GEMINI_KEY_1="AIzaSyBH8mRSlNVKQoRi5uCrEJikTJlqhRhPA-g"
-export GEMINI_KEY_2="AIzaSyAporcskLK6R4Ky67c34YUTrtJhwhjg-2I"
-export GEMINI_KEY_3="AIzaSyB5v7LHHgdj7AMpi8Drngi7UsRhb4tLvcE"
-export GEMINI_KEY_4="AIzaSyA5MHJ6upgVIM8-SSqqbw5mVeam50mMOLo"
-export GEMINI_KEY_5="AIzaSyD0AC3iwBEPT54h6i2lOmAN9W-pOUWw-Es"
-export GEMINI_KEY_6="AIzaSyAgakXQVcSD5BadqMsNwxgZ86qs01natAI"
+# Load from environment variables (fallback to empty if not set)
+export GEMINI_KEY_1="${GEMINI_KEY_1:-}"
+export GEMINI_KEY_2="${GEMINI_KEY_2:-}"
+export GEMINI_KEY_3="${GEMINI_KEY_3:-}"
+export GEMINI_KEY_4="${GEMINI_KEY_4:-}"
+export GEMINI_KEY_5="${GEMINI_KEY_5:-}"
+export GEMINI_KEY_6="${GEMINI_KEY_6:-}"
+
+# Load from .env file if it exists
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
 
 # Backward compatibility
-export GOOGLE_API_KEY="$GEMINI_KEY_1"
-export GEMINI_API_KEY="$GEMINI_KEY_1"
+export GOOGLE_API_KEY="${GEMINI_KEY_1:-}"
+export GEMINI_API_KEY="${GEMINI_KEY_1:-}"
+
+# Validate that at least one key is set
+if [ -z "$GEMINI_KEY_1" ] && [ -z "$GEMINI_KEY_2" ] && [ -z "$GEMINI_KEY_3" ] && \
+   [ -z "$GEMINI_KEY_4" ] && [ -z "$GEMINI_KEY_5" ] && [ -z "$GEMINI_KEY_6" ]; then
+    echo "⚠️  WARNING: No GEMINI API keys found in environment variables!"
+    echo "   Please set GEMINI_KEY_1 through GEMINI_KEY_6 environment variables"
+    echo "   or create a .env file with your API keys."
+    echo "   See .env.example for reference."
+    exit 1
+fi
 
 # ==========================================================================
 # ⚙️ OPTIMIZER CONFIGURATION
