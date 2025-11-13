@@ -352,17 +352,16 @@ See [LICENSE](LICENSE) for full terms and conditions.
 
 ## 🎊 Acknowledgments
 
-Built with ❤️ by the Supreme System Team using:
-
-- **Python 3.11** for modern, type-safe development
-- **FastAPI** for high-performance API development
-- **Streamlit** for beautiful analytical dashboards
-- **Prometheus** for comprehensive monitoring
-- **Docker** for containerized deployment
-- **NumPy/Pandas** for high-performance data processing
-
-**Supreme System V5 - Where Algorithmic Trading Meets Production Excellence** 🚀
-
 ---
 
-*Last updated: November 11, 2025 | Version: 5.0.0*
+<div align="center">
+
+**Built with** ❤️ **using Neuromorphic Computing & Quantum-Inspired Algorithms**
+
+*Supreme System V5 - The Future of Algorithmic Trading*
+
+**Contact**: thanhmuefatty07@gmail.com
+
+*Last updated: November 14, 2025 | Version: 5.0.0*
+
+</div>
