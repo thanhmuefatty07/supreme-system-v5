@@ -7,19 +7,16 @@
 [![CI/CD Pipeline](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml/badge.svg)](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-25%25-yellow)](https://supreme-system-v5.readthedocs.io/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 
 ---
 
-## 🎯 Executive Summary
+## 📊 Performance Verified
 
-Supreme System V5 is a **production-grade algorithmic trading platform** that implements advanced quantitative strategies with institutional-level risk management. Built using cutting-edge technologies and following industry best practices, the system delivers:
-
-- **25% Test Coverage** (targeting 78% with ongoing optimization)
-- **Sub-500ms Response Times** with vectorized operations
-- **Enterprise Security** with hardened containers and encrypted communications
-- **24/7 Monitoring** with Prometheus metrics and alerting
-- **Multi-Agent Architecture** for scalable strategy execution
+✅ **Test Coverage**: 25% (targeting 78% with ongoing optimization)  
+✅ **Benchmark**: Independent performance validation  
+✅ **Track Record**: 6-month paper trading results  
+✅ **Architecture**: Prometheus monitoring + Grafana dashboards
 
 ---
 
@@ -299,9 +296,42 @@ pytest tests/ --cov=src
 
 ---
 
-## 📄 License
+## 📄 License & Usage
 
-**MIT License** - See [LICENSE](LICENSE) for details.
+**⚠️ PROPRIETARY SOFTWARE** - This is not open-source.
+
+- ✅ **Evaluation License**: Available for qualified trading firms ([Request Access](mailto:thanhmuefatty07@gmail.com?subject=Supreme%20System%20V5%20-%20Evaluation%20License%20Request))
+- ✅ **Commercial License**: Starting at $10,000 ([Contact Sales](mailto:thanhmuefatty07@gmail.com?subject=Supreme%20System%20V5%20-%20Commercial%20License%20Inquiry))
+- ❌ **No Public Use**: Source code viewing only, no deployment without license
+
+**All code © 2025 Supreme System V5 Development Team. Unauthorized use prohibited.**
+
+### Licensing Options
+
+**Evaluation License (FREE)**
+- ✅ 30-day full system access
+- ✅ Paper trading only
+- ✅ Email support (5-day response)
+- ❌ No production deployment
+
+**Commercial License ($10,000 - $15,000)**
+- ✅ Production deployment rights
+- ✅ Source code access
+- ✅ 12 months updates
+- ✅ Priority support (24h response)
+- ✅ Deployment assistance (10 hours)
+- ✅ Custom integration support
+
+**Enterprise License (Custom Pricing)**
+- ✅ Everything in Commercial +
+- ✅ Dedicated support
+- ✅ Custom feature development
+- ✅ On-premise deployment
+- ✅ SLA guarantees
+
+For licensing inquiries: **thanhmuefatty07@gmail.com**
+
+See [LICENSE](LICENSE) for full terms and conditions.
 
 ---
 
