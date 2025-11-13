@@ -36,7 +36,7 @@ COPY requirements.txt ./
 
 # Security: Install Python dependencies with constraints
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --require-hashes -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Security: Copy application code with minimal permissions
 COPY --chown=trader:trader . .

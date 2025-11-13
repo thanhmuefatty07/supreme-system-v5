@@ -71,7 +71,7 @@ echo -e "${YELLOW}Step 1: Installing dependencies...${NC}"
 
 if ! python -c "import google.generativeai" 2>/dev/null; then
     echo "  Installing google-generativeai..."
-    pip install -q google-generativeai
+    python -m pip install -q google-generativeai
     echo -e "  ${GREEN}✓ google-generativeai installed${NC}"
 else
     echo -e "  ${GREEN}✓ google-generativeai already installed${NC}"
@@ -79,7 +79,7 @@ fi
 
 if ! python -c "import openai" 2>/dev/null; then
     echo "  Installing openai (fallback)..."
-    pip install -q openai
+    python -m pip install -q openai
     echo -e "  ${GREEN}✓ openai installed${NC}"
 else
     echo -e "  ${GREEN}✓ openai already installed${NC}"
@@ -87,7 +87,7 @@ fi
 
 if ! python -c "import anthropic" 2>/dev/null; then
     echo "  Installing anthropic (fallback)..."
-    pip install -q anthropic
+    python -m pip install -q anthropic
     echo -e "  ${GREEN}✓ anthropic installed${NC}"
 else
     echo -e "  ${GREEN}✓ anthropic already installed${NC}"
