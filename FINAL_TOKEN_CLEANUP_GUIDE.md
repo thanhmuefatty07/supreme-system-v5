@@ -22,7 +22,7 @@
 **Before cleaning Git history, you MUST revoke the token:**
 
 1. Go to: https://github.com/settings/tokens
-2. Find token starting with `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`
+2. Find token starting with `YOUR_EXPOSED_TOKEN_HERE`
 3. Click **"Revoke"** immediately
 4. Confirm revocation
 
@@ -100,7 +100,7 @@ Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg
 
 **When prompted, enter the token:**
 ```
-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
+YOUR_EXPOSED_TOKEN_HERE
 ```
 
 ---
@@ -114,7 +114,7 @@ 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
 git branch backup-before-token-cleanup-$(Get-Date -Format 'yyyyMMdd-HHmmss')
 
 # Step 2: Create tokens.txt file
-$token = "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"
+$token = "YOUR_EXPOSED_TOKEN_HERE"
 "$token==>REVOKED_TOKEN_REMOVED_FROM_HISTORY" | Out-File -FilePath "tokens.txt" -Encoding UTF8 -NoNewline
 
 # Step 3: Download BFG (if not exists)
@@ -130,7 +130,7 @@ git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 
 # Step 6: Verify cleanup
-git log --all -p | Select-String -Pattern "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"
+git log --all -p | Select-String -Pattern "YOUR_EXPOSED_TOKEN_HERE"
 # Expected: No matches ✅
 ```
 
@@ -142,7 +142,7 @@ git log --all -p | Select-String -Pattern "ghp_pt4qfpZPGgvYtuFD2uPQKScSwcvAxx3hO
 
 ```powershell
 # Check Git history
-git log --all -p | Select-String -Pattern "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"
+git log --all -p | Select-String -Pattern "YOUR_EXPOSED_TOKEN_HERE"
 # Expected: No matches ✅
 
 # Check specific commit
@@ -305,7 +305,7 @@ choco install openjdk -y
 .\scripts\cleanup-token-bfg.ps1
 
 # 4. Follow script prompts
-# Enter token when prompted: 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
+# Enter token when prompted: YOUR_EXPOSED_TOKEN_HERE
 
 # 5. Force push after verification
 git push origin --force --all
