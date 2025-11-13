@@ -518,7 +518,12 @@ class AdvancedRiskManager:
         return results
 
     def _detect_market_regime(self, market_data: Optional[pd.DataFrame]) -> str:
-        """Detect current market regime."""
+        """
+        Detect current market regime based on volatility and trend analysis.
+        
+        Returns:
+            'normal', 'volatile', 'volatile_bullish', 'volatile_bearish', 'crisis', or 'unknown'
+        """
         if market_data is None or len(market_data) < self.regime_window:
             return 'unknown'
 
@@ -526,12 +531,45 @@ class AdvancedRiskManager:
         returns = market_data['close'].pct_change().dropna()
         volatility = returns.rolling(self.regime_window).std().iloc[-1]
 
+        # Calculate trend direction and strength
+        recent_prices = market_data['close'].tail(self.regime_window).values
+        if len(recent_prices) < 2:
+            return 'unknown'
+        
+        # Calculate trend slope using linear regression
+        x = np.arange(len(recent_prices))
+        trend_slope = np.polyfit(x, recent_prices, 1)[0]
+        
+        # Calculate trend strength (magnitude) - always non-negative
+        mean_price = np.mean(recent_prices)
+        if mean_price > 0:
+            trend_strength = abs(trend_slope) / mean_price
+        else:
+            trend_strength = 0.0
+        
+        # Determine trend direction using original trend_slope (not abs)
+        is_bearish = trend_slope < -0.001
+        is_bullish = trend_slope > 0.001
+
+        # Classify regime based on volatility and trend
         if volatility > self.volatility_threshold * 2:
             return 'crisis'
         elif volatility > self.volatility_threshold:
-            return 'volatile'
+            # High volatility: check trend direction
+            if is_bearish:
+                return 'volatile_bearish'
+            elif is_bullish:
+                return 'volatile_bullish'
+            else:
+                return 'volatile'
         else:
-            return 'normal'
+            # Normal volatility: still check trend for completeness
+            if is_bearish and trend_strength > 0.01:
+                return 'normal_bearish'
+            elif is_bullish and trend_strength > 0.01:
+                return 'normal_bullish'
+            else:
+                return 'normal'
 
     def _calculate_volatility(self, symbol: str, market_data: Optional[pd.DataFrame]) -> float:
         """Calculate asset volatility."""
