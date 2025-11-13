@@ -513,3 +513,8 @@ def get_quantum_crypto(
     if _quantum_crypto is None:
         _quantum_crypto = QuantumSafeCrypto(security_level=security_level)
     return _quantum_crypto
+
+
+# Backward compatibility alias
+# Some code may import QuantumCryptography instead of QuantumSafeCrypto
+QuantumCryptography = QuantumSafeCrypto

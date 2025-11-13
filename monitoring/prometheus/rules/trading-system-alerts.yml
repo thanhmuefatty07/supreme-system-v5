@@ -140,7 +140,7 @@ groups:
         runbook_url: "https://supreme-system-v5.readthedocs.io/en/latest/monitoring.html#sharpe-ratio"
 
     - alert: SupremeSystemPortfolioValueDecline
-      expr: (supreme_portfolio_value - supremum(supreme_portfolio_value) over (1h)) / supremum(supreme_portfolio_value) over (1h) < -0.05
+      expr: (supreme_portfolio_value - max_over_time(supreme_portfolio_value[1h])) / max_over_time(supreme_portfolio_value[1h]) < -0.05
       for: 30m
       labels:
         severity: warning
