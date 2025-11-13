@@ -77,10 +77,18 @@ $backupBranch = "backup-before-token-cleanup-$(Get-Date -Format 'yyyyMMdd-HHmmss
 git branch $backupBranch 2>$null
 Write-Host "✅ Backup created: $backupBranch" -ForegroundColor Green
 
-# Step 4: Create tokens.txt file
+# Step 4: Get token to remove
 Write-Host ""
-Write-Host "Step 4: Creating replacement file..." -ForegroundColor Blue
-$tokenToRemove = "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"
+Write-Host "Step 4: Getting token to remove..." -ForegroundColor Blue
+Write-Host ""
+Write-Host "⚠️  IMPORTANT: Enter the exposed token that needs to be removed from Git history." -ForegroundColor Yellow
+Write-Host "   This should be the token that was committed to the repository." -ForegroundColor Yellow
+Write-Host ""
+$tokenToRemove = Read-Host "Enter the GitHub token to remove (or press Enter to use placeholder)"
+if ([string]::IsNullOrWhiteSpace($tokenToRemove)) {
+    Write-Host "⚠️  Using placeholder. Please edit the script to add your actual token." -ForegroundColor Yellow
+    $tokenToRemove = "YOUR_EXPOSED_TOKEN_HERE"
+}
 $replacement = "REVOKED_TOKEN_REMOVED_FROM_HISTORY"
 
 # Create tokens.txt for BFG

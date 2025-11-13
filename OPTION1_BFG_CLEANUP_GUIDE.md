@@ -10,7 +10,7 @@
 
 - ✅ Script tự động: `scripts/cleanup-token-bfg.ps1`
 - ✅ Documentation: `CRITICAL_TOKEN_REMOVAL.md`
-- ✅ Token đã được xác định: `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`
+- ✅ Token đã được xác định: `YOUR_EXPOSED_TOKEN_HERE`
 
 ---
 
@@ -89,7 +89,7 @@ Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg
 git branch backup-before-token-cleanup-$(Get-Date -Format 'yyyyMMdd-HHmmss')
 
 # Step 2: Tạo tokens.txt
-$token = "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"
+$token = "YOUR_EXPOSED_TOKEN_HERE"
 "$token==>REVOKED_TOKEN_REMOVED_FROM_HISTORY" | Out-File -FilePath "tokens.txt" -Encoding UTF8 -NoNewline
 
 # Step 3: Download BFG (nếu chưa có)
@@ -103,7 +103,7 @@ git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 
 # Step 6: Verify
-git log --all -p | Select-String -Pattern "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"
+git log --all -p | Select-String -Pattern "YOUR_EXPOSED_TOKEN_HERE"
 # Should return: No matches
 
 # Step 7: Force push (WARNING: Rewrites remote history)
@@ -131,7 +131,7 @@ git push origin --force --tags
 
 1. **Revoke token:**
    - Go to: https://github.com/settings/tokens
-   - Find token: `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`
+   - Find token: `YOUR_EXPOSED_TOKEN_HERE`
    - Click "Revoke"
 
 2. **Install Java** (nếu chưa có):
@@ -158,7 +158,7 @@ git push origin --force --tags
 **Hoặc manual:**
 ```powershell
 # Tạo tokens.txt
-"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==>REVOKED_TOKEN_REMOVED" | Out-File tokens.txt -NoNewline
+"YOUR_EXPOSED_TOKEN_HERE==>REVOKED_TOKEN_REMOVED" | Out-File tokens.txt -NoNewline
 
 # Download BFG
 Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg-1.14.0.jar" -OutFile "bfg.jar"
@@ -177,7 +177,7 @@ git gc --prune=now --aggressive
 
 ```powershell
 # Kiểm tra token đã được remove
-git log --all -p | Select-String -Pattern "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"
+git log --all -p | Select-String -Pattern "YOUR_EXPOSED_TOKEN_HERE"
 # Expected: No matches
 
 # Kiểm tra commit history
@@ -213,7 +213,7 @@ git remote get-url origin
 
 ### **Check 1: Token không còn trong history**
 ```powershell
-git log --all -p | Select-String -Pattern "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"
+git log --all -p | Select-String -Pattern "YOUR_EXPOSED_TOKEN_HERE"
 ```
 **Expected:** No matches ✅
 
