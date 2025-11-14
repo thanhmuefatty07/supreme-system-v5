@@ -335,7 +335,7 @@ class TestPerformanceBenchmarks:
 
     def test_benchmark_all_implementations(self):
         """Test comprehensive performance benchmarking."""
-        results = benchmark_all_implementations()
+            results = benchmark_all_implementations()
 
         # Should return comprehensive results
         required_keys = [
