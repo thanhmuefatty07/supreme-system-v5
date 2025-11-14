@@ -274,82 +274,64 @@ class TestTrendFollowingAgent:
         """Agent parameters from config must reflect on the instance."""
 
         config = {"short_window": 10, "long_window": 30, "adx_threshold": 20}
-        # TrendFollowingAgent calls super().__init__(agent_id, config) but BaseStrategy only takes name
-        # This is a bug in implementation, but we'll work around it by using name parameter
-        try:
-            agent = TrendFollowingAgent(agent_id="agent-1", config=config)
-            # If initialization succeeds, check parameters
-            assert agent.parameters["short_window"] == 10
-            assert agent.parameters["long_window"] == 30
-            assert agent.parameters["adx_threshold"] == 20
-        except TypeError:
-            # If initialization fails due to BaseStrategy signature mismatch, skip test
-            pytest.skip("TrendFollowingAgent has incorrect BaseStrategy.__init__ call")
+        agent = TrendFollowingAgent(agent_id="agent-1", config=config)
+        # Verify parameters were set correctly
+        assert agent.parameters["short_window"] == 10
+        assert agent.parameters["long_window"] == 30
+        assert agent.parameters["adx_threshold"] == 20
 
     def test_trend_following_generate_signal_insufficient_data(self) -> None:
         """A short dataset should yield a HOLD dict."""
 
-        try:
-            agent = TrendFollowingAgent(agent_id="agent-2", config={})
-            df = _build_ohlcv_dataframe(periods=10)
-            signal = agent.generate_signal(df)
-            assert signal["action"] == "HOLD"
-            assert signal["confidence"] == 0.0
-        except TypeError:
-            pytest.skip("TrendFollowingAgent has incorrect BaseStrategy.__init__ call")
+        agent = TrendFollowingAgent(agent_id="agent-2", config={})
+        df = _build_ohlcv_dataframe(periods=10)
+        signal = agent.generate_signal(df)
+        assert signal["action"] == "HOLD"
+        assert signal["confidence"] == 0.0
 
     def test_trend_following_buy_path(self) -> None:
         """Mock indicators to trigger a BUY response with position sizing."""
 
-        try:
-            agent = TrendFollowingAgent(agent_id="agent-3", config={})
-            df = _build_ohlcv_dataframe(periods=agent.long_window + 5)
-            mocked_indicators = df.copy()
-            mocked_indicators["sma_short"] = mocked_indicators["close"] + 1
-            mocked_indicators["sma_long"] = mocked_indicators["close"]
-            mocked_indicators["adx"] = np.full(len(df), agent.adx_threshold + 5)
-            mocked_indicators["rsi"] = np.full(len(df), agent.rsi_oversold + 1)
-            mocked_indicators["macd"] = np.full(len(df), 2.0)
-            mocked_indicators["macd_signal"] = np.full(len(df), 1.0)
-            mocked_indicators["volume"] = np.full(len(df), 2_000_000)
-            mocked_indicators["volume_ma"] = np.full(len(df), 1_000_000)
+        agent = TrendFollowingAgent(agent_id="agent-3", config={})
+        df = _build_ohlcv_dataframe(periods=agent.long_window + 5)
+        mocked_indicators = df.copy()
+        mocked_indicators["sma_short"] = mocked_indicators["close"] + 1
+        mocked_indicators["sma_long"] = mocked_indicators["close"]
+        mocked_indicators["adx"] = np.full(len(df), agent.adx_threshold + 5)
+        mocked_indicators["rsi"] = np.full(len(df), agent.rsi_oversold + 1)
+        mocked_indicators["macd"] = np.full(len(df), 2.0)
+        mocked_indicators["macd_signal"] = np.full(len(df), 1.0)
+        mocked_indicators["volume"] = np.full(len(df), 2_000_000)
+        mocked_indicators["volume_ma"] = np.full(len(df), 1_000_000)
 
-            with patch.object(agent, "_calculate_indicators", return_value=mocked_indicators), patch.object(
-                agent, "_determine_trend_direction", return_value="UPTREND"
-            ), patch.object(agent, "_check_buy_conditions", return_value=True), patch.object(
-                agent, "_calculate_position_size", return_value=25
-            ):
-                signal = agent.generate_signal(df, portfolio_value=50_000)
-                assert signal["action"] == "BUY"
-                assert signal["quantity"] == 25
-        except TypeError:
-            pytest.skip("TrendFollowingAgent has incorrect BaseStrategy.__init__ call")
+        with patch.object(agent, "_calculate_indicators", return_value=mocked_indicators), patch.object(
+            agent, "_determine_trend_direction", return_value="UPTREND"
+        ), patch.object(agent, "_check_buy_conditions", return_value=True), patch.object(
+            agent, "_calculate_position_size", return_value=25
+        ):
+            signal = agent.generate_signal(df, portfolio_value=50_000)
+            assert signal["action"] == "BUY"
+            assert signal["quantity"] == 25
 
     def test_trend_following_determine_trend_sideways_when_conditions_disagree(self) -> None:
         """Disagreement among indicators must fall back to SIDEWAYS."""
 
-        try:
-            agent = TrendFollowingAgent(agent_id="agent-4", config={})
-            df = _build_ohlcv_dataframe(periods=agent.long_window + 1)
-            df["sma_short"] = df["close"]
-            df["sma_long"] = df["close"] + 1
-            df["adx"] = np.full(len(df), agent.adx_threshold - 1)
-            df["macd"] = np.full(len(df), 0.5)
-            df["macd_signal"] = np.full(len(df), 0.6)
-            trend = agent._determine_trend_direction(df)
-            assert trend == "SIDEWAYS"
-        except TypeError:
-            pytest.skip("TrendFollowingAgent has incorrect BaseStrategy.__init__ call")
+        agent = TrendFollowingAgent(agent_id="agent-4", config={})
+        df = _build_ohlcv_dataframe(periods=agent.long_window + 1)
+        df["sma_short"] = df["close"]
+        df["sma_long"] = df["close"] + 1
+        df["adx"] = np.full(len(df), agent.adx_threshold - 1)
+        df["macd"] = np.full(len(df), 0.5)
+        df["macd_signal"] = np.full(len(df), 0.6)
+        trend = agent._determine_trend_direction(df)
+        assert trend == "SIDEWAYS"
 
     def test_trend_following_position_size_bounds(self) -> None:
         """Position sizing must never return zero."""
 
-        try:
-            agent = TrendFollowingAgent(agent_id="agent-5", config={"stop_loss_pct": 0.05})
-            size = agent._calculate_position_size(portfolio_value=1_000, price=200)
-            assert size >= 1
-        except TypeError:
-            pytest.skip("TrendFollowingAgent has incorrect BaseStrategy.__init__ call")
+        agent = TrendFollowingAgent(agent_id="agent-5", config={"stop_loss_pct": 0.05})
+        size = agent._calculate_position_size(portfolio_value=1_000, price=200)
+        assert size >= 1
 
 
 class TestImprovedBreakoutStrategy:
@@ -426,19 +408,11 @@ class TestImprovedBreakoutStrategy:
         assert strategy.lookback_period == 15
         assert strategy.base_breakout_threshold == 0.03
         
-        # get_parameters() has a bug - it references self.breakout_threshold 
-        # but the attribute is self.base_breakout_threshold
-        # So calling get_parameters() will raise AttributeError
-        # We'll test that set_parameters works by checking attributes directly
-        # and skip get_parameters() call if it would fail
-        try:
-            params = strategy.get_parameters()
-            assert params["lookback_period"] == 15
-            assert "lookback_period" in params
-        except AttributeError:
-            # Expected due to bug in get_parameters() - it references non-existent breakout_threshold
-            # Just verify set_parameters worked by checking attributes directly
-            pass
+        # get_parameters() now works correctly after bug fix
+        params = strategy.get_parameters()
+        assert params["lookback_period"] == 15
+        assert params["breakout_threshold"] == 0.03  # Should match base_breakout_threshold
+        assert "lookback_period" in params
 
         strategy.reset()
         assert not strategy.position_active

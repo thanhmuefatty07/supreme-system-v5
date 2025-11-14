@@ -779,7 +779,7 @@ class ImprovedBreakoutStrategy(BaseStrategy):
         """Get strategy parameters."""
         return {
             'lookback_period': self.lookback_period,
-            'breakout_threshold': self.breakout_threshold,
+            'breakout_threshold': self.base_breakout_threshold,  # Fixed: use base_breakout_threshold
             'volume_multiplier': self.volume_multiplier,
             'consolidation_period': self.consolidation_period,
             'min_breakout_distance': self.min_breakout_distance,
