@@ -98,7 +98,7 @@ class GeminiCoverageOptimizer:
 
             logger.warning("Could not parse coverage, using fallback")
             return 0.20  # Fallback
-
+            
         except Exception as e:
             logger.error(f"Coverage analysis failed: {e}")
             return 0.20
@@ -134,7 +134,7 @@ def {test_name}():
     async def _save_tests(self, tests: List[Dict]) -> int:
         """Save generated tests to files."""
         saved = 0
-
+        
         for test in tests:
             try:
                 os.makedirs(os.path.dirname(test['file']), exist_ok=True)
@@ -207,7 +207,7 @@ def {test_name}():
 async def main():
     """CLI entry point."""
     import argparse
-
+    
     parser = argparse.ArgumentParser(description="Enterprise AI Coverage Optimizer")
     parser.add_argument("--source-dir", default="src", help="Source directory")
     parser.add_argument("--target-coverage", type=float, default=85.0, help="Target coverage %")
@@ -215,12 +215,12 @@ async def main():
     parser.add_argument("--batch-size", type=int, default=3, help="Batch size")
     parser.add_argument("--max-concurrent", type=int, default=2, help="Max concurrent batches")
     parser.add_argument("--verbose", action="store_true", help="Verbose logging")
-
+    
     args = parser.parse_args()
-
+    
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-
+    
     # Load keys from config
     try:
         sys.path.insert(0, '.')
@@ -231,21 +231,21 @@ async def main():
         logger.error(f"Failed to load config: {e}")
         keys = ["dummy_key_1", "dummy_key_2", "dummy_key_3"]  # Fallback
         logger.warning("Using dummy keys for testing")
-
+    
     # Initialize optimizer
     optimizer = GeminiCoverageOptimizer(
         gemini_keys=keys,
         batch_size=args.batch_size,
         max_concurrent_batches=args.max_concurrent
     )
-
+    
     # Run optimization
     result = await optimizer.optimize_coverage(
         source_dir=args.source_dir,
         target_coverage=args.target_coverage / 100.0,
         max_iterations=args.max_iterations
     )
-
+    
     # Print results
     print("\n=== OPTIMIZATION RESULTS ===")
     print(f"Initial Coverage: {result['initial_coverage']*100:.1f}%")
