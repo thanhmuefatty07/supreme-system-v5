@@ -31,7 +31,8 @@ class TrendFollowingAgent(BaseStrategy):
             agent_id: Unique identifier for the agent
             config: Configuration parameters
         """
-        super().__init__(agent_id, config)
+        # BaseStrategy.__init__() only takes 'name' parameter
+        super().__init__(name=agent_id)
 
         # Strategy parameters with defaults
         self.short_window = config.get('short_window', 20)
