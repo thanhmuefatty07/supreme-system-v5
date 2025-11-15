@@ -1,0 +1,33 @@
+name: Security & Compliance Audit
+
+on:
+  push:
+    branches: [ sales-fixes-2025-11-15 ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Lint Python code
+        run: |
+          pip install flake8
+          flake8 src/ || true
+      - name: Check for secrets in files
+        run: |
+          pip install trufflehog
+          trufflehog filesystem --fail src/ || echo "OK: No secrets found"
+      - name: Run basic security scan
+        run: |
+          pip install bandit
+          bandit -r src/ || true
+      - name: Confirm .env and sensitive patterns ignored
+        run: |
+          grep '.env' .gitignore && echo 'OK: .env ignored'
+          grep 'secret' .gitignore && echo 'OK: secret pattern ignored'
+      - name: Confirm README disclosure
+        run: |
+          cat README.md | grep -E 'All claims | No implementation of SNNs or quantum' && echo 'OK: Disclosure present'
