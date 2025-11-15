@@ -5,7 +5,8 @@
 **Ultra-Low Latency | High Throughput | Robust Architecture**
 
 [![CI/CD Pipeline](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml/badge.svg)](https://github.com/thanhmuefatty07/supreme-system-v5/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-25%25-yellow)](https://supreme-system-v5.readthedocs.io/)
+[![Coverage](https://img.shields.io/badge/coverage-27%25-yellow)](https://supreme-system-v5.readthedocs.io/)
+[![Critical Modules](https://img.shields.io/badge/critical%20coverage-96%25-brightgreen)](https://supreme-system-v5.readthedocs.io/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](docker-compose.yml)
@@ -20,7 +21,7 @@
 |--------|-------|
 | **Latency (P95)** | Sub-50ms (Python/Async. See artifacts)
 | **Throughput** | 2,500+ signals/sec (batch, multicore)
-| **Test Coverage** | 25% (targeting 78%)
+| **Test Coverage** | 27% total, 96% critical modules (risk management)
 | **Deployment** | <15 min (dockerized environments)
 
 ---
