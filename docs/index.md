@@ -1,16 +1,16 @@
 # Supreme System V5 Documentation
 
-Welcome to the official documentation for **Supreme System V5**, the world's first neuromorphic trading platform.
+Welcome to the official documentation for **Supreme System V5**, an AI-powered multi-strategy trading platform.
 
 ## What is Supreme System V5?
 
-Supreme System V5 combines neuromorphic computing with quantum-inspired algorithms to achieve ultra-low latency (<10μs) trading performance at a fraction of FPGA costs.
+Supreme System V5 is a production-ready algorithmic trading platform featuring modular strategy framework, enterprise risk management, and comprehensive monitoring capabilities. Built with Python and modern async patterns, it delivers sub-50ms P95 latency and 2,500+ signals per second throughput.
 
 ## Key Features
 
-- **Ultra-Low Latency**: <10μs tick-to-trade
-- **High Throughput**: 486K+ transactions per second
-- **Neuromorphic Computing**: Brain-inspired processing
+- **Low Latency**: Sub-50ms P95 tick-to-trade (Python/async)
+- **High Throughput**: 2,500+ signals per second (batch processing)
+- **Modular Framework**: Momentum, mean reversion, breakout strategies
 - **Production Ready**: Docker deployment, monitoring, risk management
 
 ## Quick Links
@@ -49,4 +49,3 @@ open http://localhost:8501
 ---
 
 **Built with** ❤️ **by Supreme System V5 Development Team**
-

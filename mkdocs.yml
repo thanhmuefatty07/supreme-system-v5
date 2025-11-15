@@ -1,5 +1,5 @@
 site_name: Supreme System V5
-site_description: Neuromorphic Trading Platform Documentation
+site_description: AI-Powered Trading Platform Documentation
 site_author: Supreme System V5 Development Team
 repo_url: https://github.com/thanhmuefatty07/supreme-system-v5
 repo_name: thanhmuefatty07/supreme-system-v5
@@ -34,7 +34,6 @@ nav:
     - Configuration: getting-started/configuration.md
   - Architecture:
     - Overview: architecture/overview.md
-    - Neuromorphic Engine: architecture/neuromorphic.md
     - Risk Management: architecture/risk.md
   - API Reference:
     - Trading API: api/trading.md
@@ -50,4 +49,3 @@ nav:
 plugins:
   - search
   - git-revision-date-localized
-
