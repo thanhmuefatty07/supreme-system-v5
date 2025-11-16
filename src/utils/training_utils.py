@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def clip_grad_norm(
-    parameters: Union[torch.Tensor, Iterable[torch.Tensor]],
+    parameters: Union["torch.Tensor", Iterable["torch.Tensor"]],
     max_norm: float,
     norm_type: float = 2.0,
     error_if_nonfinite: bool = False
@@ -104,7 +104,7 @@ def clip_grad_norm(
 
 
 def get_grad_norm(
-    parameters: Union[torch.Tensor, Iterable[torch.Tensor]],
+    parameters: Union["torch.Tensor", Iterable["torch.Tensor"]],
     norm_type: float = 2.0
 ) -> float:
     """
@@ -133,6 +133,10 @@ def get_grad_norm(
 
     if len(parameters) == 0:
         return 0.0
+
+    # Check torch availability
+    if not _check_torch():
+        raise RuntimeError("PyTorch is not available. Gradient norm calculation requires PyTorch.")
 
     if norm_type == float('inf'):
         total_norm = max(p.grad.detach().abs().max().item() for p in parameters)
