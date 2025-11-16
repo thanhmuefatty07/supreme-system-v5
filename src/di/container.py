@@ -102,9 +102,9 @@ class CoreContainer(DeclarativeContainer):
 
     bybit_client = providers.Singleton(
         AsyncBybitClient,
-        api_key=config.bybit.api_key,
-        api_secret=config.bybit.api_secret,
-        testnet=config.bybit.testnet,
+        api_key=config.api.bybit_api_key,
+        api_secret=config.api.bybit_api_secret,
+        testnet=config.api.bybit_testnet,
         secrets_manager=secrets_manager
     )
 
@@ -307,6 +307,15 @@ def init_container(config_dict: dict = None) -> ApplicationContainer:
             'api_key': None,
             'api_secret': None,
             'testnet': True
+        },
+        'api': {
+            'binance_api_key': None,
+            'binance_api_secret': None,
+            'binance_testnet': True,
+            'bybit_api_key': None,
+            'bybit_api_secret': None,
+            'bybit_testnet': True,
+            'primary_exchange': 'binance'
         },
         'storage': {
             'base_path': 'data/',
