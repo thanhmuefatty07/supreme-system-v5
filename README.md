@@ -66,7 +66,7 @@ Supreme System V5 is designed as a robust, extensible, and auditable trading pla
 See `/docs`, `/due-diligence/`, and in-code docstrings for usage, risk, configuration, deployment, production hardening, and upgrade/migration.
 
 ## 📞 Support & Commercial Inquiries
-[Contact thanhmuefatty07@gmail.com]
+[Contact phamvanthanhgd1204@gmail.com]
 
 ---
-Built with ❤️ by Supreme System V5: Audit-Driven Adaptive Trading Infrastructure.
+Built with ❤️ by thanhmuefatty07: Audit-Driven Adaptive Trading Infrastructure.
