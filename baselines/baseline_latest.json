@@ -1,20 +1,20 @@
 {
-  "captured_at": "2025-11-16T17:20:22.413148",
-  "git_commit": "d2649067db4f07c2259f88d849acac8cfc33398d",
+  "captured_at": "2025-11-17T00:24:22.140178",
+  "git_commit": "6295441ac420e59a1b2d5fcb6fb0b8eafb9881af",
   "test_baseline": {
-    "timestamp": "2025-11-16T17:22:27.537325",
+    "timestamp": "2025-11-17T00:27:00.611305",
     "tests": {
-      "passed": 406,
-      "failed": 127,
-      "skipped": 6,
-      "total": 533
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 0
     },
     "coverage": {
-      "total_coverage": 26.646933819064966,
-      "lines_covered": 3511,
+      "total_coverage": 26.639344262295083,
+      "lines_covered": 3510,
       "lines_total": 13176
     },
-    "exit_code": 1,
-    "stdout": "ize_dataframe_memory\nFAILED tests/unit/test_vectorized_ops.py::TestPerformanceBenchmarks::test_benchmark_all_implementations\nFAILED tests/unit/test_vectorized_ops.py::TestPerformanceBenchmarks::test_benchmark_with_mock_hardware\nFAILED tests/unit/test_vectorized_ops.py::TestErrorHandling::test_invalid_window_sizes\nERROR tests/integration/test_data_pipeline_integration.py::TestPerformanceBenchmarks::test_pipeline_throughput\nERROR tests/integration/test_data_pipeline_integration.py::TestPerformanceBenchmarks::test_storage_performance\nERROR tests/integration/test_data_pipeline_integration.py::TestPerformanceBenchmarks::test_query_performance\nERROR tests/unit/test_risk_management.py::TestAdvancedRiskManager::test_portfolio_rebalancing\nERROR tests/unit/test_risk_management.py::TestAdvancedRiskManager::test_stress_testing\nERROR tests/unit/test_strategies_comprehensive.py::test_strategy_performance_large_dataset\n= 127 failed, 406 passed, 9 skipped, 83 warnings, 6 errors in 116.49s (0:01:56) =\n"
+    "exit_code": 2,
+    "stdout": "teError: 'NoneType' object...\nERROR tests/unit/test_circuit_breaker.py - AttributeError: 'NoneType' object ...\nERROR tests/unit/test_data_pipeline_manual.py - AttributeError: 'NoneType' ob...\nERROR tests/unit/test_memory_optimizer.py - AttributeError: 'NoneType' object...\nERROR tests/unit/test_risk_management.py - AttributeError: 'NoneType' object ...\nERROR tests/unit/test_strategies_codex.py - AttributeError: 'NoneType' object...\nERROR tests/unit/test_strategies_comprehensive.py - AttributeError: 'NoneType...\nERROR tests/unit/test_strategies_manual.py - AttributeError: 'NoneType' objec...\nERROR tests/unit/test_vectorized_ops.py - AttributeError: 'NoneType' object h...\nERROR tests/unit/test_walk_forward.py - AttributeError: 'NoneType' object has...\nERROR tests/utils/test_training_utils.py - OSError: [WinError 1114] A dynamic...\n!!!!!!!!!!!!!!!!!! Interrupted: 25 errors during collection !!!!!!!!!!!!!!!!!!!\n=========== 1 skipped, 17 warnings, 25 errors in 152.46s (0:02:32) ============\n"
   }
 }

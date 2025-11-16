@@ -1,0 +1,20 @@
+{
+  "captured_at": "2025-11-16T23:40:21.775991",
+  "git_commit": "6295441ac420e59a1b2d5fcb6fb0b8eafb9881af",
+  "test_baseline": {
+    "timestamp": "2025-11-16T23:43:18.499564",
+    "tests": {
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 0
+    },
+    "coverage": {
+      "total_coverage": 26.639344262295083,
+      "lines_covered": 3510,
+      "lines_total": 13176
+    },
+    "exit_code": 2,
+    "stdout": ": [WinError 1114] A dynami...\nERROR tests/unit/test_circuit_breaker.py - OSError: [WinError 1114] A dynamic...\nERROR tests/unit/test_data_pipeline_manual.py - OSError: [WinError 1114] A dy...\nERROR tests/unit/test_memory_optimizer.py - OSError: [WinError 1114] A dynami...\nERROR tests/unit/test_risk_management.py - OSError: [WinError 1114] A dynamic...\nERROR tests/unit/test_strategies_codex.py - OSError: [WinError 1114] A dynami...\nERROR tests/unit/test_strategies_comprehensive.py - OSError: [WinError 1114] ...\nERROR tests/unit/test_strategies_manual.py - OSError: [WinError 1114] A dynam...\nERROR tests/unit/test_vectorized_ops.py - OSError: [WinError 1114] A dynamic ...\nERROR tests/unit/test_walk_forward.py - OSError: [WinError 1114] A dynamic li...\nERROR tests/utils/test_training_utils.py - OSError: [WinError 1114] A dynamic...\n!!!!!!!!!!!!!!!!!! Interrupted: 25 errors during collection !!!!!!!!!!!!!!!!!!!\n=========== 1 skipped, 17 warnings, 25 errors in 164.01s (0:02:44) ============\n"
+  }
+}
