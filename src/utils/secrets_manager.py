@@ -392,6 +392,51 @@ class SecretsManager:
             'testnet': (testnet_str or 'true').lower() == 'true'
         }
 
+    def get_bybit_credentials(self) -> Dict[str, str]:
+        """
+        Get Bybit API credentials from secure storage.
+
+        Returns:
+            Dict with 'api_key', 'api_secret', and 'testnet'
+        """
+        api_key = self.get_secret('bybit_api_key') or self.get_secret('BYBIT_API_KEY')
+        api_secret = self.get_secret('bybit_api_secret') or self.get_secret('BYBIT_SECRET_KEY')
+
+        testnet_str = self.get_secret('bybit_testnet') or self.get_secret('BYBIT_TESTNET') or 'true'
+        return {
+            'api_key': api_key,
+            'api_secret': api_secret,
+            'testnet': (testnet_str or 'true').lower() == 'true'
+        }
+
+    def setup_bybit_credentials(self, api_key: str, api_secret: str, testnet: bool = True):
+        """
+        Setup Bybit credentials securely.
+
+        Args:
+            api_key: Bybit API key
+            api_secret: Bybit API secret
+            testnet: Use testnet
+        """
+        # Validate credentials
+        key_validation = self.validate_secret_strength('bybit_api_key', api_key)
+        secret_validation = self.validate_secret_strength('bybit_api_secret', api_secret)
+
+        if key_validation['strength'] == 'weak' or secret_validation['strength'] == 'weak':
+            logger.warning("Bybit API credentials may be weak - consider rotating them")
+
+        # Store securely
+        self.set_secret('bybit_api_key', api_key, 'encrypted')
+        self.set_secret('bybit_api_secret', api_secret, 'encrypted')
+        self.set_secret('bybit_testnet', str(testnet).lower(), 'encrypted')
+
+        # Also store in keyring for convenience
+        if KEYRING_AVAILABLE:
+            self.set_secret('bybit_api_key', api_key, 'keyring')
+            self.set_secret('bybit_api_secret', api_secret, 'keyring')
+
+        logger.info("Bybit secure configuration setup complete")
+
     def setup_secure_config(self, api_key: str, api_secret: str, testnet: bool = True):
         """
         Setup secure configuration for first-time use.
@@ -501,6 +546,14 @@ def setup_binance_credentials(api_key: str, api_secret: str, testnet: bool = Tru
 def get_binance_credentials() -> Dict[str, str]:
     """Get Binance credentials from secure storage."""
     return get_secrets_manager().get_binance_credentials()
+
+def get_bybit_credentials() -> Dict[str, str]:
+    """Get Bybit credentials from secure storage."""
+    return get_secrets_manager().get_bybit_credentials()
+
+def setup_bybit_credentials(api_key: str, api_secret: str, testnet: bool = True):
+    """Setup Bybit credentials securely."""
+    return get_secrets_manager().setup_bybit_credentials(api_key, api_secret, testnet)
 
 
 if __name__ == "__main__":

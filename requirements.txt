@@ -3,6 +3,7 @@ numpy>=1.26.4  # Latest secure version (fixes buffer overflow CVEs)
 pandas>=2.2.2   # Latest secure version (fixes multiple security issues)
 requests>=2.32.0  # Latest secure version (fixes CVE-2023-32681 DoS vulnerability)
 python-binance>=1.0.19  # Latest version with security fixes
+pybit>=5.7.0  # Bybit API client library
 ta>=0.11.0     # Latest version
 scikit-learn>=1.5.0  # Latest secure version
 pytest>=8.3.0  # Latest version with security fixes

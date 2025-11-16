@@ -10,6 +10,7 @@ from dependency_injector.containers import DeclarativeContainer
 
 # Import core components
 from ..data.binance_client import AsyncBinanceClient
+from ..data.bybit_client import AsyncBybitClient
 from ..data.data_pipeline import DataPipeline
 from ..data.data_storage import DataStorage
 from ..data.data_validator import DataValidator
@@ -99,17 +100,35 @@ class CoreContainer(DeclarativeContainer):
         secrets_manager=secrets_manager
     )
 
+    bybit_client = providers.Singleton(
+        AsyncBybitClient,
+        api_key=config.bybit.api_key,
+        api_secret=config.bybit.api_secret,
+        testnet=config.bybit.testnet,
+        secrets_manager=secrets_manager
+    )
+
     data_storage = providers.Singleton(
         DataStorage,
         base_path=config.storage.base_path,
         compression=config.storage.compression
     )
 
+    # Exchange client selector based on primary_exchange config
+    exchange_client = providers.Selector(
+        config.api.primary_exchange,
+        {
+            'binance': binance_client,
+            'bybit': bybit_client
+        },
+        default=binance_client
+    )
+
     data_pipeline = providers.Singleton(
         DataPipeline,
         config=config.data_pipeline,
         use_async=config.data_pipeline.use_async,
-        client=binance_client,
+        client=exchange_client,
         storage=data_storage,
         validator=data_validator
     )

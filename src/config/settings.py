@@ -71,6 +71,14 @@ class APIConfig(BaseSettings):
     binance_api_secret: Optional[str] = Field(None, description="Binance API secret")
     binance_testnet: bool = Field(True, description="Use Binance testnet")
 
+    # Bybit API (alternative exchange)
+    bybit_api_key: Optional[str] = Field(None, description="Bybit API key")
+    bybit_api_secret: Optional[str] = Field(None, description="Bybit API secret")
+    bybit_testnet: bool = Field(True, description="Use Bybit testnet")
+
+    # Exchange selection
+    primary_exchange: str = Field("binance", description="Primary exchange: 'binance' or 'bybit'")
+
     # Alternative data providers
     alpha_vantage_api_key: Optional[str] = Field(None, description="Alpha Vantage API key")
     yahoo_finance_enabled: bool = Field(True, description="Enable Yahoo Finance fallback")
