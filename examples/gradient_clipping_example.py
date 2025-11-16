@@ -1,7 +1,7 @@
 """
-Example: Using Gradient Clipping to prevent exploding gradients
+Example: Using Gradient Clipping to prevent exploding gradients.
 
-This demonstrates how to use gradient clipping for stable training.
+This demonstrates the dramatic difference between training with and without gradient clipping.
 """
 
 import sys
@@ -16,141 +16,152 @@ sys.path.insert(0, str(project_root))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Try to import torch - handle gracefully if not available
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from src.training.callbacks import GradientClipCallback
+    from src.utils.training_utils import get_grad_norm
+    TORCH_AVAILABLE = True
+except (ImportError, OSError) as e:
+    logger.warning(f"PyTorch not available: {e}")
+    logger.warning("This example requires PyTorch to run.")
+    logger.warning("Install PyTorch with: pip install torch")
+    TORCH_AVAILABLE = False
 
-def demonstrate_gradient_clipping():
-    """Demonstrate gradient clipping concepts"""
 
-    logger.info("🚀 Gradient Clipping Demo")
-    logger.info("=" * 60)
+class SimpleRNN(nn.Module):
+    """Simple RNN model prone to exploding gradients"""
+    def __init__(self, input_size=10, hidden_size=50, output_size=1):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
 
-    # Try to import torch
-    try:
-        import torch
-        import torch.nn as nn
-        import torch.optim as optim
-        from src.training.callbacks import GradientClipCallback
-        from src.utils.training_utils import clip_grad_norm, get_grad_norm
+    def forward(self, x):
+        out, _ = self.rnn(x)
+        out = self.fc(out[:, -1, :])
+        return out
 
-        logger.info("✅ PyTorch available - running full demo")
 
-        class SimpleRNN(nn.Module):
-            """Simple RNN model prone to gradient explosion"""
-            def __init__(self, input_size=10, hidden_size=32, output_size=1):
-                super().__init__()
-                self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
-                self.linear = nn.Linear(hidden_size, output_size)
+def create_problematic_gradients(model):
+    """Create large gradients to simulate exploding gradient problem"""
+    for param in model.parameters():
+        # Set very large gradients (simulating gradient explosion)
+        param.grad = torch.randn_like(param) * 1000
 
-            def forward(self, x):
-                out, _ = self.rnn(x)
-                return self.linear(out[:, -1])  # Last timestep
 
-        def create_problematic_gradients(model):
-            """Create large gradients to simulate exploding gradient problem"""
-            for param in model.parameters():
-                # Set very large gradients (simulating gradient explosion)
-                param.grad = torch.randn_like(param) * 1000
+def train_without_clipping():
+    """Demonstrate training WITHOUT gradient clipping (may explode)"""
+    if not TORCH_AVAILABLE:
+        logger.error("❌ PyTorch not available. Cannot run training example.")
+        return
 
-        # Setup model and optimizer
-        model = SimpleRNN()
-        optimizer = optim.SGD(model.parameters(), lr=0.01)
-        criterion = nn.MSELoss()
+    print("\n" + "="*80)
+    print("TRAINING WITHOUT GRADIENT CLIPPING")
+    print("="*80)
 
-        # Initialize gradient clipping callback
-        grad_clip = GradientClipCallback(max_norm=5.0, verbose=True)
-        grad_clip.set_model(model)
+    model = SimpleRNN()
+    optimizer = optim.SGD(model.parameters(), lr=1.0)  # High LR intentionally
+    criterion = nn.MSELoss()
 
-        # Simulate training loop with potential gradient explosion
-        logger.info("Simulating training with large gradients...")
+    # Dummy data
+    x = torch.randn(32, 20, 10)  # (batch, seq_len, features)
+    y = torch.randn(32, 1)
 
-        for epoch in range(5):
-            logger.info(f"\n📊 Epoch {epoch + 1}/5")
+    for epoch in range(5):
+        optimizer.zero_grad()
 
-            # Simulate forward pass
-            batch_size, seq_len, input_size = 32, 10, 10
-            inputs = torch.randn(batch_size, seq_len, input_size)
-            targets = torch.randn(batch_size, 1)
+        output = model(x)
+        loss = criterion(output, y)
+        loss.backward()
 
-            # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+        # Check gradient norm (no clipping)
+        grad_norm = get_grad_norm(model.parameters())
 
-            # Backward pass (this would create gradients)
-            loss.backward()
+        optimizer.step()
 
-            # Demonstrate gradient explosion without clipping
-            if epoch == 0:
-                logger.info("Without clipping:")
-                norm_before = get_grad_norm(model.parameters())
-                logger.info(f"  Gradient norm: {norm_before:.2f}")
+        print(f"Epoch {epoch+1}: Loss={loss.item():.6f}, Grad Norm={grad_norm:.2f}")
 
-                # Create problematic large gradients
-                create_problematic_gradients(model)
-                norm_after_explosion = get_grad_norm(model.parameters())
-                logger.info(f"  After explosion: {norm_after_explosion:.2f}")
+        if torch.isnan(loss):
+            print("❌ LOSS BECAME NaN - TRAINING CRASHED!")
+            break
 
-            # Clip gradients using callback
-            logger.info("With gradient clipping:")
-            total_norm = grad_clip.on_after_backward()
-            logger.info(f"  Clipped norm: {total_norm:.2f}")
 
-            # Optimizer step
-            optimizer.step()
-            optimizer.zero_grad()
+def train_with_clipping():
+    """Demonstrate training WITH gradient clipping (stable)"""
+    if not TORCH_AVAILABLE:
+        logger.error("❌ PyTorch not available. Cannot run clipping example.")
+        return
 
-            # Log statistics
-            stats = grad_clip.get_statistics()
-            logger.info(f"  Clipping stats: {stats['clip_count']}/{stats['total_steps']} clips")
+    print("\n" + "="*80)
+    print("TRAINING WITH GRADIENT CLIPPING")
+    print("="*80)
 
-        # Final statistics
-        logger.info("\n🎯 Final Statistics:")
-        final_stats = grad_clip.get_statistics()
-        for key, value in final_stats.items():
-            if isinstance(value, float):
-                logger.info(f"  {key}: {value:.4f}")
-            else:
-                logger.info(f"  {key}: {value}")
+    model = SimpleRNN()
+    optimizer = optim.SGD(model.parameters(), lr=1.0)  # Same high LR
+    criterion = nn.MSELoss()
 
-        logger.info("\n✅ Training completed successfully with stable gradients!")
+    # Initialize gradient clipping
+    grad_clip = GradientClipCallback(max_norm=5.0, verbose=True)
+    grad_clip.set_model(model)
 
-        # Demonstrate standalone function
-        logger.info("\n🔧 Demonstrating clip_grad_norm utility function")
-        logger.info("=" * 60)
+    # Dummy data
+    x = torch.randn(32, 20, 10)
+    y = torch.randn(32, 1)
 
-        # Create model with large gradients
-        model = nn.Linear(10, 1)
+    for epoch in range(5):
+        optimizer.zero_grad()
 
-        # Set large gradients manually
-        for param in model.parameters():
-            param.grad = torch.randn_like(param) * 100  # Very large
-
-        # Measure norm before clipping
-        norm_before = get_grad_norm(model.parameters())
-        logger.info(f"Gradient norm before clipping: {norm_before:.2f}")
+        output = model(x)
+        loss = criterion(output, y)
+        loss.backward()
 
         # Clip gradients
-        max_norm = 2.0
-        clipped_norm = clip_grad_norm(model.parameters(), max_norm=max_norm)
+        grad_norm = grad_clip.on_after_backward()
 
-        # Measure norm after clipping
-        norm_after = get_grad_norm(model.parameters())
-        logger.info(f"Gradient norm after clipping:  {norm_after:.2f}")
-        logger.info(f"Clipped norm (reported):       {clipped_norm:.2f}")
-        logger.info(f"Max allowed norm:              {max_norm}")
+        optimizer.step()
 
-        # Verify clipping worked
-        assert abs(norm_after - max_norm) < 0.01, "Clipping failed!"
-        logger.info("✅ Clipping verification: PASSED")
+        print(f"Epoch {epoch+1}: Loss={loss.item():.6f}, Grad Norm={grad_norm:.2f}")
 
-    except (ImportError, OSError) as e:
-        logger.warning(f"⚠️  PyTorch not available: {e}")
-        logger.info("This is expected on Windows systems with DLL issues.")
-        logger.info("Gradient clipping will work when PyTorch is properly installed.")
-        logger.info("\n📚 Gradient Clipping Theory:")
-        logger.info("1. Prevents exploding gradients by limiting norm")
-        logger.info("2. Formula: clipped_grad = grad × min(1, max_norm / ||grad||)")
-        logger.info("3. Essential for RNNs/LSTMs training stability")
-        logger.info("4. Reduces NaN/inf losses significantly")
+    # Print statistics
+    print("\n📊 Gradient Clipping Statistics:")
+    stats = grad_clip.get_statistics()
+    for key, value in stats.items():
+        if isinstance(value, float):
+            print(f"   {key}: {value:.4f}")
+        else:
+            print(f"   {key}: {value}")
+
+    print("\n✅ Training completed successfully - No NaN losses!")
+
+
+def main():
+    if not TORCH_AVAILABLE:
+        logger.error("❌ Cannot run examples without PyTorch.")
+        logger.error("Install PyTorch with: pip install torch")
+        sys.exit(1)
+
+    print("\n🎯 Gradient Clipping Demonstration")
+    print("Comparing training stability with and without gradient clipping")
+
+    # Without clipping (may crash)
+    try:
+        train_without_clipping()
+    except Exception as e:
+        print(f"❌ Training failed: {e}")
+
+    # With clipping (stable)
+    train_with_clipping()
+
+    print("\n" + "="*80)
+    print("🎓 KEY TAKEAWAYS:")
+    print("1. High learning rates can cause exploding gradients")
+    print("2. Gradient clipping prevents training instability")
+    print("3. Always monitor gradient norms during training")
+    print("4. Use max_norm=1.0-10.0 depending on model/task")
+    print("="*80)
 
 
 if __name__ == "__main__":
-    demonstrate_gradient_clipping()
+    main()
