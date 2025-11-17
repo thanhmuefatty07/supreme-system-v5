@@ -58,6 +58,22 @@ Supreme System V5 is designed as a robust, extensible, and auditable trading pla
 
 ## 🆕 Recent Improvements
 
+### Variance Threshold Feature Selection ✅ (Completed: 2025-11-17)
+
+- **Status:** Production-ready
+- **Benefit:** Removes constant/near-constant features, improves model performance
+- **Tests:** 15 passing
+
+**Quick Start:**
+
+```python
+from src.data.preprocessing import VarianceThreshold
+
+selector = VarianceThreshold(threshold=0.0)
+X_train_selected = selector.fit_transform(X_train)
+X_test_selected = selector.transform(X_test)  # Uses training mask
+```
+
 ### Z-Score Normalization ✅ (Completed: 2025-11-17)
 
 - **Status:** Production-ready
