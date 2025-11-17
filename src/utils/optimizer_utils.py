@@ -5,20 +5,17 @@ Optimizer utilities and factory functions.
 
 import logging
 from typing import Iterable, Optional
-import torch
-import torch.nn as nn
-from torch.optim import Optimizer, Adam, AdamW, SGD
 
 logger = logging.getLogger(__name__)
 
 
 def get_optimizer(
-    parameters: Iterable[nn.Parameter],
+    parameters: Iterable["nn.Parameter"],
     optimizer_name: str = 'adamw',
     lr: float = 0.001,
     weight_decay: float = 0.01,
     **kwargs
-) -> Optimizer:
+) -> "Optimizer":
     """
     Factory function to create optimizers.
 
@@ -101,7 +98,7 @@ OPTIMIZER_CONFIGS = {
 }
 
 
-def init_weights_he_normal(module: nn.Module) -> None:
+def init_weights_he_normal(module: "nn.Module") -> None:
     """
     Initialize weights using He Normal initialization.
 
@@ -131,7 +128,7 @@ def init_weights_he_normal(module: nn.Module) -> None:
                 nn.init.constant_(param, 0)
 
 
-def init_weights_xavier_uniform(module: nn.Module) -> None:
+def init_weights_xavier_uniform(module: "nn.Module") -> None:
     """
     Initialize weights using Xavier Uniform initialization.
 
