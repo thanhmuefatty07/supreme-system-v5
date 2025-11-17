@@ -76,3 +76,22 @@ Thumbs.db
 
 # Archive (keep structure but ignore contents if needed)
 # archive/legacy-reports/ - Keep for reference
+# Gemini & AI API Keys
+.gemini_api_key
+gemini_credentials.json
+ai_keys/
+*.gemini
+
+# Generic secrets
+*.key
+*.secret
+*.pem
+credentials/
+secrets/
+.env*
+!.env.example
+
+# Logs that might contain keys
+*.log
+logs/
+debug.log
