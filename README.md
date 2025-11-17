@@ -58,6 +58,23 @@ Supreme System V5 is designed as a robust, extensible, and auditable trading pla
 
 ## 🆕 Recent Improvements
 
+### Walk-Forward Validation ✅ (Completed: 2025-11-17)
+
+- **Status:** Production-ready
+- **Benefit:** Prevents look-ahead bias, realistic time series validation
+- **Tests:** 13 passing
+
+**Quick Start:**
+
+```python
+from src.data.validation import WalkForwardValidator
+
+validator = WalkForwardValidator(n_splits=5)
+for train_idx, test_idx in validator.split(X):
+    # Train on train_idx, test on test_idx
+    # No look-ahead bias!
+```
+
 ### Variance Threshold Feature Selection ✅ (Completed: 2025-11-17)
 
 - **Status:** Production-ready
