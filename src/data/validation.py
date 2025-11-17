@@ -121,8 +121,15 @@ class WalkForwardValidator:
         # Calculate split points
         indices = np.arange(n_samples)
         
+        # For sliding window, calculate first train size
+        first_train_size = None
+        if not self.expanding_window:
+            # Calculate what the first train size should be
+            first_test_start = n_samples - self.n_splits * test_size - self.gap * (self.n_splits - 1)
+            first_train_size = first_test_start - self.gap
+        
         for i in range(self.n_splits):
-            # Calculate test set boundaries
+            # Calculate test set boundaries (from end backwards)
             test_end = n_samples - (self.n_splits - i - 1) * test_size
             test_start = test_end - test_size
             
@@ -134,13 +141,9 @@ class WalkForwardValidator:
                 train_start = 0
             else:
                 # Sliding window: maintain constant train size
-                if i == 0:
-                    # First split: use all available data before test
-                    train_start = 0
-                else:
-                    # Subsequent splits: maintain train size from first split
-                    train_size = train_end + 1  # Size from first split
-                    train_start = max(0, train_end - train_size + 1)
+                if first_train_size is None:
+                    first_train_size = train_end + 1
+                train_start = max(0, train_end - first_train_size + 1)
             
             # Apply minimum train size constraint
             if self.min_train_size:
@@ -230,8 +233,17 @@ class WalkForwardValidator:
                     except ImportError:
                         raise ValueError(f"scikit-learn not available for scorer '{scoring}'")
             else:
-                # Use estimator's default score method
-                score = estimator.score(X_test, y_test)
+                # Use estimator's default score method if available
+                if hasattr(estimator, 'score'):
+                    score = estimator.score(X_test, y_test)
+                else:
+                    # Fallback to R² score
+                    try:
+                        from sklearn.metrics import r2_score
+                        score = r2_score(y_test, y_pred)
+                    except ImportError:
+                        # Last resort: use simple correlation
+                        score = np.corrcoef(y_test, y_pred)[0, 1] if len(y_test) > 1 else 0.0
             
             scores.append(score)
             

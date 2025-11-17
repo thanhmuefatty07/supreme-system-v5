@@ -150,6 +150,13 @@ class TestWalkForwardValidator:
             
             def predict(self, X):
                 return np.full(len(X), self.mean_)
+            
+            def score(self, X, y):
+                # R² score
+                y_pred = self.predict(X)
+                ss_res = np.sum((y - y_pred) ** 2)
+                ss_tot = np.sum((y - np.mean(y)) ** 2)
+                return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
         
         X = np.arange(100).reshape(-1, 1)
         y = np.arange(100)
