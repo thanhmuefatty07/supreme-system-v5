@@ -126,7 +126,92 @@ for epoch in range(100):
 - **Computation:** Negligible (<0.1% overhead)
 - **Training time:** Reduced by 10-50% (depends on when stopping occurs)
 
+### Gradient Clipping
+
+Prevents exploding gradients by clipping the global norm of gradients.
+Essential for training stability, especially with RNNs/LSTMs.
+
+#### Parameters
+
+- `max_norm` (float, default=5.0): Maximum gradient norm
+- `norm_type` (float, default=2.0): Type of norm to use (L2)
+- `error_if_nonfinite` (bool, default=False): Raise error for NaN/Inf gradients
+- `verbose` (bool, default=True): Log clipping statistics
+
+#### Example Usage
+
+```python
+from src.training.callbacks import GradientClipCallback
+
+# Initialize callback
+grad_clip = GradientClipCallback(max_norm=5.0)
+grad_clip.set_model(model)
+
+# In training loop
+for epoch in range(num_epochs):
+    optimizer.zero_grad()
+    loss = compute_loss(model, data)
+    loss.backward()
+
+    # Clip gradients before optimizer step
+    grad_clip.on_after_backward()
+
+    optimizer.step()
+```
+
+#### How It Works
+
+1. **Compute total norm**: Calculate L2 norm across all gradients
+2. **Check threshold**: If norm > max_norm, calculate scaling factor
+3. **Scale gradients**: Multiply all gradients by scaling factor
+4. **Track statistics**: Monitor clipping frequency and norms
+
+#### When to Use
+
+- ✅ **RNNs/LSTMs**: Essential to prevent gradient explosion
+- ✅ **Deep networks**: Helpful for training stability
+- ✅ **Large learning rates**: Reduces instability risk
+- ✅ **Unstable training**: Fixes NaN/inf losses
+
+#### Best Practices
+
+**Recommended Settings:**
+
+- **RNNs/LSTMs**: max_norm=5.0-10.0
+- **CNNs/Transformers**: max_norm=1.0-5.0
+- **Small models**: max_norm=1.0-2.0
+- **Large models**: max_norm=5.0-10.0
+
+**Common Pitfalls:**
+
+- ❌ **Too small max_norm**: May slow learning significantly
+- ❌ **Too large max_norm**: Won't prevent explosion effectively
+- ❌ **Wrong timing**: Must be called after backward(), before step()
+- ❌ **No monitoring**: Monitor clipping ratio (<10% is good)
+
+#### Standalone Function
+
+For direct usage without callback:
+
+```python
+from src.utils.training_utils import clip_grad_norm
+
+# After loss.backward()
+total_norm = clip_grad_norm(model.parameters(), max_norm=5.0)
+
+# Continue with optimizer.step()
+optimizer.step()
+```
+
+#### Performance Impact
+
+- **Memory:** Minimal (+small tracking overhead)
+- **Computation:** Very low (norm calculation + scaling)
+- **Training stability:** Significantly improved
+- **Convergence:** Often faster and more stable
+
 #### References
 
 - Prechelt, L. (1998). "Early Stopping - But When?"
 - Goodfellow et al. (2016). "Deep Learning", Section 7.8
+- Pascanu et al. (2013). "On the difficulty of training RNNs"
