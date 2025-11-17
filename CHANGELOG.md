@@ -9,6 +9,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+#### Feature: Walk-Forward Validation for Time Series
+
+- Implemented `WalkForwardValidator` for time series cross-validation
+- Added comprehensive test suite (13 tests, 100% passing)
+- Created usage examples and documentation
+- Supports expanding and sliding windows
+- Includes gap parameter to prevent data leakage
+- Compatible with any estimator (fit/predict interface)
+
+**Technical Details:**
+
+- **File:** `src/data/validation.py`
+- **Tests:** `tests/data/test_validation.py` (13 tests)
+- **Coverage:** +13 tests (465 total)
+- **New Files:** 
+  - `examples/walk_forward_example.py` - Usage examples
+
+**Benefits:**
+
+- Prevents look-ahead bias in time series validation
+- Realistic performance estimation
+- Proper chronological ordering (train before test)
+- Flexible window strategies (expanding/sliding)
+- Gap parameter for additional data leakage prevention
+
+**Usage:**
+
+```python
+from src.data.validation import WalkForwardValidator
+import numpy as np
+
+# Create time series data
+X = np.arange(100).reshape(-1, 1)
+y = np.arange(100)
+
+# Create validator
+validator = WalkForwardValidator(n_splits=5)
+
+# Get splits
+for train_idx, test_idx in validator.split(X):
+    X_train, X_test = X[train_idx], X[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+    # Train and evaluate model
+
+# Or validate directly
+scores = validator.validate(model, X, y)
+```
+
+**Key Features:**
+
+- ✅ Expanding window (train size grows)
+- ✅ Sliding window (train size constant)
+- ✅ Gap parameter (separation between train/test)
+- ✅ No look-ahead bias (train always before test)
+- ✅ Custom scoring functions
+- ✅ Compatible with any estimator
+
+**Documentation:**
+
+- `docs/implementation_plans/walk_forward_validation.md` - Implementation plan
+- `examples/walk_forward_example.py` - 5 comprehensive examples
+- Inline docstrings with examples
+
+**Migration Notes:**
+
+- No breaking changes
+- Backward compatible
+- Optional feature (use for time series data)
+
+**References:**
+
+- Time series cross-validation best practices
+- scikit-learn: TimeSeriesSplit documentation
+
 #### Feature: Variance Threshold Feature Selection
 
 - Implemented `VarianceThreshold` for removing low-variance features
