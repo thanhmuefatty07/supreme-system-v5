@@ -9,6 +9,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+#### Feature: Variance Threshold Feature Selection
+
+- Implemented `VarianceThreshold` for removing low-variance features
+- Added comprehensive test suite (15 tests, 100% passing)
+- Created usage examples and documentation
+- Supports numpy arrays and pandas DataFrames
+- Prevents data leakage (strict train/test separation)
+- Includes inverse transform capability
+
+**Technical Details:**
+
+- **File:** `src/data/preprocessing.py`
+- **Tests:** `tests/data/test_variance_threshold.py` (15 tests)
+- **Coverage:** +15 tests (452 total)
+- **New Files:** 
+  - `examples/variance_threshold_example.py` - Usage examples
+
+**Benefits:**
+
+- Reduces dimensionality by removing constant/near-constant features
+- Improves model performance by eliminating noise
+- Faster training with fewer features
+- Better generalization (reduces overfitting)
+
+**Usage:**
+
+```python
+from src.data.preprocessing import VarianceThreshold
+import numpy as np
+
+# Training data
+X_train = np.array([[1, 10, 100], [1, 20, 200], [1, 30, 300]])
+
+# Fit and transform training data
+selector = VarianceThreshold(threshold=0.0)
+X_train_selected = selector.fit_transform(X_train)
+
+# Transform test data using TRAINING feature mask (prevents data leakage)
+X_test = np.array([[1, 15, 150], [1, 25, 250]])
+X_test_selected = selector.transform(X_test)
+
+# Get selected feature indices
+selected_indices = selector.get_support(indices=True)
+```
+
+**Key Features:**
+
+- ✅ Handles constant features (zero variance)
+- ✅ Handles all features removed edge case
+- ✅ Works with pandas DataFrames
+- ✅ Prevents data leakage
+- ✅ Inverse transform (can restore removed features)
+- ✅ Integration with other preprocessing steps
+
+**Documentation:**
+
+- `docs/data_preprocessing.md` - Complete API reference
+- `examples/variance_threshold_example.py` - 5 comprehensive examples
+- Inline docstrings with examples
+
+**Migration Notes:**
+
+- No breaking changes
+- Backward compatible
+- Optional feature (use when features have low variance)
+
+**References:**
+
+- scikit-learn: VarianceThreshold documentation
+- Feature selection best practices
+
 #### Feature: Z-Score Normalization for Data Preprocessing
 
 - Implemented `ZScoreNormalizer` for feature standardization
