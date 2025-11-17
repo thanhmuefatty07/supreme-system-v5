@@ -1,0 +1,20 @@
+{
+  "captured_at": "2025-11-17T00:57:37.019787",
+  "git_commit": "ff52c9f82fa84de62d94105c5b6a459dc2c761a6",
+  "test_baseline": {
+    "timestamp": "2025-11-17T00:58:16.754618",
+    "tests": {
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "total": 0
+    },
+    "coverage": {
+      "total_coverage": 26.639344262295083,
+      "lines_covered": 3510,
+      "lines_total": 13176
+    },
+    "exit_code": 2,
+    "stdout": "MIN\\supreme-system-v5\\tests\\unit\\test_strategies_comprehensive.py:323: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.slow\n\ntests\\unit\\test_walk_forward.py:67\n  C:\\Users\\ADMIN\\supreme-system-v5\\tests\\unit\\test_walk_forward.py:67: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.slow\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ===========================\nERROR tests/training/test_callbacks.py - AttributeError: 'NoneType' object ha...\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n================== 3 skipped, 25 warnings, 1 error in 30.93s ==================\n"
+  }
+}
