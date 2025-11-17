@@ -2,7 +2,197 @@
 
 ## Overview
 
-The data preprocessing module provides utilities for feature normalization and standardization, essential for machine learning model training.
+The data preprocessing module provides utilities for feature normalization, standardization, and feature selection, essential for machine learning model training.
+
+## Feature Selection: Variance Threshold
+
+Variance Threshold removes features with variance below a specified threshold. This is useful for removing constant or near-constant features that provide no information to the model.
+
+### What is Variance Threshold?
+
+Variance Threshold is a simple feature selection method that removes features with variance below a threshold:
+
+- **Formula**: `variance = Var(X) = E[(X - μ)²]`
+- **Keep feature if**: `variance > threshold`
+- **Remove feature if**: `variance ≤ threshold`
+
+### Why Use It?
+
+1. **Reduces Dimensionality**: Removes uninformative features
+2. **Improves Model Performance**: Eliminates noise from constant features
+3. **Faster Training**: Fewer features = faster computation
+4. **Better Generalization**: Reduces overfitting risk
+
+### When to Use
+
+- ✅ **Use when**: Features have constant or near-constant values
+- ✅ **Use when**: You want to reduce dimensionality before training
+- ✅ **Use when**: Features have very low variance (< 0.01)
+- ❌ **Don't use when**: All features have meaningful variance
+- ❌ **Don't use when**: Feature variance is important for your model
+
+### Usage
+
+#### Basic Usage
+
+```python
+from src.data.preprocessing import VarianceThreshold
+import numpy as np
+
+# Create data with constant feature
+X_train = np.array([
+    [1, 10, 100],   # Feature 0: constant (variance=0)
+    [1, 20, 200],   # Feature 1: varying
+    [1, 30, 300]    # Feature 2: varying
+])
+
+# Fit and transform
+selector = VarianceThreshold(threshold=0.0)
+X_train_selected = selector.fit_transform(X_train)
+
+# Result: constant feature removed
+print(X_train_selected.shape)  # (3, 2) - only 2 features remain
+```
+
+#### Train/Test Split (CRITICAL!)
+
+**Always fit on training data only!**
+
+```python
+# Training data
+X_train = np.array([[1, 10, 100], [1, 20, 200], [1, 30, 300]])
+
+# Test data
+X_test = np.array([[1, 15, 150], [1, 25, 250]])
+
+# Fit ONLY on training data
+selector = VarianceThreshold(threshold=0.0)
+selector.fit(X_train)
+
+# Transform both using TRAINING feature mask
+X_train_selected = selector.transform(X_train)
+X_test_selected = selector.transform(X_test)  # Uses training mask!
+```
+
+**Why?** Using test statistics would cause **data leakage** - the model would see information about test data during training.
+
+#### With Pandas DataFrames
+
+```python
+import pandas as pd
+from src.data.preprocessing import VarianceThreshold
+
+# Create DataFrame
+df = pd.DataFrame({
+    'constant': [1.0, 1.0, 1.0, 1.0],
+    'low_var': [1.0, 1.1, 1.2, 1.3],
+    'high_var': [10.0, 20.0, 30.0, 40.0]
+})
+
+# Apply variance threshold
+selector = VarianceThreshold(threshold=0.01)
+df_selected = selector.fit_transform(df)
+
+# Returns DataFrame with selected columns only
+print(df_selected.columns)  # ['low_var', 'high_var']
+```
+
+#### Get Selected Features
+
+```python
+# Get boolean mask
+mask = selector.get_support()
+print(mask)  # [False, True, True]
+
+# Get feature indices
+indices = selector.get_support(indices=True)
+print(indices)  # [1, 2]
+```
+
+#### Inverse Transform
+
+```python
+# Restore removed features (with fill_value)
+X_restored = selector.inverse_transform(X_selected, fill_value=0.0)
+print(X_restored.shape)  # (3, 3) - original shape restored
+```
+
+### API Reference
+
+#### VarianceThreshold
+
+##### Parameters
+
+- `threshold` (float, default=0.0): Features with variance below this threshold will be removed
+
+##### Methods
+
+- `fit(X)`: Compute variances and determine feature mask
+- `transform(X)`: Remove low-variance features
+- `fit_transform(X)`: Fit and transform in one step
+- `get_support(indices=False)`: Get mask or indices of selected features
+- `inverse_transform(X, fill_value=0.0)`: Restore removed features
+
+##### Attributes
+
+- `variances_`: Variance of each feature (computed during fit)
+- `n_features_in_`: Number of features seen during fit
+- `feature_names_in_`: Names of features (if DataFrame was used)
+
+### Edge Cases
+
+#### All Features Removed
+
+If all features have variance below threshold:
+
+```python
+data = np.array([[1, 1], [1, 1], [1, 1]])  # All constant
+
+selector = VarianceThreshold(threshold=0.0)
+transformed = selector.fit_transform(data)
+
+print(transformed.shape)  # (3, 0) - empty array
+```
+
+#### Single Feature
+
+Works correctly with single feature:
+
+```python
+data = np.array([[1], [2], [3], [4]])
+
+selector = VarianceThreshold(threshold=0.0)
+transformed = selector.fit_transform(data)
+
+print(transformed.shape)  # (4, 1)
+```
+
+### Integration with Other Preprocessing
+
+Variance Threshold works well with other preprocessing steps:
+
+```python
+from src.data.preprocessing import VarianceThreshold, ZScoreNormalizer
+
+# Step 1: Remove constant features
+selector = VarianceThreshold(threshold=0.0)
+X_selected = selector.fit_transform(X_train)
+
+# Step 2: Normalize remaining features
+normalizer = ZScoreNormalizer()
+X_normalized = normalizer.fit_transform(X_selected)
+```
+
+### Examples
+
+See `examples/variance_threshold_example.py` for complete examples.
+
+### References
+
+- scikit-learn: VarianceThreshold documentation
+- Feature selection best practices
+
+---
 
 ## Z-Score Normalization
 
