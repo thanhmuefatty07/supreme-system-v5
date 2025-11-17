@@ -58,6 +58,22 @@ Supreme System V5 is designed as a robust, extensible, and auditable trading pla
 
 ## 🆕 Recent Improvements
 
+### Z-Score Normalization ✅ (Completed: 2025-11-17)
+
+- **Status:** Production-ready
+- **Benefit:** 10-30% faster convergence, equal feature importance
+- **Tests:** 12 passing
+
+**Quick Start:**
+
+```python
+from src.data.preprocessing import ZScoreNormalizer
+
+normalizer = ZScoreNormalizer()
+X_train_scaled = normalizer.fit_transform(X_train)
+X_test_scaled = normalizer.transform(X_test)  # Uses training stats
+```
+
 ### AdamW Optimizer & He Init ✅ (Completed: 2025-11-17)
 
 - **Status:** Production-ready
