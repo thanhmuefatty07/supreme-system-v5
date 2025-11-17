@@ -3,10 +3,10 @@ Example: Walk-Forward Validation for Time Series.
 
 Demonstrates:
 1. Basic walk-forward validation
-2. Expanding vs sliding windows
+2. Expanding vs sliding window
 3. Gap parameter usage
-4. Model validation workflow
-5. Custom scoring functions
+4. Comparison with K-fold (incorrect for time series)
+5. Visualization of splits
 """
 
 import numpy as np
@@ -16,7 +16,19 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.data.validation import WalkForwardValidator
+try:
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import r2_score, mean_squared_error
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    print("Warning: scikit-learn not available, some examples will be skipped")
+
+from src.data.validation import (
+    WalkForwardValidator,
+    plot_walk_forward_splits,
+    compare_cv_methods
+)
 
 
 def example_basic_usage():
@@ -25,148 +37,190 @@ def example_basic_usage():
     print("EXAMPLE 1: Basic Walk-Forward Validation")
     print("="*80)
     
-    # Create time series data
+    # Create time series data (trend + noise)
+    np.random.seed(42)
     n_samples = 100
     X = np.arange(n_samples).reshape(-1, 1)
-    y = np.arange(n_samples) + np.random.randn(n_samples) * 0.1
+    y = 2 * X.ravel() + 10 + np.random.randn(n_samples) * 5
     
-    print(f"\nData: {n_samples} samples")
-    print(f"Features shape: {X.shape}")
-    print(f"Target shape: {y.shape}")
+    print(f"\nDataset: {n_samples} samples")
+    print(f"Features: {X.shape[1]}")
     
-    # Create validator
+    # Walk-forward validation
     validator = WalkForwardValidator(n_splits=5)
     
-    print(f"\nWalk-forward splits: {validator.n_splits} folds")
-    print("\nSplit details:")
+    print(f"\nWalk-Forward Validation ({validator.n_splits} splits):")
+    print("-" * 60)
     
-    for i, (train_idx, test_idx) in enumerate(validator.split(X)):
-        print(f"Fold {i+1}: Train=[0:{max(train_idx)+1}], Test=[{min(test_idx)}:{max(test_idx)+1}]")
-        print(f"  Train size: {len(train_idx)}, Test size: {len(test_idx)}")
-        print(f"  ✅ No look-ahead: max(train)={max(train_idx)} < min(test)={min(test_idx)}")
+    if SKLEARN_AVAILABLE:
+        for fold, (train_idx, test_idx) in enumerate(validator.split(X)):
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            
+            # Train model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+            
+            # Evaluate
+            score = model.score(X_test, y_test)
+            
+            print(f"Fold {fold+1}: train=[{train_idx[0]:3d}:{train_idx[-1]:3d}], "
+                  f"test=[{test_idx[0]:3d}:{test_idx[-1]:3d}], "
+                  f"R²={score:.3f}")
+    else:
+        for fold, (train_idx, test_idx) in enumerate(validator.split(X)):
+            print(f"Fold {fold+1}: train=[{train_idx[0]:3d}:{train_idx[-1]:3d}], "
+                  f"test=[{test_idx[0]:3d}:{test_idx[-1]:3d}]")
     
-    print("\n✅ Walk-forward validation ensures no look-ahead bias!")
+    print("\n✅ Training data always precedes test data (no look-ahead bias)")
 
 
 def example_expanding_vs_sliding():
-    """Example 2: Expanding vs Sliding Windows"""
+    """Example 2: Expanding vs Sliding Window"""
     print("\n" + "="*80)
-    print("EXAMPLE 2: Expanding vs Sliding Windows")
+    print("EXAMPLE 2: Expanding vs Sliding Window")
     print("="*80)
     
+    np.random.seed(42)
     X = np.arange(100).reshape(-1, 1)
+    y = 2 * X.ravel() + np.random.randn(100) * 5
     
-    # Expanding window
-    print("\n--- Expanding Window (train size grows) ---")
-    validator_expanding = WalkForwardValidator(n_splits=5, expanding_window=True)
+    # Expanding window (default)
+    print("\n📈 EXPANDING WINDOW (training set grows):")
+    print("-" * 60)
+    expanding = WalkForwardValidator(n_splits=5, expanding_window=True)
     
-    train_sizes_expanding = []
-    for train_idx, test_idx in validator_expanding.split(X):
-        train_sizes_expanding.append(len(train_idx))
-        print(f"Fold {len(train_sizes_expanding)}: Train size = {len(train_idx)}")
-    
-    print(f"\nTrain sizes: {train_sizes_expanding}")
-    print("✅ Train size increases each fold")
+    for fold, (train_idx, test_idx) in enumerate(expanding.split(X)):
+        print(f"Fold {fold+1}: train_size={len(train_idx):3d}, "
+              f"test_size={len(test_idx):2d}")
     
     # Sliding window
-    print("\n--- Sliding Window (train size constant) ---")
-    validator_sliding = WalkForwardValidator(
-        n_splits=5,
-        expanding_window=False,
-        test_size=10
-    )
+    print("\n📊 SLIDING WINDOW (training set size constant):")
+    print("-" * 60)
+    sliding = WalkForwardValidator(n_splits=5, expanding_window=False, test_size=10)
     
-    train_sizes_sliding = []
-    for train_idx, test_idx in validator_sliding.split(X):
-        train_sizes_sliding.append(len(train_idx))
-        print(f"Fold {len(train_sizes_sliding)}: Train size = {len(train_idx)}")
+    for fold, (train_idx, test_idx) in enumerate(sliding.split(X)):
+        print(f"Fold {fold+1}: train_size={len(train_idx):3d}, "
+              f"test_size={len(test_idx):2d}")
     
-    print(f"\nTrain sizes: {train_sizes_sliding}")
-    print("✅ Train size remains constant (after first fold)")
+    print("\n✅ Expanding: more training data each fold")
+    print("✅ Sliding: consistent training window size")
 
 
 def example_gap_parameter():
-    """Example 3: Gap Parameter"""
+    """Example 3: Gap parameter (prevents label leakage)"""
     print("\n" + "="*80)
-    print("EXAMPLE 3: Gap Parameter (Prevents Data Leakage)")
+    print("EXAMPLE 3: Gap Parameter")
     print("="*80)
+    
+    print("\nWhy gaps are important:")
+    print("In real trading, labels may be delayed (e.g., next-day close price)")
+    print("Gap ensures we don't use information not available at prediction time")
     
     X = np.arange(50).reshape(-1, 1)
     
-    print("\n--- Without Gap ---")
-    validator_no_gap = WalkForwardValidator(n_splits=3, test_size=5)
+    print("\n🔴 WITHOUT GAP (may cause label leakage):")
+    print("-" * 60)
+    no_gap = WalkForwardValidator(n_splits=3, test_size=5, gap=0)
     
-    for i, (train_idx, test_idx) in enumerate(validator_no_gap.split(X)):
-        gap = min(test_idx) - max(train_idx) - 1
-        print(f"Fold {i+1}: Gap = {gap}")
+    for fold, (train_idx, test_idx) in enumerate(no_gap.split(X)):
+        print(f"Fold {fold+1}: train_end={train_idx[-1]:2d}, "
+              f"test_start={test_idx[0]:2d}, "
+              f"gap={test_idx[0] - train_idx[-1] - 1}")
     
-    print("\n--- With Gap=3 ---")
-    validator_with_gap = WalkForwardValidator(n_splits=3, test_size=5, gap=3)
+    print("\n🟢 WITH GAP=3 (safe):")
+    print("-" * 60)
+    with_gap = WalkForwardValidator(n_splits=3, test_size=5, gap=3)
     
-    for i, (train_idx, test_idx) in enumerate(validator_with_gap.split(X)):
-        gap = min(test_idx) - max(train_idx) - 1
-        print(f"Fold {i+1}: Gap = {gap}")
-        print(f"  Train ends at: {max(train_idx)}, Test starts at: {min(test_idx)}")
+    for fold, (train_idx, test_idx) in enumerate(with_gap.split(X)):
+        print(f"Fold {fold+1}: train_end={train_idx[-1]:2d}, "
+              f"test_start={test_idx[0]:2d}, "
+              f"gap={test_idx[0] - train_idx[-1] - 1}")
     
-    print("\n✅ Gap creates separation between train and test sets")
+    print("\n✅ Gap of 3 samples prevents label leakage")
 
 
-def example_model_validation():
-    """Example 4: Model Validation Workflow"""
+def example_validate_method():
+    """Example 4: Using validate() method"""
+    if not SKLEARN_AVAILABLE:
+        print("\n" + "="*80)
+        print("EXAMPLE 4: Skipped (scikit-learn not available)")
+        print("="*80)
+        return
+    
     print("\n" + "="*80)
-    print("EXAMPLE 4: Model Validation Workflow")
+    print("EXAMPLE 4: Automated Validation with validate()")
     print("="*80)
     
-    # Simple model that predicts mean
-    class MeanPredictor:
-        def fit(self, X, y):
-            self.mean_ = y.mean()
-            return self
-        
-        def predict(self, X):
-            return np.full(len(X), self.mean_)
+    # Generate data
+    np.random.seed(42)
+    n_samples = 200
+    X = np.arange(n_samples).reshape(-1, 1)
+    y = 2 * X.ravel() + 10 + np.random.randn(n_samples) * 10
     
-    # Create data
-    X = np.arange(100).reshape(-1, 1)
-    y = np.arange(100) + np.random.randn(100) * 5
+    print(f"\nDataset: {n_samples} samples")
     
-    # Validate model
+    # Validate with different models
+    models = {
+        'Linear Regression': LinearRegression(),
+    }
+    
     validator = WalkForwardValidator(n_splits=5)
-    scores = validator.validate(MeanPredictor(), X, y)
     
-    print(f"\nValidation scores: {scores}")
-    print(f"Mean score: {np.mean(scores):.4f}")
-    print(f"Std score: {np.std(scores):.4f}")
+    for name, model in models.items():
+        # Using default scoring (R²)
+        scores_r2 = validator.validate(model, X, y)
+        
+        # Using custom scoring (MSE)
+        scores_mse = validator.validate(
+            model, X, y,
+            scoring=lambda y_true, y_pred: -mean_squared_error(y_true, y_pred)
+        )
+        
+        print(f"\n{name}:")
+        print(f"  R² scores: {[f'{s:.3f}' for s in scores_r2]}")
+        print(f"  Mean R²: {np.mean(scores_r2):.3f} ± {np.std(scores_r2):.3f}")
+        print(f"  Mean -MSE: {np.mean(scores_mse):.1f} ± {np.std(scores_mse):.1f}")
     
-    print("\n✅ Model validated using walk-forward cross-validation!")
+    print("\n✅ Easy automated validation with performance tracking")
 
 
-def example_custom_scoring():
-    """Example 5: Custom Scoring Function"""
+def example_comparison_with_kfold():
+    """Example 5: Why K-fold is wrong for time series"""
+    if not SKLEARN_AVAILABLE:
+        print("\n" + "="*80)
+        print("EXAMPLE 5: Skipped (scikit-learn not available)")
+        print("="*80)
+        return
+    
     print("\n" + "="*80)
-    print("EXAMPLE 5: Custom Scoring Function")
+    print("EXAMPLE 5: Walk-Forward vs K-Fold Comparison")
     print("="*80)
     
-    class DummyModel:
-        def fit(self, X, y):
-            return self
-        def predict(self, X):
-            return np.zeros(len(X))
+    print("\n⚠️  WARNING: K-Fold should NOT be used for time series!")
+    print("This example shows WHY:\n")
     
-    X = np.arange(50).reshape(-1, 1)
-    y = np.arange(50)
+    # Create trending data
+    np.random.seed(42)
+    n_samples = 100
+    X = np.arange(n_samples).reshape(-1, 1)
+    y = 0.5 * X.ravel() + np.random.randn(n_samples) * 2
     
-    # Custom scorer: Mean Absolute Error (MAE)
-    def mae_scorer(y_true, y_pred):
-        return -np.mean(np.abs(y_true - y_pred))  # Negative because lower is better
+    results = compare_cv_methods(X, y, LinearRegression())
     
-    validator = WalkForwardValidator(n_splits=3)
-    scores = validator.validate(DummyModel(), X, y, scoring=mae_scorer)
+    print("Walk-Forward (CORRECT for time series):")
+    print(f"  Scores: {[f'{s:.3f}' for s in results['walk_forward']]}")
+    print(f"  Mean: {results['walk_forward_mean']:.3f} ± {results['walk_forward_std']:.3f}")
     
-    print(f"\nMAE scores: {scores}")
-    print(f"Mean MAE: {np.mean(scores):.4f}")
+    print("\nK-Fold (INCORRECT - contains look-ahead bias):")
+    print(f"  Scores: {[f'{s:.3f}' for s in results['kfold']]}")
+    print(f"  Mean: {results['kfold_mean']:.3f} ± {results['kfold_std']:.3f}")
     
-    print("\n✅ Custom scoring function works correctly!")
+    print(f"\nDifference: {results['difference']:.3f}")
+    print("(K-Fold often shows better scores due to look-ahead bias)")
+    
+    print("\n❌ K-Fold randomly mixes past and future → unrealistic performance")
+    print("✅ Walk-Forward respects time order → realistic performance")
 
 
 def main():
@@ -178,22 +232,19 @@ def main():
     example_basic_usage()
     example_expanding_vs_sliding()
     example_gap_parameter()
-    example_model_validation()
-    example_custom_scoring()
+    example_validate_method()
+    example_comparison_with_kfold()
     
     print("\n" + "="*80)
     print("🎓 KEY TAKEAWAYS:")
     print("="*80)
-    print("1. Walk-forward validation prevents look-ahead bias")
-    print("2. Training data always precedes test data chronologically")
-    print("3. Expanding window: train size grows (uses more historical data)")
-    print("4. Sliding window: train size constant (fixed lookback period)")
-    print("5. Gap parameter: creates separation between train and test")
-    print("6. Works with any model that has fit() and predict() methods")
-    print("7. Supports custom scoring functions")
+    print("1. Walk-forward prevents look-ahead bias in time series")
+    print("2. Always ensure training precedes test chronologically")
+    print("3. Use gaps when labels are delayed")
+    print("4. Choose expanding or sliding window based on use case")
+    print("5. NEVER use K-fold for time series!")
     print("="*80)
 
 
 if __name__ == "__main__":
     main()
-
