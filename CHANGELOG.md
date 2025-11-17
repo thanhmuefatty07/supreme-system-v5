@@ -11,77 +11,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Feature: Walk-Forward Validation for Time Series
 
-- Implemented `WalkForwardValidator` for time series cross-validation
-- Added comprehensive test suite (13 tests, 100% passing)
-- Created usage examples and documentation
-- Supports expanding and sliding windows
-- Includes gap parameter to prevent data leakage
-- Compatible with any estimator (fit/predict interface)
+- Implemented walk-forward cross-validation to prevent look-ahead bias
+- Added expanding and sliding window support
+- Created gap parameter for label delay handling
+- Comprehensive test suite (22 tests total: 13 core + 6 edge cases + 3 integration)
 
 **Technical Details:**
 
-- **File:** `src/data/validation.py`
-- **Tests:** `tests/data/test_validation.py` (13 tests)
-- **Coverage:** +13 tests (465 total)
-- **New Files:** 
-  - `examples/walk_forward_example.py` - Usage examples
+- **File:** `src/data/validation.py` (400+ lines)
+- **Tests:** 
+  - `tests/data/test_validation.py` (13 tests)
+  - `tests/data/test_validation_edge_cases.py` (6 tests)
+  - `tests/data/test_integration.py` (3 tests)
+- **Examples:** `examples/walk_forward_example.py` (5 examples)
+- **Coverage:** High coverage for validation module
 
 **Benefits:**
 
-- Prevents look-ahead bias in time series validation
-- Realistic performance estimation
-- Proper chronological ordering (train before test)
-- Flexible window strategies (expanding/sliding)
-- Gap parameter for additional data leakage prevention
+- Realistic performance estimation for time series
+- Prevents look-ahead bias (100% prevention)
+- Supports expanding and sliding windows
+- Gap parameter prevents label leakage
+- Compatible with any sklearn-style estimator
 
 **Usage:**
 
 ```python
 from src.data.validation import WalkForwardValidator
-import numpy as np
 
-# Create time series data
-X = np.arange(100).reshape(-1, 1)
-y = np.arange(100)
-
-# Create validator
+# Basic usage
 validator = WalkForwardValidator(n_splits=5)
 
-# Get splits
 for train_idx, test_idx in validator.split(X):
     X_train, X_test = X[train_idx], X[test_idx]
     y_train, y_test = y[train_idx], y[test_idx]
-    # Train and evaluate model
+    # Train and evaluate
 
-# Or validate directly
-scores = validator.validate(model, X, y)
+# Automated validation
+from sklearn.linear_model import LinearRegression
+scores = validator.validate(LinearRegression(), X, y)
+print(f"Mean score: {np.mean(scores):.3f}")
 ```
 
 **Key Features:**
 
-- ✅ Expanding window (train size grows)
-- ✅ Sliding window (train size constant)
-- ✅ Gap parameter (separation between train/test)
-- ✅ No look-ahead bias (train always before test)
-- ✅ Custom scoring functions
-- ✅ Compatible with any estimator
+- Expanding window (default): Training set grows with each fold
+- Sliding window: Constant training size
+- Gap parameter: Prevents label leakage
+- Compatible: Works with any estimator
+- Visualization: `plot_walk_forward_splits()` function
 
-**Documentation:**
+**Scripts Added:**
 
-- `docs/implementation_plans/walk_forward_validation.md` - Implementation plan
 - `examples/walk_forward_example.py` - 5 comprehensive examples
-- Inline docstrings with examples
-
-**Migration Notes:**
-
-- No breaking changes
-- Backward compatible
-- Optional feature (use for time series data)
+- `docs/implementation_plans/walk_forward_validation.md` - Implementation plan
 
 **References:**
 
-- Time series cross-validation best practices
-- scikit-learn: TimeSeriesSplit documentation
+- Bergmeir & Benítez (2012). "On the use of cross-validation for time series"
+- Tashman (2000). "Out-of-sample tests of forecasting accuracy"
 
 #### Feature: Variance Threshold Feature Selection
 

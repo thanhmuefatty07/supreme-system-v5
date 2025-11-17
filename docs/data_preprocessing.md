@@ -418,3 +418,205 @@ See `examples/normalization_example.py` for complete examples.
 - scikit-learn: StandardScaler documentation
 - Statistical standardization best practices
 
+---
+
+## Walk-Forward Validation
+
+### Overview
+
+Walk-forward validation is the CORRECT way to evaluate time series models. Unlike standard K-fold cross-validation, it respects temporal order and prevents look-ahead bias.
+
+### The Problem with K-Fold
+
+```python
+# WRONG for time series! ❌
+from sklearn.model_selection import KFold
+
+# K-Fold randomly splits data
+# Training may use future data → overoptimistic scores
+# Example: Train on [future], Test on [past] ← WRONG!
+```
+
+### The Solution: Walk-Forward
+
+```python
+# CORRECT for time series! ✅
+from src.data.validation import WalkForwardValidator
+
+validator = WalkForwardValidator(n_splits=5)
+
+# Always: past → train, immediate future → test
+# Example: Train on [past], Test on [future] ← CORRECT!
+```
+
+### Usage
+
+#### Basic Splitting
+
+```python
+from src.data.validation import WalkForwardValidator
+
+validator = WalkForwardValidator(n_splits=5)
+
+for train_idx, test_idx in validator.split(X):
+    # Training data ALWAYS precedes test data
+    X_train, X_test = X[train_idx], X[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+    
+    model.fit(X_train, y_train)
+    score = model.score(X_test, y_test)
+    print(f"Score: {score:.3f}")
+```
+
+#### Automated Validation
+
+```python
+from src.data.validation import WalkForwardValidator
+from sklearn.linear_model import LinearRegression
+
+validator = WalkForwardValidator(n_splits=5)
+scores = validator.validate(LinearRegression(), X, y)
+
+print(f"Mean R²: {np.mean(scores):.3f}")
+print(f"Std: {np.std(scores):.3f}")
+```
+
+#### With Gap Parameter
+
+```python
+# Gap prevents label leakage when labels are delayed
+# Example: Predicting next-day price, but price finalizes after 2 days
+
+validator = WalkForwardValidator(
+    n_splits=5,
+    gap=2  # 2-sample gap between train and test
+)
+
+# Now there's a safe buffer between training and testing
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n_splits` | int | 5 | Number of validation folds |
+| `test_size` | int | None | Test set size (auto if None) |
+| `gap` | int | 0 | Gap between train and test |
+| `expanding_window` | bool | True | Expanding vs sliding window |
+| `min_train_size` | int | None | Minimum training samples |
+
+### Window Types
+
+#### Expanding Window (Default)
+
+Training set grows with each fold:
+
+```
+Fold 1: Train=[0:20]    Test=[21:25]
+Fold 2: Train=[0:25]    Test=[26:30]  ← Train grew
+Fold 3: Train=[0:30]    Test=[31:35]  ← Train grew
+```
+
+**Use when:** More recent data is still relevant
+
+#### Sliding Window
+
+Training set size stays constant:
+
+```
+Fold 1: Train=[0:20]    Test=[21:25]
+Fold 2: Train=[5:25]    Test=[26:30]  ← Train slid
+Fold 3: Train=[10:30]   Test=[31:35]  ← Train slid
+```
+
+**Use when:** Only recent data is relevant (concept drift)
+
+### Best Practices
+
+**✅ DO:**
+
+- Use walk-forward for ALL time series validation
+- Set gap > 0 if labels are delayed
+- Choose window type based on data characteristics
+- Validate on multiple splits (n_splits ≥ 5)
+
+**❌ DON'T:**
+
+- Use K-fold for time series (look-ahead bias!)
+- Shuffle time series data
+- Train on future, test on past
+- Ignore label delays (causes leakage)
+
+### Comparison with K-Fold
+
+```python
+from src.data.validation import compare_cv_methods
+
+results = compare_cv_methods(X, y, model)
+
+print("Walk-Forward (CORRECT):", results['walk_forward_mean'])
+print("K-Fold (WRONG):", results['kfold_mean'])
+print("Difference:", results['difference'])
+# K-Fold usually shows inflated scores due to look-ahead bias
+```
+
+### Integration with Preprocessing
+
+```python
+from src.data.preprocessing import ZScoreNormalizer
+from src.data.validation import WalkForwardValidator
+
+class Pipeline:
+    def fit(self, X, y):
+        self.normalizer = ZScoreNormalizer()
+        X_norm = self.normalizer.fit_transform(X)
+        # Train model on normalized data
+        return self
+    
+    def predict(self, X):
+        X_norm = self.normalizer.transform(X)
+        return self.model.predict(X_norm)
+
+validator = WalkForwardValidator(n_splits=5)
+scores = validator.validate(Pipeline(), X, y)
+```
+
+### Visualization
+
+```python
+from src.data.validation import plot_walk_forward_splits
+
+validator = WalkForwardValidator(n_splits=5, gap=2)
+plot_walk_forward_splits(validator, n_samples=100)
+# Shows visual representation of train/test splits
+```
+
+### Performance Impact
+
+- **Memory:** Negligible
+- **Computation:** ~N×n_splits (same as K-fold)
+- **Accuracy:** REALISTIC (no optimistic bias)
+
+### Common Pitfalls
+
+**Problem:** K-fold shows better scores than walk-forward
+
+- **Why:** K-fold has look-ahead bias
+- **Solution:** Trust walk-forward, ignore K-fold
+
+**Problem:** Scores vary significantly between folds
+
+- **Why:** Model performance changes over time (normal!)
+- **Solution:** Report mean ± std, analyze fold-by-fold
+
+**Problem:** Not enough data for validation
+
+- **Why:** Too many splits or too large test_size
+- **Solution:** Reduce n_splits or use smaller test_size
+
+### References
+
+- Bergmeir & Benítez (2012). "On the use of cross-validation for time series predictor evaluation"
+- Tashman (2000). "Out-of-sample tests of forecasting accuracy: an analysis and review"
+- Hyndman & Athanasopoulos (2018). "Forecasting: Principles and Practice"
+
