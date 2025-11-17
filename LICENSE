@@ -1,54 +1,49 @@
-Copyright © 2025 Supreme System V5 Development Team. All Rights Reserved.
+# Commercial License Agreement
 
-PROPRIETARY SOFTWARE LICENSE
+Copyright (c) 2025 Supreme System V5
 
-This software and associated documentation files (the "Software") are proprietary and confidential. Unauthorized copying, modification, distribution, or use of this Software, via any medium, is strictly prohibited.
+## Terms of Use
 
-RESTRICTIONS:
-1. NO RIGHT TO USE: You may not use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software without explicit written permission from the copyright holder.
-2. NO PUBLIC DEPLOYMENT: Source code viewing is permitted for evaluation purposes only. Deployment, execution, or production use of the Software requires a commercial license.
-3. EVALUATION LICENSE: Limited evaluation licenses are available for qualified trading firms upon request. Evaluation licenses are restricted to:
-  - Paper trading only (no live trading)
-  - 30-day evaluation period
-  - Non-production environments only
-  - No redistribution rights
-4. COMMERCIAL LICENSE: Commercial licenses are available starting at $10,000 USD. Commercial licenses include:
-  - Production deployment rights
-  - Source code access
-  - 12 months of updates and patches
-  - Priority support (24-hour response time)
-  - Deployment assistance (10 hours included)
-  - Access to private GitHub repository
-5. ENTERPRISE LICENSE: Enterprise licenses with custom pricing available for:
-  - Dedicated support
-  - Custom feature development
-  - On-premise deployment
-  - SLA guarantees
-  - Multi-site licensing
+This software and associated documentation files (the "Software") are proprietary 
+and confidential. All rights reserved.
 
-LICENSING INQUIRIES:
-For evaluation access:
-- Email: thanhmuefatty07@gmail.com
-- Subject: "Supreme System V5 - Evaluation License Request"
-- Include: Company name, trading volume, use case
-For commercial licensing:
-- Email: thanhmuefatty07@gmail.com
-- Subject: "Supreme System V5 - Commercial License Inquiry"
-- Include: Company details, deployment requirements, expected usage
-For enterprise licensing:
-- Email: thanhmuefatty07@gmail.com
-- Subject: "Supreme System V5 - Enterprise License Inquiry"
-- Include: Company details, custom requirements, SLA needs
+### Restrictions
 
-TERMS AND CONDITIONS:
-- All code, documentation, and intellectual property remain the exclusive property of Supreme System V5 Development Team.
-- Unauthorized use, reverse engineering, or decompilation is strictly prohibited.
-- Violation of these terms may result in legal action and damages.
-- This license does not grant any rights to use trademarks, service marks, or trade names of Supreme System V5.
+1. **No Unauthorized Use**: You may not use, copy, modify, merge, publish, 
+   distribute, sublicense, and/or sell copies of the Software without explicit 
+   written permission from the copyright holder.
 
-DISCLAIMER:
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+2. **No Redistribution**: Redistribution of this Software in any form is 
+   prohibited without prior written consent.
+
+3. **Commercial Use**: Commercial use requires a valid commercial license. 
+   Contact for licensing inquiries.
+
+### Permitted Use
+
+- **Evaluation**: Limited evaluation for potential licensing purposes only.
+- **Licensed Use**: Full commercial use with valid commercial license agreement.
+
+### Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+### Limitation of Liability
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR 
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+IN THE SOFTWARE.
+
+### Contact
+
+For licensing inquiries: 
+- GitHub: https://github.com/thanhmuefatty07/supreme-system-v5
+- Discussions: https://github.com/thanhmuefatty07/supreme-system-v5/discussions
 
 ---
 
-Contact: thanhmuefatty07@gmail.com
+**Version:** 1.0  
+**Last Updated:** November 17, 2025
