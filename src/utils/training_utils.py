@@ -2,22 +2,31 @@
 Training utilities for gradient clipping and optimization helpers.
 """
 
-import logging
 from typing import Iterable, Union, Optional
 
-# Lazy import torch to avoid Windows DLL issues
 try:
     import torch
     import torch.nn as nn
     TORCH_AVAILABLE = True
 except (ImportError, OSError):
-    TORCH_AVAILABLE = False
     torch = None
     nn = None
+    TORCH_AVAILABLE = False
 
-logger = logging.getLogger(__name__)
+
+def requires_torch(func):
+    """Decorator to mark functions requiring PyTorch"""
+    import functools
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is required but not available")
+        return func(*args, **kwargs)
+    return wrapper
 
 
+@requires_torch
 def clip_grad_norm(
     parameters: Union["torch.Tensor", Iterable["torch.Tensor"]],
     max_norm: float,
@@ -57,8 +66,6 @@ def clip_grad_norm(
         - Pascanu et al. (2013). "On the difficulty of training RNNs"
         - PyTorch docs: torch.nn.utils.clip_grad_norm_
     """
-    if not TORCH_AVAILABLE:
-        raise RuntimeError("PyTorch is required for gradient clipping but is not available")
 
     # Convert to list if single tensor
     if isinstance(parameters, torch.Tensor):
@@ -103,6 +110,7 @@ def clip_grad_norm(
     return total_norm
 
 
+@requires_torch
 def get_grad_norm(
     parameters: Union["torch.Tensor", Iterable["torch.Tensor"]],
     norm_type: float = 2.0
@@ -123,9 +131,6 @@ def get_grad_norm(
         >>> grad_norm = get_grad_norm(model.parameters())
         >>> logger.info(f"Gradient norm: {grad_norm:.4f}")
     """
-    if not TORCH_AVAILABLE:
-        return 0.0  # Return 0 if torch not available
-
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
 
@@ -133,10 +138,6 @@ def get_grad_norm(
 
     if len(parameters) == 0:
         return 0.0
-
-    # Check torch availability
-    if not _check_torch():
-        raise RuntimeError("PyTorch is not available. Gradient norm calculation requires PyTorch.")
 
     if norm_type == float('inf'):
         total_norm = max(p.grad.detach().abs().max().item() for p in parameters)

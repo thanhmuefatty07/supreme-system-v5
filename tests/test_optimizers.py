@@ -2,15 +2,16 @@
 
 import pytest
 
-# Try to import torch, but provide fallbacks for testing
+# Try to import torch, but skip tests if not available
 try:
     import torch
     import torch.nn as nn
     TORCH_AVAILABLE = True
-except (ImportError, OSError):
+except (ImportError, OSError) as e:
     TORCH_AVAILABLE = False
     torch = None
     nn = None
+    pytest.skip(f"PyTorch not available: {e}", allow_module_level=True)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch not available")

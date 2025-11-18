@@ -3,8 +3,9 @@ Training callbacks for model regularization and optimization.
 """
 
 import copy
+import functools
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,43 @@ logger = logging.getLogger(__name__)
 TORCH_AVAILABLE = False
 torch = None
 nn = None
+
+# Attempt to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+    logger.debug("PyTorch successfully imported")
+except (ImportError, OSError) as e:
+    TORCH_AVAILABLE = False
+    torch = None
+    nn = None
+    logger.warning(f"PyTorch not available: {e}. Some features will be disabled.")
+
+
+def requires_torch(func: Callable) -> Callable:
+    """
+    Decorator to ensure PyTorch is available before executing a function.
+
+    Args:
+        func: Function that requires PyTorch
+
+    Returns:
+        Wrapped function that checks PyTorch availability
+
+    Raises:
+        RuntimeError: If PyTorch is not available
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not _check_torch():
+            raise RuntimeError(
+                f"Function {func.__name__} requires PyTorch, but PyTorch is not available. "
+                f"Please install PyTorch or ensure it's properly configured."
+            )
+        return func(*args, **kwargs)
+    return wrapper
+
 
 def _check_torch():
     """Lazy check for torch availability"""
@@ -250,6 +288,7 @@ class GradientClipCallback:
         self.clip_count = 0
         self.total_norm_history = []
 
+    @requires_torch
     def set_model(self, model: nn.Module) -> None:
         """Set the model to clip gradients for"""
         self.model = model
