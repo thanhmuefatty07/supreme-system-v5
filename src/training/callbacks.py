@@ -284,12 +284,12 @@ class GradientClipCallback:
         self.error_if_nonfinite = error_if_nonfinite
         self.verbose = verbose
 
-        self.model: Optional[nn.Module] = None
+        self.model = None
         self.clip_count = 0
         self.total_norm_history = []
 
     @requires_torch
-    def set_model(self, model: nn.Module) -> None:
+    def set_model(self, model) -> None:
         """Set the model to clip gradients for"""
         self.model = model
 
