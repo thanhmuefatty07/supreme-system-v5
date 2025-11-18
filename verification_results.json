@@ -1,0 +1,25 @@
+{
+    "claimed":  {
+                    "Coverage":  27,
+                    "Tests":  474
+                },
+    "timestamp":  "2025-11-18 14:32:18",
+    "actual":  {
+                   "passed":  446,
+                   "pass_rate":  75.2,
+                   "failed":  121,
+                   "tests":  593,
+                   "errors":  6,
+                   "skipped":  26,
+                   "coverage":  26
+               },
+    "status":  {
+                   "pass_rate":  "NEEDS_IMPROVEMENT",
+                   "tests":  "BETTER",
+                   "coverage":  "LOWER"
+               },
+    "differences":  {
+                        "coverage":  -1,
+                        "tests":  119
+                    }
+}
