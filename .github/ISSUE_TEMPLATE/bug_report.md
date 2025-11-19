@@ -1,37 +1,80 @@
 ---
-name: Bug Report
-about: Report a bug in Supreme System V5
-title: '[BUG] '
-labels: bug
-assignees: ''
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG] - Brief description of the issue"
+labels: ["bug", "triage"]
+assignees: []
 ---
 
-**Describe the bug**
-A clear description of what the bug is.
+## 🐛 Bug Report
 
-**To Reproduce**
-Steps to reproduce:
+### Describe the Bug
+<!-- A clear and concise description of what the bug is -->
+
+**What happened?**
+
+**What should have happened?**
+
+### Environment
+<!-- Please complete the following information -->
+- **OS:** <!-- Windows/Linux/macOS -->
+- **Python Version:** <!-- e.g., 3.11.0 -->
+- **Branch:** <!-- main/develop/feature-branch -->
+- **Commit:** <!-- git commit hash -->
+
+### Reproduction Steps
+<!-- Steps to reproduce the behavior -->
 1. Go to '...'
-2. Click on '....'
-3. See error
+2. Run command '...'
+3. See error '...'
 
-**Expected behavior**
-What you expected to happen.
+### Expected Behavior
+<!-- What you expected to happen -->
 
-**System Info:**
- - OS: [e.g. Ubuntu 22.04]
- - Python Version: [e.g. 3.11.5]
- - Docker Version: [e.g. 24.0.5]
- - Supreme System Version: [e.g. v5.0.0]
+### Actual Behavior
+<!-- What actually happened -->
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+### Error Logs
+<!-- If applicable, add error logs or screenshots -->
 
-**Additional context**
-Add any other context about the problem here.
+```bash
+# Error output
+```
 
-**License Type**
-- [ ] Evaluation License
-- [ ] Commercial License
-- [ ] Enterprise License
+### Additional Context
+<!-- Add any other context about the problem -->
 
+**Screenshots:**
+<!-- If applicable, add screenshots to help explain your problem -->
+
+**Configuration:**
+<!-- Any relevant configuration files or environment variables -->
+
+**Test Results:**
+<!-- Output from test runs if applicable -->
+
+### Impact Assessment
+<!-- How severe is this bug? -->
+- [ ] **Critical** - System unusable
+- [ ] **High** - Major functionality broken
+- [ ] **Medium** - Feature partially broken
+- [ ] **Low** - Minor inconvenience
+
+### Root Cause Analysis
+<!-- If you have insights into the root cause -->
+
+**Suspected Cause:**
+
+**Code Location:**
+
+### Fix Suggestions
+<!-- If you have ideas for how to fix this -->
+
+**Proposed Solution:**
+
+**Files to Modify:**
+
+**Test Cases to Add:**
+
+---
+*Thank you for helping improve Supreme System V5!* 🚀

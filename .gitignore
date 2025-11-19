@@ -95,3 +95,16 @@ secrets/
 *.log
 logs/
 debug.log
+
+# Analysis reports
+analysis_reports/*/
+gemini_analysis.log
+
+# Temporary files
+*.pyc
+__pycache__/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.json
+*.log

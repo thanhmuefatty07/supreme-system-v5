@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-19T14:55:18.372987",
+  "total_files": 0,
+  "covered_files": 0,
+  "total_lines": 0,
+  "covered_lines": 0,
+  "coverage_percent": 0.0,
+  "file_coverage": {},
+  "uncovered_lines": {},
+  "recommendations": [
+    "Overall coverage is low - prioritize unit tests for core business logic"
+  ]
+}

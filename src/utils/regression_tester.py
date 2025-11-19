@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import subprocess
 import tempfile
 import shutil
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -547,7 +548,7 @@ class RegressionTestingManager:
         logger.info("Starting full regression testing cycle")
 
         # Generate regression tests
-        suite = self.generator.generate_regression_suite(base_commit)
+        suite = self.generator.generate_regression_tests(base_commit)
 
         # Run the tests
         results = self.runner.run_regression_suite(suite)
