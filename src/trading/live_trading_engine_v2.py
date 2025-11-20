@@ -14,6 +14,7 @@ Features:
 
 import asyncio
 import logging
+import time
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -21,6 +22,7 @@ from ..execution.router import SmartRouter
 from ..risk.core import RiskManager
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..utils.validators import validate_market_data, ValidationError
+from ..monitoring.metrics_collector import MetricsCollector
 
 
 logger = logging.getLogger(__name__)
@@ -96,7 +98,15 @@ class LiveTradingEngineV2:
         self._state_lock = asyncio.Lock()
         self._event_queue = asyncio.Queue()
 
-        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration and Critical Fixes")
+        # NEW: Performance Monitoring
+        self.metrics = MetricsCollector()
+        self.metrics.initialize(config.get('initial_capital', 10000.0))
+
+        # INTEGRATION 3: Performance Monitoring (The Heartbeat)
+        self.metrics = MetricsCollector()
+        self.metrics.initialize(config.get('initial_capital', 10000.0))
+
+        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration, Critical Fixes, and Performance Monitoring")
 
     async def on_market_update(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -115,6 +125,9 @@ class LiveTradingEngineV2:
         Returns:
             Execution result or None if no action taken
         """
+        # PERFORMANCE MONITORING: Start latency measurement
+        start_time = time.perf_counter()
+
         # CRITICAL FIX: Validate input first
         try:
             validated_data = validate_market_data(market_data)
@@ -182,6 +195,11 @@ class LiveTradingEngineV2:
                 self.logger.error(f"Error in market update processing: {e}", exc_info=True)
                 return {'status': 'ERROR', 'error': str(e)}
 
+        # PERFORMANCE MONITORING: Record latency
+        end_time = time.perf_counter()
+        latency_ms = (end_time - start_time) * 1000
+        self.metrics.record_latency(latency_ms)
+
     async def _on_trade_executed(self, signal: Signal, execution_result: Dict[str, Any], position_size: float):
         """
         Handle post-trade updates and tracking.
@@ -215,6 +233,9 @@ class LiveTradingEngineV2:
             if pnl > 0:
                 self.winning_trades += 1
             self.total_pnl += pnl
+
+            # PERFORMANCE MONITORING: Record trade in metrics collector
+            self.metrics.record_trade(pnl, symbol)
 
             # Notify strategy
             self.strategy.on_order_filled({
