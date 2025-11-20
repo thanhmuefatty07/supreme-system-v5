@@ -34,7 +34,21 @@ class BreakoutStrategy(BaseStrategy):
         Args:
             config: Strategy configuration with parameters
         """
+        # CRITICAL FIX: Initialize deque attributes BEFORE calling super().__init__()
+        buffer_size = max(config.get('lookback_period', 20) * 3, 100)
+        self.price_history = deque(maxlen=buffer_size)
+        self.volume_history = deque(maxlen=buffer_size)
+        self.support_levels = deque(maxlen=5)
+        self.resistance_levels = deque(maxlen=5)
+
+        # Store previous levels for breakout detection (avoid current price affecting levels)
+        self._previous_resistance = None
+        self._previous_support = None
+
         super().__init__("BreakoutStrategy", config)
+
+        # CRITICAL FIX: Add max_history_size for compatibility with tests
+        self.max_history_size = buffer_size
 
         # Core parameters
         self.lookback_period = config.get('lookback_period', 20)
@@ -45,13 +59,6 @@ class BreakoutStrategy(BaseStrategy):
         # Advanced features
         self.require_volume_confirmation = config.get('require_volume_confirmation', True)
         self.min_breakout_strength = config.get('min_breakout_strength', 0.1)
-
-        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
-        buffer_size = max(self.lookback_period * 3, 100)
-        self.price_history = deque(maxlen=buffer_size)  # Price data for level calculation
-        self.volume_history = deque(maxlen=buffer_size)  # Volume data for confirmation
-        self.support_levels = deque(maxlen=50)  # Dynamic support levels
-        self.resistance_levels = deque(maxlen=50)  # Dynamic resistance levels
 
         self.logger.info(f"Breakout Strategy initialized: Lookback={self.lookback_period}, Threshold={self.breakout_threshold}")
 
@@ -85,19 +92,22 @@ class BreakoutStrategy(BaseStrategy):
         self.price_history.append(current_price)
         self.volume_history.append(current_volume)
 
-        # Maintain buffer sizes
-        if len(self.price_history) > self.max_history_size:
-            self.price_history.pop(0)
-            self.volume_history.pop(0)
+        # CRITICAL FIX: Deque auto-manages size, no manual popping needed
 
         # Need sufficient data
         if len(self.price_history) < self.lookback_period:
             return None
 
-        # Update support/resistance levels
+        # Store current levels as previous before updating
+        if self.resistance_levels:
+            self._previous_resistance = list(self.resistance_levels)[-1]
+        if self.support_levels:
+            self._previous_support = list(self.support_levels)[-1]
+
+        # Update support/resistance levels with new price
         self._update_levels()
 
-        # Analyze for breakouts
+        # Analyze for breakouts using levels from before current price
         signal = self._analyze_breakout(current_price, current_volume, symbol)
 
         if signal:
@@ -111,7 +121,11 @@ class BreakoutStrategy(BaseStrategy):
         if len(self.price_history) < self.lookback_period:
             return
 
-        recent_prices = self.price_history[-self.lookback_period:]
+        # Deque-safe slicing - use historical prices for level calculation
+        prices_list = list(self.price_history)
+        # Always use the most recent lookback_period prices for level calculation
+        # This includes the current price, but that's acceptable for the first few signals
+        recent_prices = prices_list[-self.lookback_period:]
 
         # Calculate pivot points for S/R levels
         high = max(recent_prices)
@@ -123,15 +137,18 @@ class BreakoutStrategy(BaseStrategy):
         support = 2 * pivot - high
         resistance = 2 * pivot - low
 
+        # Store previous levels for breakout detection
+        if self.resistance_levels:
+            self._previous_resistance = list(self.resistance_levels)[-1]
+        if self.support_levels:
+            self._previous_support = list(self.support_levels)[-1]
+
         # Update level history
         self.support_levels.append(support)
         self.resistance_levels.append(resistance)
 
-        # Keep recent levels
-        max_levels = 5
-        if len(self.support_levels) > max_levels:
-            self.support_levels.pop(0)
-            self.resistance_levels.pop(0)
+        # CRITICAL FIX: maxlen automatically handles size limits
+        # Previous levels are now stored in generate_signal before updating
 
     def _analyze_breakout(self, current_price: float, current_volume: float, symbol: str) -> Optional[Signal]:
         """
@@ -148,16 +165,25 @@ class BreakoutStrategy(BaseStrategy):
         if not self.support_levels or not self.resistance_levels:
             return None
 
-        # Get current levels
-        current_support = self.support_levels[-1]
-        current_resistance = self.resistance_levels[-1]
+        # CRITICAL FIX: Use previous levels for breakout detection to avoid current price affecting levels
+        current_support = self._previous_support
+        current_resistance = self._previous_resistance
+
+        # Fallback to current levels if no previous levels exist
+        if current_support is None or current_resistance is None:
+            support_list = list(self.support_levels)
+            resistance_list = list(self.resistance_levels)
+            current_support = support_list[-1] if support_list else None
+            current_resistance = resistance_list[-1] if resistance_list else None
 
         # Check for volume confirmation if required
         volume_confirmed = True
         if self.require_volume_confirmation and len(self.volume_history) >= self.lookback_period:
             # Use last lookback_period volumes (excluding current) for average
-            avg_volume = np.mean(self.volume_history[-self.lookback_period:])
-            volume_confirmed = current_volume >= avg_volume * self.volume_multiplier
+            # Deque-safe slicing for volume
+            volume_list = list(self.volume_history)
+            avg_volume = np.mean(volume_list[-self.lookback_period:])
+            volume_confirmed = bool(current_volume >= avg_volume * self.volume_multiplier)
 
         # Check for resistance breakout (BULLISH)
         # Price must break above resistance by more than threshold percentage
@@ -217,7 +243,9 @@ class BreakoutStrategy(BaseStrategy):
         if len(self.price_history) < self.consolidation_period:
             return False
 
-        recent_prices = self.price_history[-self.consolidation_period:]
+        # Deque-safe slicing for consolidation check
+        prices_list = list(self.price_history)
+        recent_prices = prices_list[-self.consolidation_period:]
         price_range = max(recent_prices) - min(recent_prices)
         avg_price = sum(recent_prices) / len(recent_prices)
 
@@ -227,6 +255,10 @@ class BreakoutStrategy(BaseStrategy):
     def get_strategy_info(self) -> Dict[str, Any]:
         """Get detailed strategy information."""
         base_info = super().get_status()
+
+        # Convert deques to lists for JSON serialization
+        support_list = list(self.support_levels)
+        resistance_list = list(self.resistance_levels)
 
         # Add breakout-specific info
         base_info.update({
@@ -241,8 +273,8 @@ class BreakoutStrategy(BaseStrategy):
             },
             'current_state': {
                 'data_points': len(self.price_history),
-                'current_support': self.support_levels[-1] if self.support_levels else None,
-                'current_resistance': self.resistance_levels[-1] if self.resistance_levels else None,
+                'current_support': support_list[-1] if support_list else None,
+                'current_resistance': resistance_list[-1] if resistance_list else None,
                 'is_consolidating': self._is_consolidating()
             }
         })

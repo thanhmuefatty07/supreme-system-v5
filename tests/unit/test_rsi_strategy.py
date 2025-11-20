@@ -7,9 +7,11 @@ overbought/oversold signals, divergence detection, and edge cases.
 """
 
 import pytest
+import pandas as pd
 import numpy as np
+from collections import deque
 from unittest.mock import MagicMock
-from src.strategies.rsi_strategy import RSIStrategy
+from src.strategies.rsi_strategy import RSIStrategy, Signal
 
 
 class TestRSIStrategy:
@@ -42,8 +44,13 @@ class TestRSIStrategy:
         assert strategy.overbought_level == 70
         assert strategy.oversold_level == 30
         assert strategy.enable_divergence is True
-        assert strategy.prices == []
-        assert strategy.rsi_history == []
+        # CRITICAL FIX: Verify deque initialization (prevents memory leaks)
+        assert len(strategy.prices) == 0
+        assert isinstance(strategy.prices, deque)
+        assert strategy.prices.maxlen == 100  # Buffer size limit
+        assert len(strategy.rsi_history) == 0
+        assert isinstance(strategy.rsi_history, deque)
+        assert strategy.rsi_history.maxlen == 100
 
     def test_insufficient_data(self, strategy):
         """Test behavior with insufficient data."""
@@ -235,6 +242,10 @@ class TestRSIStrategy:
         strategy.reset()
 
         assert strategy.total_signals == 0
-        assert strategy.prices == []
-        assert strategy.rsi_history == []
-        assert strategy.price_changes == []
+        # CRITICAL FIX: After reset, deques should be cleared but remain deques
+        assert len(strategy.prices) == 0
+        assert isinstance(strategy.prices, deque)
+        assert len(strategy.rsi_history) == 0
+        assert isinstance(strategy.rsi_history, deque)
+        assert len(strategy.price_changes) == 0
+        assert isinstance(strategy.price_changes, deque)

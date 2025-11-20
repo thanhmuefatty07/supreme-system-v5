@@ -11,15 +11,11 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
-import sys
-from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+from typing import Any, Dict
 
 try:
-    from data.data_pipeline import DataPipeline
-    from data.binance_client import BinanceClient
+    from src.data.data_pipeline import DataPipeline
+    from src.data.binance_client import BinanceClient
 except ImportError:
     # Skip tests if imports fail
     pytest.skip("Required modules not available", allow_module_level=True)

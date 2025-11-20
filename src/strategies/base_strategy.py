@@ -1,175 +1,245 @@
 #!/usr/bin/env python3
 """
-Supreme System V5 - Base Trading Strategy
+Base Strategy Interface 2.0 - Enterprise Strategy Framework
 
-Abstract base class for all trading strategies.
+Advanced strategy framework with risk integration, portfolio awareness,
+and production-grade signal generation with validation and lifecycle management.
 """
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Protocol, Union, List, Tuple
+from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
+from datetime import datetime
 
-import pandas as pd
-
-# Import typed structures
-try:
-    from ..types.trading_types import (
-        OHLCVData, SignalData, StrategyConfig, IndicatorResult,
-        validate_ohlcv_data, SignalStrength, OrderAction
-    )
-except ImportError:
-    # Fallback for missing types
-    OHLCVData = Dict[str, Any]
-    SignalData = Dict[str, Any]
-    StrategyConfig = Dict[str, Any]
-    IndicatorResult = Dict[str, Any]
-    SignalStrength = str
-    OrderAction = str
-
-    def validate_ohlcv_data(data: pd.DataFrame) -> bool:
-        """Fallback validation."""
-        required = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        return all(col in data.columns for col in required)
-
-# Import with fallback for different execution contexts
-try:
-    from ..utils.data_utils import optimize_dataframe_memory, validate_and_clean_data
-except ImportError:
-    try:
-        from utils.data_utils import optimize_dataframe_memory, validate_and_clean_data
-    except ImportError:
-        # Fallback implementation
-        def validate_and_clean_data(df, required_columns=None):
-            return df
-
-        def optimize_dataframe_memory(df, copy=True):
-            return df.copy() if copy else df
+logger = logging.getLogger(__name__)
 
 
-class SignalType:
-    """Enumeration of possible trading signals."""
-    HOLD = 0
-    BUY = 1
-    SELL = -1
+@dataclass
+class Signal:
+    """
+    Standardized signal format for all strategies.
 
+    Provides consistent interface for signal communication between
+    strategies, risk managers, and execution engines.
+    """
+    symbol: str
+    side: str  # 'buy' or 'sell'
+    price: float
+    strength: float = 1.0  # 0.0 to 1.0 (signal confidence/strength)
+    metadata: Optional[Dict[str, Any]] = None
+    timestamp: Optional[datetime] = None
 
-class MarketDataProtocol(Protocol):
-    """Protocol for market data structure."""
-    @property
-    def columns(self) -> pd.Index: ...
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
 
-    @property
-    def index(self) -> pd.Index: ...
-
-    def __getitem__(self, key: str) -> pd.Series: ...
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert signal to dictionary format."""
+        return {
+            'symbol': self.symbol,
+            'side': self.side,
+            'price': self.price,
+            'strength': self.strength,
+            'metadata': self.metadata or {},
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+        }
 
 
 class BaseStrategy(ABC):
     """
-    Abstract base class for trading strategies.
+    Abstract base class for all trading strategies v2.0.
 
-    All trading strategies must inherit from this class and implement
-    the required methods.
+    Enterprise-grade strategy framework with:
+    - Portfolio awareness and risk integration
+    - Standardized signal format
+    - Comprehensive validation and error handling
+    - Performance tracking and analytics
     """
 
-    def __init__(self, name: str = "BaseStrategy") -> None:
+    def __init__(self, name: str, config: Dict[str, Any]):
         """
-        Initialize the strategy.
+        Initialize the strategy with enterprise configuration.
 
         Args:
-            name: Strategy name for identification
+            name: Unique strategy identifier
+            config: Comprehensive configuration dictionary
         """
-        self.name: str = name
-        self.logger: logging.Logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.parameters: Dict[str, Any] = {}
-        self.is_initialized: bool = False
+        self.name = name
+        self.config = config
+        self.logger = logging.getLogger(f"Strategy.{name}")
+
+        # Core state
+        self.is_active = True
+        self.creation_time = datetime.now()
+        self.last_signal_time = None
+
+        # Position tracking (for strategy awareness)
+        self.current_position = None  # Current position info
+        self.portfolio_value = config.get('initial_capital', 10000.0)
+
+        # Risk integration
+        self.risk_manager = None  # Will be injected by framework
+        self.max_position_size = config.get('max_position_size', 0.1)
+        self.max_daily_loss = config.get('max_daily_loss', 0.05)
+
+        # Performance tracking
+        self.total_signals = 0
+        self.executed_signals = 0
+        self.successful_signals = 0
+        self.total_pnl = 0.0
+
+        # Strategy-specific state (subclasses can override)
+        self._initialize_state()
+
+        logger.info(f"Strategy {name} v2.0 initialized with enterprise config")
+
+    def _initialize_state(self):
+        """Initialize strategy-specific state. Override in subclasses."""
+        pass
 
     @abstractmethod
-    def generate_signal(self, data: pd.DataFrame, portfolio_value: Optional[float] = None) -> SignalData:
+    def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
         """
-        Generate trading signal based on market data.
+        Core strategy logic: Analyze market data and generate signals.
 
         Args:
-            data: DataFrame with OHLCV data (timestamp, open, high, low, close, volume)
-            portfolio_value: Current portfolio value (optional)
+            market_data: Current market data with price, volume, etc.
 
         Returns:
-            SignalData dict with action, symbol, strength, confidence, etc.
+            Signal object or None if no action needed
         """
         pass
 
-    def validate_data(self, data: pd.DataFrame) -> bool:
+    def validate_signal(self, signal: Signal) -> bool:
         """
-        Validate that the input data has required columns and format.
+        Pre-validate signal before sending to risk manager.
 
         Args:
-            data: DataFrame to validate
+            signal: Signal to validate
 
         Returns:
-            True if data is valid, False otherwise
+            True if signal passes validation
         """
-        required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
-
-        # Check for required columns
-        missing_columns = [col for col in required_columns if col not in data.columns]
-        if missing_columns:
-            self.logger.error(f"Missing required columns: {missing_columns}")
+        if not signal:
             return False
 
-        # Use optimized validation and memory management
-        try:
-            # Use optimized validation and cleaning
-            validated_data = validate_and_clean_data(data)
-
-            # Update original data with validated and optimized version
-            # Ensure dtype compatibility to avoid FutureWarning and SettingWithCopyWarning
-            for col in data.columns:
-                if col in validated_data.columns:
-                    # Convert to compatible dtype if needed
-                    if data[col].dtype != validated_data[col].dtype:
-                        data.loc[:, col] = validated_data[col].astype(data[col].dtype)
-                    else:
-                        data.loc[:, col] = validated_data[col]
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Data validation error: {e}")
+        # Basic validation
+        if signal.side not in ['buy', 'sell']:
+            self.logger.error(f"Invalid signal side: {signal.side}")
             return False
 
-    def set_parameters(self, **kwargs: Any) -> None:
-        """Set strategy parameters."""
-        self.parameters.update(kwargs)
+        if signal.price <= 0:
+            self.logger.error(f"Invalid signal price: {signal.price}")
+            return False
 
-        # Also update instance attributes if they exist
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
+        if not (0.0 <= signal.strength <= 1.0):
+            self.logger.warning(f"Signal strength out of range: {signal.strength}")
+            signal.strength = max(0.0, min(1.0, signal.strength))  # Clamp to valid range
 
-        self.logger.info(f"Updated parameters: {kwargs}")
+        # Risk-aware validation
+        if self.risk_manager:
+            # Check if we can afford this position
+            position_value = signal.price * self._estimate_position_size(signal)
+            if position_value > self.portfolio_value * self.max_position_size:
+                self.logger.warning(f"Signal exceeds max position size: {position_value}")
+                return False
 
-    def get_parameters(self) -> Dict[str, Any]:
-        """Get current strategy parameters."""
-        return self.parameters.copy()
+        return True
 
-    def reset(self) -> None:
-        """Reset strategy state."""
-        self.parameters.clear()
-        self.is_initialized = False
-        self.logger.info("Strategy reset")
+    def _estimate_position_size(self, signal: Signal) -> float:
+        """
+        Estimate position size for signal (simplified).
 
-    def get_strategy_info(self) -> Dict[str, Any]:
-        """Get strategy information."""
+        Returns:
+            Estimated number of shares/contracts
+        """
+        # Simplified: assume we risk 1% of portfolio per trade
+        risk_amount = self.portfolio_value * 0.01
+        stop_distance = signal.price * 0.02  # Assume 2% stop loss
+
+        if stop_distance > 0:
+            return risk_amount / stop_distance
+        return 0.0
+
+    def on_order_filled(self, trade_info: Dict[str, Any]):
+        """
+        Callback when order is executed. Update internal state.
+
+        Args:
+            trade_info: Details about the executed trade
+        """
+        self.executed_signals += 1
+        self.last_signal_time = datetime.now()
+
+        # Update portfolio value (simplified)
+        if 'pnl' in trade_info:
+            self.total_pnl += trade_info['pnl']
+            self.portfolio_value += trade_info['pnl']
+
+        # Update position tracking
+        if trade_info.get('side') == 'buy':
+            self.current_position = {
+                'symbol': trade_info.get('symbol'),
+                'quantity': trade_info.get('quantity', 0),
+                'avg_price': trade_info.get('price', 0),
+                'timestamp': datetime.now()
+            }
+        elif trade_info.get('side') == 'sell':
+            self.current_position = None  # Closed position
+
+        self.logger.info(f"Order filled: {trade_info}")
+
+    def update_portfolio_state(self, portfolio_info: Dict[str, Any]):
+        """
+        Update strategy with current portfolio state.
+
+        Args:
+            portfolio_info: Current portfolio metrics and positions
+        """
+        self.portfolio_value = portfolio_info.get('total_value', self.portfolio_value)
+        self.current_position = portfolio_info.get('current_position')
+
+    def get_status(self) -> Dict[str, Any]:
+        """
+        Get comprehensive strategy status and performance metrics.
+
+        Returns:
+            Detailed status dictionary
+        """
+        win_rate = self.successful_signals / self.executed_signals if self.executed_signals > 0 else 0
+
         return {
             'name': self.name,
-            'type': self.__class__.__name__,
-            'parameters': self.get_parameters(),
-            'is_initialized': self.is_initialized
+            'version': '2.0',
+            'is_active': self.is_active,
+            'config': self.config,
+            'creation_time': self.creation_time.isoformat(),
+            'last_signal_time': self.last_signal_time.isoformat() if self.last_signal_time else None,
+
+            # Performance metrics
+            'total_signals': self.total_signals,
+            'executed_signals': self.executed_signals,
+            'successful_signals': self.successful_signals,
+            'win_rate': win_rate,
+            'total_pnl': self.total_pnl,
+            'portfolio_value': self.portfolio_value,
+
+            # Position info
+            'current_position': self.current_position,
+
+            # Risk settings
+            'max_position_size': self.max_position_size,
+            'max_daily_loss': self.max_daily_loss
         }
 
-
-    def __str__(self) -> str:
-        return f"{self.name}(parameters={self.parameters})"
-
-    def __repr__(self) -> str:
-        return self.__str__()
+    def reset(self):
+        """Reset strategy state for fresh start."""
+        self.total_signals = 0
+        self.executed_signals = 0
+        self.successful_signals = 0
+        self.total_pnl = 0.0
+        self.last_signal_time = None
+        self.current_position = None
+        self._initialize_state()
+        self.logger.info(f"Strategy {self.name} reset to initial state")

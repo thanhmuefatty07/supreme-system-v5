@@ -10,6 +10,7 @@ This is the most important test - validates the entire "Trifecta Integration"
 
 import pytest
 import asyncio
+import time  # CRITICAL FIX: Import time for Unix timestamp generation
 from unittest.mock import MagicMock, AsyncMock
 from src.trading.live_trading_engine_v2 import LiveTradingEngineV2
 from src.strategies.sma_crossover import SMACrossover
@@ -107,11 +108,13 @@ class TestSystemIntegration:
         live_engine.strategy.prices = [10, 10, 10, 10, 10]  # Flat baseline
 
         # Market update with breakout price (should trigger Golden Cross)
+        # CRITICAL FIX: Use Unix timestamp integer as required by validator
+        import time
         market_data = {
             'symbol': 'BTC/USDT',
             'close': 20.0,  # Significant increase
             'volume': 1000,
-            'timestamp': '2024-01-01 12:00:00'
+            'timestamp': int(time.time())  # Unix timestamp as integer
         }
 
         # Execute market update
@@ -190,7 +193,7 @@ class TestSystemIntegration:
                 'side': 'LONG',
                 'quantity': 1.0,
                 'entry_price': 100.0,
-                'timestamp': '2024-01-01'
+                'timestamp': int(time.time())
             }
 
             # Trigger sell signal by reversing trend

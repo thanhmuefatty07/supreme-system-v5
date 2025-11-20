@@ -32,7 +32,16 @@ class RSIStrategy(BaseStrategy):
         Args:
             config: Strategy configuration with parameters
         """
+        # CRITICAL FIX: Initialize deque attributes BEFORE calling super().__init__()
+        buffer_size = max(config.get('rsi_period', 14) * 3, 100)
+        self.prices = deque(maxlen=buffer_size)
+        self.rsi_history = deque(maxlen=buffer_size)
+        self.price_changes = deque(maxlen=buffer_size)
+
         super().__init__("RSIStrategy", config)
+
+        # CRITICAL FIX: Add max_buffer_size for compatibility
+        self.max_buffer_size = buffer_size
 
         # Core RSI parameters
         self.rsi_period = config.get('rsi_period', 14)
@@ -43,12 +52,6 @@ class RSIStrategy(BaseStrategy):
         # Advanced features
         self.enable_divergence = config.get('enable_divergence', True)
         self.divergence_lookback = config.get('divergence_lookback', 5)
-
-        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
-        buffer_size = max(self.rsi_period * 3, 100)
-        self.prices = deque(maxlen=buffer_size)  # Price history
-        self.rsi_history = deque(maxlen=buffer_size)  # RSI values history
-        self.price_changes = deque(maxlen=buffer_size)  # For RSI calculation
 
         self.logger.info(f"RSI Strategy initialized: Period={self.rsi_period}, OB={self.overbought_level}, OS={self.oversold_level}")
 
@@ -78,19 +81,15 @@ class RSIStrategy(BaseStrategy):
 
         # Calculate price change BEFORE adding to buffer
         if self.prices:  # If we have previous price
-            change = current_price - self.prices[-1]  # Current - previous
+            # Deque-safe: use negative indexing by converting to list temporarily
+            prices_list = list(self.prices)
+            change = current_price - prices_list[-1]  # Current - previous
             self.price_changes.append(change)
-
-            # Maintain buffer size
-            if len(self.price_changes) > self.max_buffer_size:
-                self.price_changes.pop(0)
 
         # Update price buffer AFTER calculating change
         self.prices.append(current_price)
 
-        # Maintain buffer size
-        if len(self.prices) > self.max_buffer_size:
-            self.prices.pop(0)
+        # CRITICAL FIX: Deque auto-manages size, no manual popping needed
 
         # Need enough data for RSI calculation
         if len(self.prices) < self.rsi_period + 1:
@@ -127,8 +126,9 @@ class RSIStrategy(BaseStrategy):
         if len(self.price_changes) < self.rsi_period:
             return None
 
-        # Get recent changes
-        changes = self.price_changes[-self.rsi_period:]
+        # Get recent changes (deque-safe slicing)
+        changes_list = list(self.price_changes)
+        changes = changes_list[-self.rsi_period:]
 
         # Separate gains and losses
         gains = [max(change, 0) for change in changes]
@@ -214,9 +214,11 @@ class RSIStrategy(BaseStrategy):
         if len(self.prices) < self.divergence_lookback + 1 or len(self.rsi_history) < self.divergence_lookback + 1:
             return None
 
-        # Get recent data
-        recent_prices = self.prices[-(self.divergence_lookback + 1):]
-        recent_rsi = self.rsi_history[-(self.divergence_lookback + 1):]
+        # Get recent data (deque-safe slicing)
+        prices_list = list(self.prices)
+        rsi_list = list(self.rsi_history)
+        recent_prices = prices_list[-(self.divergence_lookback + 1):]
+        recent_rsi = rsi_list[-(self.divergence_lookback + 1):]
 
         # Check for bullish divergence (price falling, RSI rising)
         price_trend = recent_prices[-1] - recent_prices[0]
