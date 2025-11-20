@@ -33,18 +33,18 @@ class SMACrossover(BaseStrategy):
         Args:
             config: Strategy configuration with parameters
         """
+        # CRITICAL FIX: Initialize deque attributes BEFORE calling super().__init__()
+        buffer_size = max(config.get('slow_window', 20) * 3, 100)  # At least 3x slow window or 100 items
+        self.prices = deque(maxlen=buffer_size)  # Rolling price buffer
+        self.fast_ma_history = deque(maxlen=buffer_size)  # Fast MA history for crossover detection
+        self.slow_ma_history = deque(maxlen=buffer_size)  # Slow MA history for crossover detection
+
         super().__init__("SMACrossover", config)
 
         # Core parameters
         self.fast_window = config.get('fast_window', 10)
         self.slow_window = config.get('slow_window', 20)
         self.min_crossover_strength = config.get('min_crossover_strength', 0.001)  # Minimum % difference
-
-        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
-        buffer_size = max(self.slow_window * 3, 100)  # At least 3x slow window or 100 items
-        self.prices = deque(maxlen=buffer_size)  # Rolling price buffer
-        self.fast_ma_history = deque(maxlen=buffer_size)  # Fast MA history for crossover detection
-        self.slow_ma_history = deque(maxlen=buffer_size)  # Slow MA history for crossover detection
 
         # Optimization settings
         self.max_buffer_size = max(self.slow_window * 2, 100)  # Adaptive buffer size
@@ -53,9 +53,10 @@ class SMACrossover(BaseStrategy):
 
     def _initialize_state(self):
         """Initialize strategy-specific state."""
-        self.prices = []
-        self.fast_ma_history = []
-        self.slow_ma_history = []
+        # CRITICAL FIX: Clear deques instead of reassigning
+        self.prices.clear()
+        self.fast_ma_history.clear()
+        self.slow_ma_history.clear()
 
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
         """
@@ -88,9 +89,11 @@ class SMACrossover(BaseStrategy):
         fast_ma = prices_series.rolling(window=self.fast_window).mean().iloc[-1]
         slow_ma = prices_series.rolling(window=self.slow_window).mean().iloc[-1]
 
-        # Previous MAs for crossover detection
+        # Previous MAs for crossover detection (deque-safe)
         if len(self.prices) >= self.slow_window + 1:
-            prev_prices = pd.Series(self.prices[:-1])
+            # Convert deque to list for slicing, but keep only last N+1 elements for efficiency
+            prices_list = list(self.prices)
+            prev_prices = pd.Series(prices_list[:-1])
             prev_fast_ma = prev_prices.rolling(window=self.fast_window).mean().iloc[-1]
             prev_slow_ma = prev_prices.rolling(window=self.slow_window).mean().iloc[-1]
         else:
@@ -102,11 +105,7 @@ class SMACrossover(BaseStrategy):
         self.fast_ma_history.append(fast_ma)
         self.slow_ma_history.append(slow_ma)
 
-        # Maintain history buffer
-        max_history = 10
-        if len(self.fast_ma_history) > max_history:
-            self.fast_ma_history.pop(0)
-            self.slow_ma_history.pop(0)
+        # CRITICAL FIX: Deque auto-manages size, no manual popping needed
 
         # Detect crossovers
         signal = self._detect_crossover(

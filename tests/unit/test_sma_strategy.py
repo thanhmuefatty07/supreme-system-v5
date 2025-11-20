@@ -8,6 +8,7 @@ including signal generation, validation, edge cases, and performance.
 
 import pytest
 import pandas as pd
+from collections import deque  # CRITICAL FIX: Import deque for test assertions
 from unittest.mock import MagicMock
 from src.strategies.sma_crossover import SMACrossover
 
@@ -207,9 +208,13 @@ class TestSMACrossover:
 
         assert strategy.total_signals == 0
         assert strategy.total_pnl == 0.0
-        assert strategy.prices == []
-        assert strategy.fast_ma_history == []
-        assert strategy.slow_ma_history == []
+        # CRITICAL FIX: After reset, deques should be cleared but remain deques
+        assert len(strategy.prices) == 0
+        assert isinstance(strategy.prices, deque)
+        assert len(strategy.fast_ma_history) == 0
+        assert isinstance(strategy.fast_ma_history, deque)
+        assert len(strategy.slow_ma_history) == 0
+        assert isinstance(strategy.slow_ma_history, deque)
 
     def test_get_strategy_info(self, strategy):
         """Test strategy info retrieval."""
@@ -228,12 +233,10 @@ class TestSMACrossover:
         for i in range(150):  # More than max_buffer_size
             strategy.generate_signal({'symbol': 'BTC/USDT', 'close': 100.0 + i})
 
-        # Buffer should be trimmed to max_buffer_size
-        assert len(strategy.prices) <= strategy.max_buffer_size
-
-        # History should also be managed
-        assert len(strategy.fast_ma_history) <= 10
-        assert len(strategy.slow_ma_history) <= 10
+        # CRITICAL FIX: Deque auto-manages size up to maxlen
+        assert len(strategy.prices) <= 100  # Buffer size limit
+        assert len(strategy.fast_ma_history) <= 100  # MA history maxlen
+        assert len(strategy.slow_ma_history) <= 100  # MA history maxlen
 
     @pytest.mark.parametrize("fast_window,slow_window", [
         (5, 10),
