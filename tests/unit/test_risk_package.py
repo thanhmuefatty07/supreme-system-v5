@@ -12,9 +12,10 @@ from datetime import datetime
 # Import all risk components
 from src.risk.calculations import (
     calculate_kelly_criterion,
-    apply_position_sizing,
+    calculate_position_size,
     calculate_var_historical,
-    calculate_sharpe_ratio
+    calculate_sharpe_ratio,
+    KellyInput
 )
 from src.risk.limits import CircuitBreaker, PositionSizeLimiter
 from src.risk.core import RiskManager
@@ -26,18 +27,18 @@ class TestRiskCalculations:
     def test_kelly_criterion_basic(self):
         """Test Kelly criterion with standard inputs."""
         # Win 50%, RR 2.0 -> f = (0.5*3 - 1)/2 = 0.25
-        result = calculate_kelly_criterion(0.5, 2.0)
+        result = calculate_kelly_criterion(KellyInput(win_rate=0.5, reward_risk_ratio=2.0))
         assert result == 0.25
 
     def test_kelly_criterion_edge_cases(self):
         """Test Kelly with edge cases."""
         # Breakeven case
-        assert calculate_kelly_criterion(0.5, 1.0) == 0.0
+        assert calculate_kelly_criterion(KellyInput(win_rate=0.5, reward_risk_ratio=1.0)) == 0.0
 
         # Invalid inputs
-        assert calculate_kelly_criterion(-0.1, 2.0) == 0.0
-        assert calculate_kelly_criterion(0.5, -1.0) == 0.0
-        assert calculate_kelly_criterion(1.5, 2.0) == 0.0
+        assert calculate_kelly_criterion(KellyInput(win_rate=-0.1, reward_risk_ratio=2.0)) == 0.0
+        assert calculate_kelly_criterion(KellyInput(win_rate=0.5, reward_risk_ratio=-1.0)) == 0.0
+        assert calculate_kelly_criterion(KellyInput(win_rate=1.5, reward_risk_ratio=2.0)) == 0.0
 
     def test_position_sizing_logic(self):
         """Test position sizing with different modes."""
@@ -45,15 +46,15 @@ class TestRiskCalculations:
         kelly_fraction = 0.25
 
         # Full Kelly
-        size = apply_position_sizing(capital, kelly_fraction, 1.0, 'full')
+        size = calculate_position_size(capital, kelly_fraction, 1.0, 'full')
         assert size == 2500.0
 
         # Half Kelly
-        size = apply_position_sizing(capital, kelly_fraction, 1.0, 'half')
+        size = calculate_position_size(capital, kelly_fraction, 1.0, 'half')
         assert size == 1250.0
 
         # Quarter Kelly
-        size = apply_position_sizing(capital, kelly_fraction, 1.0, 'quarter')
+        size = calculate_position_size(capital, kelly_fraction, 1.0, 'quarter')
         assert size == 625.0
 
     def test_position_sizing_hard_cap(self):
@@ -62,7 +63,7 @@ class TestRiskCalculations:
         kelly_fraction = 0.25
 
         # Hard cap at 2% -> should return 200
-        size = apply_position_sizing(capital, kelly_fraction, 0.02, 'half')
+        size = calculate_position_size(capital, kelly_fraction, 0.02, 'half')
         assert size == 200.0  # min(1250, 200) = 200
 
     def test_var_calculation(self):

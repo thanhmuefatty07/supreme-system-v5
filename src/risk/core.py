@@ -12,9 +12,10 @@ from datetime import datetime
 
 from .calculations import (
     calculate_kelly_criterion,
-    apply_position_sizing,
+    calculate_position_size,
     calculate_var_historical,
-    calculate_sharpe_ratio
+    calculate_sharpe_ratio,
+    KellyInput
 )
 from .limits import CircuitBreaker, PositionSizeLimiter
 
@@ -103,14 +104,14 @@ class RiskManager:
             return 0.0
 
         # 3. Calculate Kelly Size
-        kelly_fraction = calculate_kelly_criterion(win_rate, reward_risk_ratio)
+        kelly_fraction = calculate_kelly_criterion(KellyInput(win_rate=win_rate, reward_risk_ratio=reward_risk_ratio))
 
         if kelly_fraction <= 0:
             logger.info("Kelly fraction <= 0 - skipping trade")
             return 0.0
 
         # 4. Apply Position Sizing Rules
-        position_size = apply_position_sizing(
+        position_size = calculate_position_size(
             self.current_capital,
             kelly_fraction,
             self.config["max_risk_per_trade"],

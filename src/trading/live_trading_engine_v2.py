@@ -98,6 +98,10 @@ class LiveTradingEngineV2:
         self._state_lock = asyncio.Lock()
         self._event_queue = asyncio.Queue()
 
+        # PERFORMANCE MONITORING: Initialize metrics collector
+        self.metrics = MetricsCollector()
+        self.metrics.initialize(config.get('initial_capital', 10000.0))
+
         # NEW: Performance Monitoring
         self.metrics = MetricsCollector()
         self.metrics.initialize(config.get('initial_capital', 10000.0))

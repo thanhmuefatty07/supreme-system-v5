@@ -9,7 +9,7 @@ and comprehensive position sizing controls.
 from .core import RiskManager
 from .calculations import (
     calculate_kelly_criterion,
-    apply_position_sizing,
+    calculate_position_size,
     calculate_var_historical,
     calculate_sharpe_ratio
 )
@@ -20,7 +20,7 @@ __all__ = [
     'CircuitBreaker',
     'PositionSizeLimiter',
     'calculate_kelly_criterion',
-    'apply_position_sizing',
+    'calculate_position_size',
     'calculate_var_historical',
     'calculate_sharpe_ratio'
 ]

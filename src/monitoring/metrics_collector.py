@@ -8,6 +8,7 @@ from typing import List, Dict, Optional
 @dataclass
 class PerformanceMetrics:
     """Snapshot of system performance."""
+
     total_pnl: float = 0.0
     win_rate: float = 0.0
     total_trades: int = 0

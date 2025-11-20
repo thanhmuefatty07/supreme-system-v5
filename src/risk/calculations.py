@@ -1,136 +1,147 @@
-#!/usr/bin/env python3
-"""
-Risk Management Calculations - Pure Functions for Risk Math
-
-Enterprise-grade risk calculations with Kelly Criterion, position sizing,
-and statistical risk metrics.
-"""
-
-import math
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, List
 
 
-def calculate_kelly_criterion(win_rate: float, reward_risk_ratio: float) -> float:
+
+@dataclass(slots=True, frozen=True)
+class KellyInput:
     """
-    Calculate Kelly fraction: f = (p(b+1) - 1) / b
+    Immutable input for Kelly calculation.
+    Using slots for memory efficiency.
+    """
+
+    win_rate: float
+    reward_risk_ratio: float
+
+
+
+def calculate_kelly_criterion(inp: KellyInput) -> float:
+    """
+    Calculates the Kelly fraction (f*) for position sizing.
+    Formula: f* = (p(b + 1) - 1) / b
 
     Where:
-    - p = win_rate (probability of winning)
-    - b = reward_risk_ratio (reward/risk ratio)
-
-    Args:
-        win_rate: Probability of winning (0.0 to 1.0)
-        reward_risk_ratio: Reward to risk ratio (must be > 0)
+        p = probability of winning (win_rate)
+        b = odds received on the wager (reward_risk_ratio)
 
     Returns:
-        Kelly fraction (0.0 to 1.0+), or 0.0 if invalid inputs
+        float: A value between 0.0 and 1.0 (clamped).
+               Returns 0.0 for invalid inputs or negative expectation.
     """
-    if reward_risk_ratio <= 0 or win_rate < 0 or win_rate > 1:
+
+    # 1. Input Validation (Fail-safe)
+    if inp.reward_risk_ratio <= 0:
+        return 0.0
+    if not (0.0 <= inp.win_rate <= 1.0):
         return 0.0
 
-    # Kelly formula: f = (p(b+1) - 1) / b
-    kelly_fraction = (win_rate * (reward_risk_ratio + 1) - 1) / reward_risk_ratio
+    # 2. Calculation
+    # f = (p * (b + 1) - 1) / b
+    numerator = inp.win_rate * (inp.reward_risk_ratio + 1.0) - 1.0
+    f = numerator / inp.reward_risk_ratio
 
-    # Kelly can be negative (avoid these trades) or very large
-    return max(0.0, kelly_fraction)
+    # 3. Safety Clamp (Conservative)
+    # Never recommend leveraging > 1.0x base capital based purely on Kelly here
+    # Negative Kelly means "Don't trade" -> 0.0
+    return min(max(0.0, f), 1.0)
 
 
-def apply_position_sizing(capital: float, kelly_fraction: float, max_risk_pct: float, mode: str = 'half') -> float:
+
+def calculate_position_size(capital: float,
+                            kelly_fraction: float,
+                            max_risk_per_trade: float,
+                            mode: str = 'half') -> float:
     """
-    Apply sizing rules with Kelly fraction and hard caps.
+    Applies Kelly fraction with safety modes to determine position size.
 
     Args:
-        capital: Current account capital
-        kelly_fraction: Raw Kelly fraction from calculate_kelly_criterion
-        max_risk_pct: Maximum risk per trade as percentage of capital
-        mode: Sizing mode - 'full', 'half', 'quarter', 'conservative'
-
-    Returns:
-        Position size in dollars (not percentage)
+        capital: Total available capital
+        kelly_fraction: Raw Kelly output (0.0 to 1.0)
+        max_risk_per_trade: Hard cap on risk per trade (e.g., 0.02 for 2%)
+        mode: 'full', 'half', 'quarter'
     """
-    if capital <= 0 or kelly_fraction < 0:
+
+    if capital <= 0 or kelly_fraction <= 0:
         return 0.0
 
-    # Apply mode multiplier
-    multiplier = {
-        'full': 1.0,
-        'half': 0.5,
-        'quarter': 0.25,
-        'conservative': 0.1
-    }.get(mode, 0.5)  # Default to half Kelly
+    # 1. Apply Mode Multiplier
+    multiplier = 1.0
+    if mode == 'half':
+        multiplier = 0.5
+    elif mode == 'quarter':
+        multiplier = 0.25
 
-    adjusted_kelly = kelly_fraction * multiplier
+    adjusted_fraction = kelly_fraction * multiplier
 
-    # Calculate risk amount
-    risk_amount = capital * adjusted_kelly
+    # 2. Calculate Raw Size
+    raw_size = capital * adjusted_fraction
 
-    # Apply hard cap
-    max_allowed_risk = capital * max_risk_pct
+    # 3. Apply Hard Cap (Risk Management Override)
+    max_allowed_size = capital * max_risk_per_trade
 
-    return min(risk_amount, max_allowed_risk)
+    # Return the smaller of the two (Safety First)
+    return min(raw_size, max_allowed_size)
 
 
-def calculate_var_historical(returns: list, confidence_level: float = 0.95) -> float:
+
+def calculate_var_historical(returns: List[float], confidence: float = 0.95) -> float:
     """
-    Calculate Value at Risk using historical simulation.
+    Calculate Value at Risk (VaR) using historical simulation.
 
     Args:
-        returns: List of historical returns (as decimals)
-        confidence_level: Confidence level (default 95%)
+        returns: List of historical returns (as decimals, e.g., 0.01 for 1%)
+        confidence: Confidence level (0.95 for 95% VaR)
 
     Returns:
-        VaR as positive percentage (e.g., 0.05 for 5% VaR)
+        float: VaR value (positive number, e.g., 0.05 means 5% loss at 95% confidence)
     """
-    if not returns or len(returns) < 2:
+    if not returns:
         return 0.0
 
     # Sort returns in ascending order (worst to best)
     sorted_returns = sorted(returns)
 
-    # Find the return at the confidence level
-    index = int((1 - confidence_level) * len(sorted_returns))
+    # Find the index for the confidence level
+    # For 95% confidence, we want the 5th percentile (worst 5% of returns)
+    index = int((1 - confidence) * len(sorted_returns))
 
-    # VaR is the negative of the worst case (since returns are negative for losses)
-    var = -sorted_returns[index]
+    # Ensure index is within bounds
+    index = max(0, min(index, len(sorted_returns) - 1))
 
-    return max(0.0, var)
+    # VaR is the absolute value of the worst return at confidence level
+    return abs(sorted_returns[index])
 
 
-def calculate_sharpe_ratio(returns: list, risk_free_rate: float = 0.02) -> float:
+
+def calculate_sharpe_ratio(returns: List[float], risk_free_rate: float = 0.0) -> float:
     """
-    Calculate Sharpe ratio: (mean return - risk_free) / std_dev
+    Calculate Sharpe Ratio.
+
+    Sharpe Ratio = (Expected Return - Risk-Free Rate) / Volatility
 
     Args:
-        returns: List of returns
-        risk_free_rate: Risk-free rate (annualized)
+        returns: List of historical returns (as decimals)
+        risk_free_rate: Risk-free rate (as decimal, e.g., 0.02 for 2%)
 
     Returns:
-        Sharpe ratio, or 0.0 if calculation impossible
+        float: Sharpe ratio (higher is better)
     """
     if not returns or len(returns) < 2:
         return 0.0
 
-    # Convert to numpy for calculations (import here to avoid dependency issues)
-    try:
-        import numpy as np
+    # Calculate average return
+    avg_return = sum(returns) / len(returns)
 
-        returns_array = np.array(returns)
-        mean_return = np.mean(returns_array)
-        std_dev = np.std(returns_array, ddof=1)  # Sample standard deviation
+    # Calculate volatility (standard deviation)
+    if len(returns) > 1:
+        variance = sum((r - avg_return) ** 2 for r in returns) / (len(returns) - 1)
+        volatility = variance ** 0.5
+    else:
+        volatility = 0.0
 
-        if std_dev == 0:
-            return 0.0
+    # Avoid division by zero
+    if volatility == 0:
+        return 0.0  # No risk = no Sharpe ratio (conservative approach)
 
-        sharpe = (mean_return - risk_free_rate) / std_dev
-        return sharpe
-
-    except ImportError:
-        # Fallback without numpy
-        mean_return = sum(returns) / len(returns)
-        variance = sum((r - mean_return) ** 2 for r in returns) / (len(returns) - 1)
-        std_dev = math.sqrt(variance)
-
-        if std_dev == 0:
-            return 0.0
-
-        return (mean_return - risk_free_rate) / std_dev
+    # Calculate Sharpe ratio
+    return (avg_return - risk_free_rate) / volatility
