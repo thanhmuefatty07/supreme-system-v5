@@ -1,0 +1,110 @@
+# .gitignore - Supreme System V5
+# Security & Secrets
+.env
+.env.*
+*.key
+*.secret
+secrets/
+.secrets/
+GITHUB_TOKEN
+API_KEY=
+BYBIT_API_KEY=
+BYBIT_SECRET_KEY=
+ALPHA_VANTAGE_KEY
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pkl
+*.egg-info/
+dist/
+build/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+coverage.json
+coverage.xml
+coverage_output.txt
+coverage_latest.txt
+htmlcov/
+.hypothesis/
+*.cover
+.tox/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs & Reports
+logs/
+*.log
+audit_temp.json
+*_test_report.txt
+*_report.json
+benchmark_output.txt
+benchmark_results.json
+performance_benchmark_results.json
+deployment_validation_results.json
+pip_audit_report.json
+security_report.json
+code_quality_report.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+ure-Object*
+
+# Virtual environments
+venv/
+env/
+ENV/
+supreme_audit_env/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Archive (keep structure but ignore contents if needed)
+# archive/legacy-reports/ - Keep for reference
+# Gemini & AI API Keys
+.gemini_api_key
+gemini_credentials.json
+ai_keys/
+*.gemini
+
+# Generic secrets
+*.key
+*.secret
+*.pem
+credentials/
+secrets/
+.env*
+!.env.example
+
+# Logs that might contain keys
+*.log
+logs/
+debug.log
+
+# Analysis reports
+analysis_reports/*/
+gemini_analysis.log
+
+# Temporary files
+*.pyc
+__pycache__/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.json
+*.log

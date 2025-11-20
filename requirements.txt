@@ -1,0 +1,139 @@
+# Core dependencies for Supreme System V5 - SECURITY UPDATED VERSIONS
+numpy>=1.26.4  # Latest secure version (fixes buffer overflow CVEs)
+pandas>=2.2.2   # Latest secure version (fixes multiple security issues)
+requests>=2.32.0  # Latest secure version (fixes CVE-2023-32681 DoS vulnerability)
+python-binance>=1.0.19  # Latest version with security fixes
+pybit>=5.7.0  # Bybit API client library
+ta>=0.11.0     # Latest version
+scikit-learn>=1.5.0  # Latest secure version
+pytest>=8.3.0  # Latest version with security fixes
+pytest-cov>=6.2.1  # Latest secure version
+black>=24.3.0  # Latest version (fixes CVE-2024-21503 ReDoS)
+flake8>=7.1.0  # Latest version
+mypy>=1.11.0  # Latest version with security fixes
+
+# High-performance computing and optimization - SECURITY UPDATED
+numba>=0.60.0  # Latest secure version
+psutil>=6.0.0  # Latest version with security fixes
+cpuinfo>=9.0.0  # Latest version
+
+# Input validation and data models - SECURITY UPDATED
+pydantic>=2.9.0  # Latest V2 with security fixes
+
+# Security enhancements - CRITICAL SECURITY UPDATES
+python-dotenv>=1.0.1  # Latest secure version
+keyring>=25.2.0  # Latest version with security fixes
+cryptography>=43.0.0  # Latest version (fixes multiple CVEs in 37.x)
+tenacity>=9.0.0  # Latest version
+
+# Dashboard and visualization - SECURITY UPDATED
+streamlit>=1.37.0  # Latest version with security fixes
+plotly>=5.23.0   # Latest secure version
+websockets>=13.0.1  # Latest version (fixes security vulnerabilities in 10.x)
+
+# Async I/O performance - SECURITY UPDATED
+aiohttp>=3.10.0  # Latest secure version (fixes multiple CVEs in 3.8.x)
+orjson>=3.10.0  # Latest version
+
+# Data storage and processing - SECURITY UPDATED
+pyarrow>=17.0.0  # Latest version with security fixes
+
+# Testing enhancements - SECURITY UPDATED
+pytest-benchmark>=4.0.0  # Latest version
+hypothesis>=6.111.0  # Latest version with security fixes
+pytest-asyncio>=0.24.0  # Latest version
+responses>=0.25.0  # Latest version
+
+# Monitoring and observability - SECURITY UPDATED
+structlog>=24.4.0  # Latest version
+opentelemetry-api>=1.27.0  # Latest version
+opentelemetry-sdk>=1.27.0  # Latest version
+
+# Architecture improvements - SECURITY UPDATED
+dependency-injector>=4.45.0  # Latest version
+
+# NEW ENTERPRISE-GRADE SECURITY DEPENDENCIES
+# Zero-Trust Security
+PyJWT>=2.9.0              # Latest secure version
+pyotp>=2.9.0              # TOTP for 2FA (required for Zero Trust)
+bcrypt>=4.2.0             # Latest secure password hashing
+argon2-cffi>=23.1.0       # Latest memory-hard password hashing
+pyOpenSSL>=24.2.0         # Latest SSL/TLS security
+
+# Service Mesh & Microservices
+fastapi>=0.115.0          # Latest async web framework
+starlette>=0.40.0        # Latest Starlette (fixes CVE-2024-47874, CVE-2025-54121)
+uvicorn>=0.31.0          # Latest ASGI server
+httpx>=0.27.0            # Latest async HTTP client
+pydantic-settings>=2.5.0  # Latest configuration management
+
+# Advanced Monitoring & Observability
+prometheus-client>=0.21.0  # Latest Prometheus metrics
+grafana-api>=1.0.3        # Latest Grafana integration
+datadog>=0.49.0           # Latest DataDog monitoring
+newrelic>=9.13.0          # Latest New Relic APM
+
+# Enterprise Data Processing
+dask>=2024.8.0           # Latest distributed computing
+modin>=0.31.0           # Latest distributed pandas
+polars>=1.7.0           # Latest high-performance DataFrame
+duckdb>=1.1.0           # Latest analytical database
+
+# AI/ML Security & Performance
+transformers>=4.44.0     # Latest Hugging Face transformers
+torch>=2.4.0            # Latest PyTorch with security fixes
+tensorflow>=2.17.0       # Latest TensorFlow with security fixes
+keras>=3.12.0           # Latest Keras (fixes CVE-2025-12058, CVE-2025-12060)
+xgboost>=2.1.0          # Latest gradient boosting
+lightgbm>=4.5.0         # Latest gradient boosting
+mlflow>=2.19.0          # Latest MLflow (fixes 15 CVEs - remove if not used)
+
+# Advanced Testing & Quality Assurance
+coverage>=7.6.0         # Latest coverage analysis
+bandit>=1.8.0           # Latest security linting
+safety>=3.2.0           # Latest dependency vulnerability scanning
+semgrep>=1.88.0         # Latest static analysis
+mypy>=1.11.0            # Latest type checking
+uv>=0.9.6               # Latest uv package manager (fixes ZIP parsing vulnerability)
+
+# Container & Orchestration Security
+docker>=7.1.0           # Latest Docker SDK
+kubernetes>=30.1.0      # Latest Kubernetes client
+helm>=3.15.0            # Latest Helm client
+istioctl>=1.23.0        # Latest Istio CLI
+
+# Cloud Security & Compliance
+boto3>=1.35.0           # Latest AWS SDK with security fixes
+azure-identity>=1.17.0  # Latest Azure authentication
+google-cloud-securitycenter>=1.35.0  # Latest GCP security
+aws-securityhub>=0.13.0  # Latest AWS Security Hub
+
+# Advanced Cryptography
+pycryptodome>=3.20.0    # Latest cryptographic library
+ecdsa>=0.19.0           # Latest ECDSA signatures
+pynacl>=1.5.0           # Latest NaCl cryptography
+oqs>=0.10.0             # Open Quantum Safe - NIST PQC algorithms
+
+# Real-time Streaming & Analytics
+confluent-kafka>=2.6.0  # Latest Kafka client
+faust-streaming>=0.11.0  # Latest streaming framework
+apache-flink>=1.19.0    # Latest Flink Python API
+clickhouse-driver>=0.2.7  # Latest ClickHouse client
+
+# Enterprise API Security
+fastapi-security>=0.8.0  # Latest FastAPI security
+authlib>=1.6.5          # Latest OAuth/JWT library (fixes CVE-2025-59420, CVE-2025-61920, CVE-2025-62706)
+python-jose>=3.3.0      # Latest JOSE implementation
+python-multipart>=0.0.9  # Latest multipart handling
+
+# Advanced Logging & Auditing
+loguru>=0.7.2           # Latest structured logging
+python-logstash>=0.4.8  # Latest Logstash integration
+graylog>=2.4.0          # Latest Graylog integration
+fluent-logger>=0.11.0   # Latest Fluentd integration
+
+# Enterprise AI/ML Dependencies - Multi-Provider Support
+openai>=1.0.0              # Latest OpenAI API client for fallback
+anthropic>=0.40.0          # Latest Anthropic Claude API for fallback
+google-generativeai>=0.8.0 # Latest Gemini API for primary AI
+instructor>=1.0.0           # Latest structured AI response parsing

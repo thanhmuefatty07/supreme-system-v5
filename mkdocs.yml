@@ -1,0 +1,51 @@
+site_name: Supreme System V5
+site_description: AI-Powered Trading Platform Documentation
+site_author: Supreme System V5 Development Team
+repo_url: https://github.com/thanhmuefatty07/supreme-system-v5
+repo_name: thanhmuefatty07/supreme-system-v5
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: purple
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - pymdownx.details
+  - tables
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quick Start: getting-started/quickstart.md
+    - Docker Deployment: getting-started/docker.md
+    - Configuration: getting-started/configuration.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Risk Management: architecture/risk.md
+  - API Reference:
+    - Trading API: api/trading.md
+    - Data API: api/data.md
+    - Monitoring API: api/monitoring.md
+  - Performance:
+    - Benchmarks: performance/benchmarks.md
+    - Optimization: performance/optimization.md
+  - Commercial:
+    - Licensing: commercial/licensing.md
+    - Support: commercial/support.md
+
+plugins:
+  - search
+  - git-revision-date-localized

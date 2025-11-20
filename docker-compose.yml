@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  supreme-system:
+    build: .
+    container_name: supreme-system-v5
+    ports:
+      - "8501:8501"  # Streamlit dashboard
+      - "8000:8000"  # API (if needed)
+    environment:
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+      - BINANCE_TESTNET=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from data.data_pipeline import DataPipeline; dp = DataPipeline(); print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL for data persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: supreme-postgres
+    environment:
+      POSTGRES_DB: supreme_db
+      POSTGRES_USER: supreme_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supreme_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: supreme-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # Optional: Health monitoring service
+  health-monitor:
+    build: .
+    container_name: supreme-health-monitor
+    command: ["python", "-c", "
+import time
+import requests
+from src.monitoring.dashboard import MonitoringDashboard
+
+def health_check():
+    try:
+        # Test data pipeline
+        from src.data.data_pipeline import DataPipeline
+        dp = DataPipeline()
+        print('✓ Data pipeline initialized')
+
+        # Test monitoring dashboard
+        dashboard = MonitoringDashboard()
+        print('✓ Monitoring dashboard initialized')
+
+        print('✓ Health check passed')
+        return True
+    except Exception as e:
+        print(f'✗ Health check failed: {e}')
+        return False
+
+if __name__ == '__main__':
+    health_check()
+    "]
+    restart: unless-stopped
+    profiles:
+      - health
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: supreme-network

@@ -1,0 +1,290 @@
+# Supreme System V5 - Production Kubernetes Deployment
+# Enterprise-grade deployment with zero-downtime rollout
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trading-prod
+  labels:
+    name: trading-prod
+    environment: production
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supreme-secrets
+  namespace: trading-prod
+type: Opaque
+stringData:
+  jwt-secret: "CHANGE_IN_PRODUCTION"  # Generate: openssl rand -base64 32
+  gemini-api-key: "AIzaSyBH8mRSlNVKQoRi5uCrEJikTJlqhRhPA-g"
+  database-url: "postgresql://user:pass@db:5432/supreme"
+  redis-url: "redis://redis:6379/0"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supreme-config
+  namespace: trading-prod
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  TARGET_COVERAGE: "80"
+  QUANTUM_CRYPTO_ENABLED: "true"
+  ZERO_TRUST_ENABLED: "true"
+  SERVICE_MESH_ENABLED: "true"
+  METRICS_PORT: "9090"
+  API_PORT: "8000"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supreme-system-v5
+  namespace: trading-prod
+  labels:
+    app: supreme-system-v5
+    version: "5.0.0"
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime
+  selector:
+    matchLabels:
+      app: supreme-system-v5
+  template:
+    metadata:
+      labels:
+        app: supreme-system-v5
+        version: "5.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Service account for K8s API access
+      serviceAccountName: supreme-system-sa
+      
+      containers:
+      - name: supreme-system
+        image: supremesystem/v5:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: api
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        
+        # Environment from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: supreme-config
+        
+        # Secrets as environment variables
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: supreme-secrets
+              key: jwt-secret
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supreme-secrets
+              key: gemini-api-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: supreme-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: supreme-secrets
+              key: redis-url
+        
+        # Security context (container level)
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE  # Only if needed for port < 1024
+        
+        # Resource management
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        # Liveness probe - restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe - remove from load balancer if not ready
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Startup probe - allow slow startup
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 8000
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30  # 150 seconds max startup time
+        
+        # Volume mounts
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: cache-volume
+          mountPath: /app/cache
+        - name: logs-volume
+          mountPath: /app/logs
+      
+      # Volumes
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: cache-volume
+        emptyDir:
+          medium: Memory
+          sizeLimit: 256Mi
+      - name: logs-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      # Affinity rules - spread pods across nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - supreme-system-v5
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supreme-system-v5
+  namespace: trading-prod
+  labels:
+    app: supreme-system-v5
+spec:
+  type: ClusterIP
+  selector:
+    app: supreme-system-v5
+  ports:
+  - name: api
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: supreme-system-sa
+  namespace: trading-prod
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: supreme-system-hpa
+  namespace: trading-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: supreme-system-v5
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 2
+        periodSeconds: 15
+      selectPolicy: Max

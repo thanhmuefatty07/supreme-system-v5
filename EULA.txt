@@ -1,0 +1,14 @@
+END USER LICENSE AGREEMENT (EULA)
+Supreme System V5 - Production Trading Platform
+
+1. Acceptance: By using, installing, or copying the software, you agree to all EULA terms. If you do not agree, do not install or use this software.
+2. Grant: You are granted a non-exclusive, non-transferable right to use the software solely in accordance with the license (Evaluation, Professional, Team, or Enterprise) terms described in the LICENSE file.
+3. Restrictions: No resale, sublicensing, sharing, reverse engineering, or use for competing/training AI platforms is allowed. All deployment must require a valid paid license except for explicit evaluation/trial scope described above.
+4. Trading Risk: You acknowledge algorithmic trading carries substantial financial risk. You use the system at your own risk. No guarantee of profitability or trading results is provided. The vendor disclaims any and all financial responsibility for any losses.
+5. Disclaimer of Warranty: Software is provided “as is”. No warranty express or implied. The authors are not liable for any incidental, indirect, or consequential damages.
+6. Updates & Support: Professional/Team/Enterprise licensees receive updates per LICENSE. Support via email/Slack as described. Evaluation/trial users: best-effort only; production use is not permitted.
+7. Termination: Any violation terminates usage rights. Continued use after license expiration or violation is strictly prohibited.
+8. Governing Law & Dispute Resolution: All disputes governed by the law of your local jurisdiction. Disputes resolved by binding arbitration at Supreme System V5's principal place of business.
+
+Contact for legal, technical, or sales inquiries: thanhmuefatty07@gmail.com
+Last updated: November 15, 2025
