@@ -8,11 +8,16 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 # Lazy import torch to avoid crashes during test collection
+TORCH_AVAILABLE = False
+torch = None
+nn = None
+
 try:
     import torch
     import torch.nn as nn
     TORCH_AVAILABLE = True
-except (ImportError, OSError):
+except (ImportError, OSError, Exception):
+    # Catch all exceptions to prevent fatal errors during test collection
     TORCH_AVAILABLE = False
     torch = None
     nn = None

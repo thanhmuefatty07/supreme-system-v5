@@ -1,38 +1,7 @@
 import pytest
 import asyncio
 from unittest.mock import MagicMock, patch, AsyncMock
-import sys
 from typing import Any, Dict
-
-# Mock all enterprise dependencies to avoid complex imports
-mock_enterprise_security = MagicMock()
-mock_enterprise_concurrency = MagicMock()
-mock_enterprise_memory = MagicMock()
-mock_ai_autonomous_sre = MagicMock()
-mock_streaming_realtime_analytics = MagicMock()
-mock_config = MagicMock()
-mock_logger = MagicMock()
-
-sys.modules["src.security.integration"] = mock_enterprise_security
-sys.modules["src.enterprise.concurrency"] = mock_enterprise_concurrency
-sys.modules["src.enterprise.memory"] = mock_enterprise_memory
-sys.modules["src.ai.autonomous_sre"] = mock_ai_autonomous_sre
-sys.modules["src.streaming.realtime_analytics"] = mock_streaming_realtime_analytics
-sys.modules["src.config.config"] = mock_config
-sys.modules["src.utils.logger"] = mock_logger
-
-# Mock the classes and functions
-mock_enterprise_security.EnterpriseSecurityManager = MagicMock()
-mock_enterprise_security.init_enterprise_security = MagicMock(return_value=True)
-mock_enterprise_security.get_enterprise_security = MagicMock()
-
-mock_enterprise_concurrency.EnterpriseConcurrencyManager = MagicMock()
-mock_enterprise_memory.EnterpriseMemoryManager = MagicMock()
-mock_ai_autonomous_sre.AutonomousSREPlatform = MagicMock()
-mock_streaming_realtime_analytics.RealTimeStreamingAnalytics = MagicMock()
-
-mock_config.get_config = MagicMock(return_value={})
-mock_logger.setup_logging = MagicMock(return_value=MagicMock())
 
 # Now import the app
 from src.supreme_system_app import SupremeSystemApp, ApplicationConfig, create_supreme_system_app, run_supreme_system
@@ -40,6 +9,40 @@ from src.supreme_system_app import SupremeSystemApp, ApplicationConfig, create_s
 
 class TestApplicationConfig:
     """Test ApplicationConfig dataclass"""
+
+    @pytest.fixture(autouse=True)
+    def mock_enterprise_dependencies(self, monkeypatch):
+        """Mock all enterprise dependencies for testing"""
+        # Mock modules using monkeypatch
+        mock_security = MagicMock()
+        mock_concurrency = MagicMock()
+        mock_memory = MagicMock()
+        mock_ai_sre = MagicMock()
+        mock_streaming = MagicMock()
+        mock_config = MagicMock()
+        mock_logger = MagicMock()
+
+        # Mock the classes and functions
+        mock_security.EnterpriseSecurityManager = MagicMock()
+        mock_security.init_enterprise_security = MagicMock(return_value=True)
+        mock_security.get_enterprise_security = MagicMock()
+
+        mock_concurrency.EnterpriseConcurrencyManager = MagicMock()
+        mock_memory.EnterpriseMemoryManager = MagicMock()
+        mock_ai_sre.AutonomousSREPlatform = MagicMock()
+        mock_streaming.RealTimeStreamingAnalytics = MagicMock()
+
+        mock_config.get_config = MagicMock(return_value={})
+        mock_logger.setup_logging = MagicMock(return_value=MagicMock())
+
+        # Apply patches
+        monkeypatch.setattr("src.security.integration", mock_security)
+        monkeypatch.setattr("src.enterprise.concurrency", mock_concurrency)
+        monkeypatch.setattr("src.enterprise.memory", mock_memory)
+        monkeypatch.setattr("src.ai.autonomous_sre", mock_ai_sre)
+        monkeypatch.setattr("src.streaming.realtime_analytics", mock_streaming)
+        monkeypatch.setattr("src.config.config", mock_config)
+        monkeypatch.setattr("src.utils.logger", mock_logger)
 
     def test_default_config(self):
         """Test default application configuration"""

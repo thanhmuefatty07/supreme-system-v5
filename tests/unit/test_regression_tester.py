@@ -482,13 +482,16 @@ class TestCodeChangeAnalyzer:
         # Mock git diff to return empty string (no changes)
         mock_repo.git.diff.return_value = ""
 
+        # Mock the repo initialization in analyzer
+        analyzer.repo = mock_repo
+
         changes = analyzer.get_changes_since_commit("abc123")
 
         # Should return empty list for no changes
         assert isinstance(changes, list)
         assert len(changes) == 0
 
-    @patch('git.Repo')
+    @patch('src.utils.regression_tester.git.Repo')
     def test_get_changes_since_commit_with_diffs(self, mock_repo_class, analyzer):
         """Test getting changes with actual diffs"""
         mock_repo = Mock()
@@ -504,6 +507,9 @@ index abc123..def456 100644
 +    return "world!"
 +    print("Added line")
 """
+
+        # Mock the repo initialization in analyzer
+        analyzer.repo = mock_repo
 
         changes = analyzer.get_changes_since_commit("abc123")
 
