@@ -14,6 +14,18 @@ from src.risk.advanced_risk_manager import AdvancedRiskManager, PortfolioMetrics
 from src.risk.risk_manager import RiskManager
 
 
+@pytest.fixture
+def sample_portfolio_state():
+    """Sample portfolio state for testing."""
+    return {
+        'positions': {
+            'BTCUSDT': {'quantity': 0.05, 'avg_price': 50000, 'current_price': 52000},
+            'ETHUSDT': {'quantity': 1.0, 'avg_price': 3000, 'current_price': 3200}
+        },
+        'cash': 5000.0
+    }
+
+
 class TestBasicRiskManager:
     """Test basic risk manager functionality."""
 
