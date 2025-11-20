@@ -9,6 +9,7 @@ divergence detection, and enterprise-grade implementation.
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, Any, List
+from collections import deque  # CRITICAL FIX: Import deque for memory management
 from .base_strategy import BaseStrategy, Signal
 
 
@@ -43,21 +44,20 @@ class RSIStrategy(BaseStrategy):
         self.enable_divergence = config.get('enable_divergence', True)
         self.divergence_lookback = config.get('divergence_lookback', 5)
 
-        # Internal state
-        self.prices = []  # Price history
-        self.rsi_history = []  # RSI values history
-        self.price_changes = []  # For RSI calculation
-
-        # Optimization
-        self.max_buffer_size = max(self.rsi_period * 3, 100)
+        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
+        buffer_size = max(self.rsi_period * 3, 100)
+        self.prices = deque(maxlen=buffer_size)  # Price history
+        self.rsi_history = deque(maxlen=buffer_size)  # RSI values history
+        self.price_changes = deque(maxlen=buffer_size)  # For RSI calculation
 
         self.logger.info(f"RSI Strategy initialized: Period={self.rsi_period}, OB={self.overbought_level}, OS={self.oversold_level}")
 
     def _initialize_state(self):
         """Initialize strategy-specific state."""
-        self.prices = []
-        self.rsi_history = []
-        self.price_changes = []
+        # CRITICAL FIX: Clear deques instead of reassigning
+        self.prices.clear()
+        self.rsi_history.clear()
+        self.price_changes.clear()
 
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
         """

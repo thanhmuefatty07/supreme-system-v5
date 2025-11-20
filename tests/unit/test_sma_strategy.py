@@ -39,9 +39,13 @@ class TestSMACrossover:
         assert strategy.slow_window == 5
         assert strategy.min_crossover_strength == 0.001
         assert strategy.portfolio_value == 10000.0
-        assert strategy.prices == []
-        assert strategy.fast_ma_history == []
-        assert strategy.slow_ma_history == []
+        # CRITICAL FIX: Check deque initialization (prevents memory leaks)
+        assert len(strategy.prices) == 0
+        assert strategy.prices.maxlen == 100  # Buffer size limit
+        assert len(strategy.fast_ma_history) == 0
+        assert strategy.fast_ma_history.maxlen == 100
+        assert len(strategy.slow_ma_history) == 0
+        assert strategy.slow_ma_history.maxlen == 100
 
     def test_not_enough_data(self, strategy):
         """Test behavior when insufficient data for analysis."""

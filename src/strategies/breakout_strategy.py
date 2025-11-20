@@ -9,6 +9,7 @@ volume confirmation, and risk-aware signal generation.
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, Any, List
+from collections import deque  # CRITICAL FIX: Import deque for memory management
 from .base_strategy import BaseStrategy, Signal
 
 
@@ -45,23 +46,22 @@ class BreakoutStrategy(BaseStrategy):
         self.require_volume_confirmation = config.get('require_volume_confirmation', True)
         self.min_breakout_strength = config.get('min_breakout_strength', 0.1)
 
-        # Internal state
-        self.price_history = []  # Price data for level calculation
-        self.volume_history = []  # Volume data for confirmation
-        self.support_levels = []  # Dynamic support levels
-        self.resistance_levels = []  # Dynamic resistance levels
-
-        # Optimization
-        self.max_history_size = max(self.lookback_period * 3, 100)
+        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
+        buffer_size = max(self.lookback_period * 3, 100)
+        self.price_history = deque(maxlen=buffer_size)  # Price data for level calculation
+        self.volume_history = deque(maxlen=buffer_size)  # Volume data for confirmation
+        self.support_levels = deque(maxlen=50)  # Dynamic support levels
+        self.resistance_levels = deque(maxlen=50)  # Dynamic resistance levels
 
         self.logger.info(f"Breakout Strategy initialized: Lookback={self.lookback_period}, Threshold={self.breakout_threshold}")
 
     def _initialize_state(self):
         """Initialize strategy-specific state."""
-        self.price_history = []
-        self.volume_history = []
-        self.support_levels = []
-        self.resistance_levels = []
+        # CRITICAL FIX: Clear deques instead of reassigning
+        self.price_history.clear()
+        self.volume_history.clear()
+        self.support_levels.clear()
+        self.resistance_levels.clear()
 
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
         """

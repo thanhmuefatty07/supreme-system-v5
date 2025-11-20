@@ -20,6 +20,7 @@ from datetime import datetime
 from ..execution.router import SmartRouter
 from ..risk.core import RiskManager
 from ..strategies.base_strategy import BaseStrategy, Signal
+from ..utils.validators import validate_market_data, ValidationError
 
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,11 @@ class LiveTradingEngineV2:
         self.config = config
         self.update_interval = config.get('update_interval', 60)  # seconds
 
-        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration")
+        # CRITICAL FIX: Add concurrency protection
+        self._state_lock = asyncio.Lock()
+        self._event_queue = asyncio.Queue()
+
+        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration and Critical Fixes")
 
     async def on_market_update(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -110,63 +115,72 @@ class LiveTradingEngineV2:
         Returns:
             Execution result or None if no action taken
         """
-        symbol = market_data.get('symbol', 'UNKNOWN')
-
+        # CRITICAL FIX: Validate input first
         try:
-            # STEP 1: Generate Signal from Strategy
-            signal = self.strategy.generate_signal(market_data)
+            validated_data = validate_market_data(market_data)
+        except ValidationError as e:
+            self.logger.warning(f"Invalid market data: {e}")
+            return None
 
-            if not signal:
-                return None  # No action needed
+        symbol = validated_data.symbol
 
-            # Validate signal
-            if not self.strategy.validate_signal(signal):
-                self.logger.warning(f"Invalid signal for {symbol}")
-                return None
+        # CRITICAL FIX: Use lock to protect shared state
+        async with self._state_lock:
+            try:
+                # STEP 1: Generate Signal from Strategy
+                signal = self.strategy.generate_signal(validated_data.dict())
 
-            self.logger.info(f"Signal generated: {signal.side} {symbol} @ {signal.price} (strength: {signal.strength:.2f})")
+                if not signal:
+                    return None  # No action needed
 
-            # STEP 2: Risk Check - Get Position Size
-            # Use strategy's historical performance or default
-            win_rate = self._get_strategy_win_rate()
-            rr_ratio = self._get_strategy_rr_ratio()
+                # Validate signal
+                if not self.strategy.validate_signal(signal):
+                    self.logger.warning(f"Invalid signal for {symbol}")
+                    return None
 
-            target_size = self.risk_manager.get_target_size(
-                win_rate=win_rate,
-                reward_risk_ratio=rr_ratio,
-                current_exposure=0.0  # TODO: Calculate actual exposure
-            )
+                self.logger.info(f"Signal generated: {signal.side} {symbol} @ {signal.price} (strength: {signal.strength:.2f})")
 
-            if target_size <= 0:
-                self.logger.warning(f"Risk Manager rejected trade for {symbol}: Circuit breaker active or Kelly = 0")
-                return {'status': 'REJECTED', 'reason': 'risk_manager_rejection'}
+                # STEP 2: Risk Check - Get Position Size
+                # Use strategy's historical performance or default
+                win_rate = self._get_strategy_win_rate()
+                rr_ratio = self._get_strategy_rr_ratio()
 
-            # Convert size from $ amount to quantity
-            quantity = target_size / signal.price
-            self.logger.info(f"Risk Manager approved: ${target_size:.2f} (~{quantity:.4f} {symbol})")
+                target_size = self.risk_manager.get_target_size(
+                    win_rate=win_rate,
+                    reward_risk_ratio=rr_ratio,
+                    current_exposure=0.0  # TODO: Calculate actual exposure
+                )
 
-            # STEP 3: Execute via Smart Router
-            self.logger.info(f"Executing {signal.side} {quantity:.4f} {symbol} via SmartRouter")
+                if target_size <= 0:
+                    self.logger.warning(f"Risk Manager rejected trade for {symbol}: Circuit breaker active or Kelly = 0")
+                    return {'status': 'REJECTED', 'reason': 'risk_manager_rejection'}
 
-            result = await self.router.execute_order(
-                symbol=symbol,
-                side=signal.side,
-                amount=quantity,  # SmartRouter uses 'amount' not 'quantity'
-                order_type='market'  # Can be enhanced with limit orders
-            )
+                # Convert size from $ amount to quantity
+                quantity = target_size / signal.price
+                self.logger.info(f"Risk Manager approved: ${target_size:.2f} (~{quantity:.4f} {symbol})")
 
-            # STEP 4: Post-Trade Processing
-            # Convert ExecutionResult to dict for consistency
-            result_dict = result.to_dict() if hasattr(result, 'to_dict') else result
+                # STEP 3: Execute via Smart Router
+                self.logger.info(f"Executing {signal.side} {quantity:.4f} {symbol} via SmartRouter")
 
-            if result_dict.get('status') == 'SUCCESS':
-                await self._on_trade_executed(signal, result_dict, target_size)
+                result = await self.router.execute_order(
+                    symbol=symbol,
+                    side=signal.side,
+                    amount=quantity,  # SmartRouter uses 'amount' not 'quantity'
+                    order_type='market'  # Can be enhanced with limit orders
+                )
 
-            return result_dict
+                # STEP 4: Post-Trade Processing
+                # Convert ExecutionResult to dict for consistency
+                result_dict = result.to_dict() if hasattr(result, 'to_dict') else result
 
-        except Exception as e:
-            self.logger.error(f"Error in market update processing: {e}", exc_info=True)
-            return {'status': 'ERROR', 'error': str(e)}
+                if result_dict.get('status') == 'SUCCESS':
+                    await self._on_trade_executed(signal, result_dict, target_size)
+
+                return result_dict
+
+            except Exception as e:
+                self.logger.error(f"Error in market update processing: {e}", exc_info=True)
+                return {'status': 'ERROR', 'error': str(e)}
 
     async def _on_trade_executed(self, signal: Signal, execution_result: Dict[str, Any], position_size: float):
         """

@@ -8,6 +8,7 @@ with enterprise-grade implementation, risk awareness, and optimization.
 
 import pandas as pd
 from typing import Optional, Dict, Any
+from collections import deque  # CRITICAL FIX: Import deque for memory management
 from .base_strategy import BaseStrategy, Signal
 
 
@@ -39,10 +40,11 @@ class SMACrossover(BaseStrategy):
         self.slow_window = config.get('slow_window', 20)
         self.min_crossover_strength = config.get('min_crossover_strength', 0.001)  # Minimum % difference
 
-        # Internal state
-        self.prices = []  # Rolling price buffer
-        self.fast_ma_history = []  # Fast MA history for crossover detection
-        self.slow_ma_history = []  # Slow MA history for crossover detection
+        # CRITICAL FIX: Use deque with maxlen to prevent memory leaks
+        buffer_size = max(self.slow_window * 3, 100)  # At least 3x slow window or 100 items
+        self.prices = deque(maxlen=buffer_size)  # Rolling price buffer
+        self.fast_ma_history = deque(maxlen=buffer_size)  # Fast MA history for crossover detection
+        self.slow_ma_history = deque(maxlen=buffer_size)  # Slow MA history for crossover detection
 
         # Optimization settings
         self.max_buffer_size = max(self.slow_window * 2, 100)  # Adaptive buffer size
@@ -72,12 +74,8 @@ class SMACrossover(BaseStrategy):
             self.logger.warning(f"Invalid price data: {current_price}")
             return None
 
-        # Update price buffer
+        # CRITICAL FIX: Update price buffer (deque auto-manages size)
         self.prices.append(current_price)
-
-        # Maintain optimal buffer size
-        if len(self.prices) > self.max_buffer_size:
-            self.prices.pop(0)
 
         # Need enough data for analysis
         if len(self.prices) < self.slow_window:
