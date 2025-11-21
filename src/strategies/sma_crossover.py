@@ -7,6 +7,7 @@ with enterprise-grade implementation, risk awareness, and optimization.
 """
 
 import pandas as pd
+import numpy as np
 from typing import Optional, Dict, Any
 from collections import deque  # CRITICAL FIX: Import deque for memory management
 from .base_strategy import BaseStrategy, Signal
@@ -47,6 +48,29 @@ class SMACrossover(BaseStrategy):
 
         self.logger.info(f"SMA Crossover initialized: Fast={self.fast_window}, Slow={self.slow_window}")
 
+    def _calculate_sma_optimized(self, prices, period: int) -> float:
+        """
+        Calculate Simple Moving Average using numpy vectorized operations.
+
+        Optimized for deque input with O(1) access to recent elements.
+
+        Args:
+            prices: Deque or list of recent prices
+            period: SMA period
+
+        Returns:
+            Current SMA value or NaN if insufficient data
+        """
+        if len(prices) < period:
+            return np.nan
+
+        # Convert deque to list for slicing (deque doesn't support direct slicing)
+        prices_list = list(prices)
+
+        # Get last 'period' prices and calculate mean
+        recent_prices = prices_list[-period:]
+        return np.mean(recent_prices)
+
     def _initialize_state(self):
         """Initialize strategy-specific state."""
         # Clear strategy-specific buffers (base class handles self.prices)
@@ -77,20 +101,24 @@ class SMACrossover(BaseStrategy):
         if len(self.prices) < self.slow_window:
             return None
 
-        # Calculate moving averages
-        prices_series = pd.Series(self.prices)
+        # Calculate moving averages using optimized numpy approach
+        fast_ma = self._calculate_sma_optimized(self.prices, self.fast_window)
+        slow_ma = self._calculate_sma_optimized(self.prices, self.slow_window)
 
-        # Current MAs
-        fast_ma = prices_series.rolling(window=self.fast_window).mean().iloc[-1]
-        slow_ma = prices_series.rolling(window=self.slow_window).mean().iloc[-1]
+        # Skip if insufficient data for MA calculation
+        if np.isnan(fast_ma) or np.isnan(slow_ma):
+            return None
 
-        # Previous MAs for crossover detection (deque-safe)
+        # Previous MAs for crossover detection (optimized)
         if len(self.prices) >= self.slow_window + 1:
-            # Convert deque to list for slicing, but keep only last N+1 elements for efficiency
-            prices_list = list(self.prices)
-            prev_prices = pd.Series(prices_list[:-1])
-            prev_fast_ma = prev_prices.rolling(window=self.fast_window).mean().iloc[-1]
-            prev_slow_ma = prev_prices.rolling(window=self.slow_window).mean().iloc[-1]
+            # Use optimized calculation for previous period
+            prev_prices_list = list(self.prices)[:-1]  # Exclude current price
+            prev_fast_ma = self._calculate_sma_optimized(prev_prices_list, self.fast_window)
+            prev_slow_ma = self._calculate_sma_optimized(prev_prices_list, self.slow_window)
+
+            # Skip if previous calculations failed
+            if np.isnan(prev_fast_ma) or np.isnan(prev_slow_ma):
+                return None
         else:
             # First calculation
             prev_fast_ma = fast_ma

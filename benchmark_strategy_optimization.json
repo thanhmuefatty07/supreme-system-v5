@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-11-22T02:24:24.484640",
+  "benchmark_type": "strategy_optimization_numpy_vectorization",
+  "results": {
+    "sma": {
+      "strategy": "SMA Crossover",
+      "iterations": 200,
+      "total_time": 0.038405400000556256,
+      "avg_time_per_signal": 0.00019202700000278127,
+      "signals_per_second": 5207.601014365252
+    },
+    "rsi": {
+      "strategy": "RSI Strategy",
+      "iterations": 200,
+      "total_time": 0.26812579999932495,
+      "avg_time_per_signal": 0.0013406289999966247,
+      "signals_per_second": 745.9185203382275
+    },
+    "breakout": {
+      "strategy": "Breakout Strategy",
+      "iterations": 0,
+      "total_time": 0,
+      "avg_time_per_signal": 0,
+      "signals_per_second": 0,
+      "status": "skipped_different_architecture"
+    }
+  }
+}

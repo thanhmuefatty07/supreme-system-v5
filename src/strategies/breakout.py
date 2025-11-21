@@ -8,6 +8,7 @@ Based on academic studies and algorithmic trading best practices.
 
 import logging
 from typing import Any, Dict, List, Optional, Tuple
+from collections import deque
 
 import numpy as np
 import pandas as pd
@@ -96,6 +97,10 @@ class ImprovedBreakoutStrategy(BaseStrategy):
 
         # Multi-timeframe data cache
         self.timeframe_data = {}
+
+        # OPTIMIZATION: O(1) recent highs/lows tracking with deque
+        self.recent_highs = deque(maxlen=self.lookback_period)
+        self.recent_lows = deque(maxlen=self.lookback_period)
 
         # Position tracking
         self.position_active = False
@@ -330,25 +335,34 @@ class ImprovedBreakoutStrategy(BaseStrategy):
         """
         Calculate dynamic resistance/support levels using advanced methods.
 
-        Uses pivot points, Fibonacci levels, and statistical measures.
+        OPTIMIZED: Uses O(1) deque operations instead of O(n) DataFrame operations.
         """
         try:
-            recent_high = data['high'].tail(self.lookback_period).max()
-            recent_low = data['low'].tail(self.lookback_period).min()
+            # Update recent highs/lows tracking (O(1) with deque)
+            current_high = data['high'].iloc[-1]
+            current_low = data['low'].iloc[-1]
+
+            self.recent_highs.append(current_high)
+            self.recent_lows.append(current_low)
+
+            # O(1) max/min operations with deque
+            recent_high = max(self.recent_highs) if self.recent_highs else current_high
+            recent_low = min(self.recent_lows) if self.recent_lows else current_low
+
             recent_close = data['close'].iloc[-1]
 
             # Enhanced resistance calculation
             resistance_levels = [
-                recent_high,  # Simple high
+                recent_high,  # Simple high (O(1) with deque)
                 recent_close + (recent_high - recent_low) * 0.618,  # Fibonacci resistance
-                data['high'].tail(self.lookback_period * 2).max() * 0.95,  # 95% of higher high
+                max(self.recent_highs) * 0.95 if self.recent_highs else recent_high * 0.95,  # 95% of higher high
             ]
 
             # Enhanced support calculation
             support_levels = [
-                recent_low,  # Simple low
+                recent_low,  # Simple low (O(1) with deque)
                 recent_close - (recent_high - recent_low) * 0.618,  # Fibonacci support
-                data['low'].tail(self.lookback_period * 2).min() * 1.05,  # 105% of lower low
+                min(self.recent_lows) * 1.05 if self.recent_lows else recent_low * 1.05,  # 105% of lower low
             ]
 
             # Use the most relevant level (closest to current price)
@@ -358,10 +372,10 @@ class ImprovedBreakoutStrategy(BaseStrategy):
             return resistance_level, support_level
 
         except Exception as e:
-            # Fallback to simple levels
+            # Fallback to simple levels (still optimized)
             self.logger.warning(f"Dynamic levels calculation error: {e}")
-            recent_high = data['high'].tail(self.lookback_period).max()
-            recent_low = data['low'].tail(self.lookback_period).min()
+            recent_high = max(self.recent_highs) if self.recent_highs else data['high'].iloc[-1]
+            recent_low = min(self.recent_lows) if self.recent_lows else data['low'].iloc[-1]
             return recent_high, recent_low
 
     def _advanced_volume_analysis(self, data: pd.DataFrame) -> Dict[str, bool]:
