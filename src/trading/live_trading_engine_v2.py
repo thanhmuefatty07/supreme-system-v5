@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 from ..execution.router import SmartRouter
-from ..risk.core import RiskManager
+from ..risk.adaptive_kelly import AdaptiveKellyRiskManager, RiskConfig
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..utils.validators import validate_market_data, ValidationError
 from ..monitoring.metrics_collector import MetricsCollector
@@ -53,19 +53,21 @@ class LiveTradingEngineV2:
         self.strategy = strategy
         self.exchange = exchange_client
 
-        # INTEGRATION 1: Enterprise Risk Manager
-        risk_config = config.get('risk_config', {})
-        # Ensure all required config keys are present
-        risk_config.setdefault('max_risk_per_trade', 0.02)
-        risk_config.setdefault('kelly_mode', 'half')
-        risk_config.setdefault('daily_loss_limit', 0.05)
-        risk_config.setdefault('risk_free_rate', 0.0)
-        risk_config.setdefault('max_position_pct', 0.10)
-        risk_config.setdefault('max_portfolio_pct', 0.50)
+        # INTEGRATION 1: Adaptive Kelly Risk Manager with EWMA tracking
+        risk_config_dict = config.get('risk_config', {})
+        adaptive_risk_config = RiskConfig(
+            initial_win_rate=risk_config_dict.get('initial_win_rate', 0.5),
+            initial_reward_risk=risk_config_dict.get('initial_reward_risk', 1.5),
+            ewma_alpha=risk_config_dict.get('ewma_alpha', 0.05),
+            max_daily_loss_pct=risk_config_dict.get('max_daily_loss_pct', 0.05),
+            max_consecutive_losses=risk_config_dict.get('max_consecutive_losses', 3),
+            max_risk_per_trade=risk_config_dict.get('max_risk_per_trade', 0.02),
+            max_position_pct=risk_config_dict.get('max_position_pct', 0.10)
+        )
 
-        self.risk_manager = RiskManager(
-            capital=config.get('initial_capital', 10000.0),
-            config=risk_config
+        self.risk_manager = AdaptiveKellyRiskManager(
+            config=adaptive_risk_config,
+            current_capital=config.get('initial_capital', 10000.0)
         )
 
         # INTEGRATION 2: Smart Execution Router with Flush-to-Disk logging
@@ -151,20 +153,18 @@ class LiveTradingEngineV2:
 
                 self.logger.info(f"Signal generated: {signal.side} {symbol} @ {signal.price} (strength: {signal.strength:.2f})")
 
-                # STEP 2: Risk Check - Get Position Size
-                # Use strategy's historical performance or default
-                win_rate = self._get_strategy_win_rate()
-                rr_ratio = self._get_strategy_rr_ratio()
+                # STEP 2: Risk Check - Circuit Breaker First
+                if not self.risk_manager.can_trade():
+                    self.logger.warning(f"Trading Halted by Circuit Breaker: {self.risk_manager.halt_reason}")
+                    return {'status': 'REJECTED', 'reason': 'circuit_breaker_active'}
 
-                target_size = self.risk_manager.get_target_size(
-                    win_rate=win_rate,
-                    reward_risk_ratio=rr_ratio,
-                    current_exposure=0.0  # TODO: Calculate actual exposure
-                )
+                # Get Position Size using Adaptive Kelly
+                kelly_mode = config.get('kelly_mode', 'half')  # 'full', 'half', or 'quarter'
+                target_size = self.risk_manager.get_target_size(mode=kelly_mode)
 
                 if target_size <= 0:
-                    self.logger.warning(f"Risk Manager rejected trade for {symbol}: Circuit breaker active or Kelly = 0")
-                    return {'status': 'REJECTED', 'reason': 'risk_manager_rejection'}
+                    self.logger.warning(f"Adaptive Kelly returned zero size for {symbol}")
+                    return {'status': 'REJECTED', 'reason': 'kelly_zero_size'}
 
                 # Convert size from $ amount to quantity
                 quantity = target_size / signal.price
@@ -222,8 +222,12 @@ class LiveTradingEngineV2:
             position = self.current_positions.pop(symbol)
             pnl = self._calculate_pnl(position, execution_result)
 
-            # Update risk manager with trade result
-            self.risk_manager.record_trade(pnl)
+            # Update Adaptive Kelly with trade result (EWMA feedback loop)
+            was_win = pnl > 0
+            self.risk_manager.update_performance(was_win, pnl)
+
+            # Update capital tracking for Adaptive Kelly
+            self.risk_manager.current_capital += pnl
 
             # Update performance stats
             self.total_trades += 1
@@ -301,12 +305,15 @@ class LiveTradingEngineV2:
             'win_rate': self._get_strategy_win_rate(),
             'total_pnl': self.total_pnl,
             'current_positions': len(self.current_positions),
-            'circuit_breaker_active': self.risk_manager.circuit_breaker.is_active,
+            'circuit_breaker_active': self.risk_manager.is_halted,
+            'halt_reason': self.risk_manager.halt_reason,
             'portfolio_value': self.risk_manager.current_capital,
-            'risk_metrics': {
-                'current_daily_drawdown': self.risk_manager.circuit_breaker.current_daily_drawdown,
-                'current_weekly_drawdown': self.risk_manager.circuit_breaker.current_weekly_drawdown,
-                'daily_limit': self.risk_manager.circuit_breaker.daily_limit
+            'adaptive_kelly_metrics': {
+                'ewma_win_rate': self.risk_manager.ewma_win_rate,
+                'ewma_reward_risk': self.risk_manager.ewma_reward_risk,
+                'daily_loss_pct': self.risk_manager.daily_loss_pct,
+                'consecutive_losses': self.risk_manager.consecutive_losses,
+                'can_trade': self.risk_manager.can_trade()
             }
         }
 
