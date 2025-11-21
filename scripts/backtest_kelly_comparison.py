@@ -63,14 +63,14 @@ class KellyComparisonBacktester:
         capital = self.initial_capital
         equity_curve = [capital]
 
-        # Initialize Adaptive Kelly (relaxed circuit breaker for backtest)
+        # Initialize Adaptive Kelly (UNLOCKED for true performance)
         config = RiskConfig(
             initial_win_rate=0.5,
             initial_reward_risk=2.0,
             max_daily_loss_pct=0.50,  # Very relaxed for backtest
             max_consecutive_losses=10,  # Much higher for backtest (vs 3 live)
-            max_risk_per_trade=0.02,
-            max_position_pct=0.10
+            max_risk_per_trade=0.10,  # UNLOCKED: Allow up to 10% per trade (Kelly will scale it)
+            max_position_pct=0.20      # Allow larger positions when conviction is high
         )
         risk_manager = AdaptiveKellyRiskManager(config=config, current_capital=capital)
 

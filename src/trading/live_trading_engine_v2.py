@@ -61,8 +61,8 @@ class LiveTradingEngineV2:
             ewma_alpha=risk_config_dict.get('ewma_alpha', 0.05),
             max_daily_loss_pct=risk_config_dict.get('max_daily_loss_pct', 0.05),
             max_consecutive_losses=risk_config_dict.get('max_consecutive_losses', 3),
-            max_risk_per_trade=risk_config_dict.get('max_risk_per_trade', 0.02),
-            max_position_pct=risk_config_dict.get('max_position_pct', 0.10)
+            max_risk_per_trade=risk_config_dict.get('max_risk_per_trade', 0.10),  # UNLOCKED: Allow Kelly full expression
+            max_position_pct=risk_config_dict.get('max_position_pct', 0.20)      # Allow larger positions with conviction
         )
 
         self.risk_manager = AdaptiveKellyRiskManager(

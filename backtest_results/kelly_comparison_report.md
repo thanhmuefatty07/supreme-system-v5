@@ -1,6 +1,6 @@
 # Kelly Criterion Comparison Report
 
-**Backtest Date:** 2025-11-22 01:29:59
+**Backtest Date:** 2025-11-22 01:53:19
 **Initial Capital:** $10,000
 **Total Trades:** 1000
 
@@ -8,7 +8,7 @@
 
 | Method | Final Capital | Total Return | Max Drawdown | Sharpe Ratio | Win Rate |
 |--------|---------------|--------------|--------------|--------------|----------|
-| Adaptive Kelly | $10,869 | 8.7% | 0.3% | 0.20 | 55.1% |
+| Adaptive Kelly | $15,149 | 51.5% | 1.4% | 3.32 | 55.1% |
 | Static Kelly | $15,125 | 51.2% | 1.3% | 3.33 | 55.1% |
 | Fixed Size (2%) | $10,869 | 8.7% | 0.3% | 0.20 | 55.1% |
 
@@ -16,9 +16,9 @@
 
 ### Adaptive Kelly
 - **Trades Executed:** 1000
-- **Total P&L:** $869
+- **Total P&L:** $5,149
 - **Final EWMA Win Rate:** 0.665
-- **Final EWMA R/R Ratio:** 15.877
+- **Final EWMA R/R Ratio:** 3.279
 - **Circuit Breaker Active:** False
 
 ### Static Kelly
