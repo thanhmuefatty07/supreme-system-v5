@@ -180,7 +180,7 @@ class DataSourceConfig(TypedDict, total=False):
     rate_limit: Optional[int]
 
 
-@dataclass
+@dataclass(slots=True)
 class MarketData:
     """Typed market data container."""
     symbol: Symbol
@@ -196,7 +196,7 @@ class MarketData:
             raise ValueError(f"Market data missing required columns: {required_columns}")
 
 
-@dataclass
+@dataclass(slots=True)
 class TradingSignal:
     """Typed trading signal container."""
     symbol: Symbol
@@ -214,7 +214,7 @@ class TradingSignal:
             self.timestamp = datetime.now()
 
 
-@dataclass
+@dataclass(slots=True)
 class Position:
     """Typed position container."""
     symbol: Symbol
