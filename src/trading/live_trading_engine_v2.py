@@ -23,6 +23,7 @@ from ..risk.core import RiskManager
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..utils.validators import validate_market_data, ValidationError
 from ..monitoring.metrics_collector import MetricsCollector
+from ..data.live_data_manager import LiveDataManager
 
 
 logger = logging.getLogger(__name__)
@@ -67,18 +68,19 @@ class LiveTradingEngineV2:
             config=risk_config
         )
 
-        # INTEGRATION 2: Smart Execution Router
-        router_config = {
-            "max_slippage": config.get('max_slippage', 0.01),
-            "max_market_impact": 0.01,
-            "iceberg_threshold": 1000,
-            "max_chunk_size": 500,
-            "liquidity_check": True,
-            "impact_analysis": True,
-            "twap_enabled": True,
-            "execution_timeout": 30
-        }
-        self.router = SmartRouter(exchange_client, config=router_config)
+        # INTEGRATION 2: Smart Execution Router with Flush-to-Disk logging
+        log_path = config.get('trade_log_path', 'trade_history.jsonl')
+        self.router = SmartRouter(exchange_client, log_file=log_path)
+
+        # INTEGRATION 4: Live Data Manager for real-time market data
+        data_config = config.get('data_config', {})
+        self.data_manager = LiveDataManager(data_config)
+
+        # Configure data streams based on strategy requirements
+        self._configure_data_streams(strategy, config)
+
+        # Set up data callbacks to receive market data
+        self.data_manager.add_data_callback(self._on_market_data_received)
 
         # Engine state
         self.is_running = False
@@ -102,15 +104,7 @@ class LiveTradingEngineV2:
         self.metrics = MetricsCollector()
         self.metrics.initialize(config.get('initial_capital', 10000.0))
 
-        # NEW: Performance Monitoring
-        self.metrics = MetricsCollector()
-        self.metrics.initialize(config.get('initial_capital', 10000.0))
-
-        # INTEGRATION 3: Performance Monitoring (The Heartbeat)
-        self.metrics = MetricsCollector()
-        self.metrics.initialize(config.get('initial_capital', 10000.0))
-
-        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration, Critical Fixes, and Performance Monitoring")
+        self.logger.info("LiveTradingEngine V2 initialized with Trifecta Integration, Live Data Manager, and Performance Monitoring")
 
     async def on_market_update(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -145,7 +139,7 @@ class LiveTradingEngineV2:
         async with self._state_lock:
             try:
                 # STEP 1: Generate Signal from Strategy
-                signal = self.strategy.generate_signal(validated_data.dict())
+                signal = self.strategy.generate_signal(validated_data.model_dump())
 
                 if not signal:
                     return None  # No action needed
@@ -182,15 +176,14 @@ class LiveTradingEngineV2:
                 result = await self.router.execute_order(
                     symbol=symbol,
                     side=signal.side,
-                    amount=quantity,  # SmartRouter uses 'amount' not 'quantity'
-                    order_type='market'  # Can be enhanced with limit orders
+                    quantity=quantity
                 )
 
                 # STEP 4: Post-Trade Processing
                 # Convert ExecutionResult to dict for consistency
                 result_dict = result.to_dict() if hasattr(result, 'to_dict') else result
 
-                if result_dict.get('status') == 'SUCCESS':
+                if result_dict.get('status') == 'FILLED':
                     await self._on_trade_executed(signal, result_dict, target_size)
 
                 return result_dict
@@ -239,7 +232,7 @@ class LiveTradingEngineV2:
             self.total_pnl += pnl
 
             # PERFORMANCE MONITORING: Record trade in metrics collector
-            self.metrics.record_trade(pnl, symbol)
+            self.metrics.record_trade(pnl)
 
             # Notify strategy
             self.strategy.on_order_filled({
@@ -286,9 +279,8 @@ class LiveTradingEngineV2:
         return 2.0  # Default 2:1 reward:risk ratio
 
     async def start(self):
-        """Start the live trading engine."""
-        self.is_running = True
-        self.logger.info("Live Trading Engine V2 started")
+        """Start the live trading engine with real-time data."""
+        await self.start_live_trading()
 
     async def stop(self):
         """Stop the live trading engine."""
@@ -323,3 +315,95 @@ class LiveTradingEngineV2:
         if limit:
             return self.trade_history[-limit:]
         return self.trade_history
+
+    def _configure_data_streams(self, strategy: BaseStrategy, config: Dict[str, Any]):
+        """
+        Configure data streams based on strategy requirements.
+
+        Args:
+            strategy: Trading strategy instance
+            config: Engine configuration
+        """
+        # Get symbols from config, default to common pairs if not specified
+        symbols = config.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+
+        # Get interval from config, default to 1 minute
+        interval = config.get('data_interval', '1m')
+
+        # Add streams for each symbol
+        for symbol in symbols:
+            self.data_manager.add_stream(
+                symbol=symbol,
+                interval=interval,
+                stream_type="kline"  # OHLCV data
+            )
+
+        self.logger.info(f"Configured data streams: {symbols} @ {interval}")
+
+    async def _on_market_data_received(self, market_data: Dict[str, Any]):
+        """
+        Callback for processing incoming market data from live streams.
+
+        Args:
+            market_data: Processed market data from LiveDataManager
+        """
+        try:
+            # Process the market data through our trading engine
+            await self.on_market_update(market_data)
+        except Exception as e:
+            self.logger.error(f"Error processing market data: {e}")
+
+    async def start_live_trading(self):
+        """
+        Start live trading with real-time data streams.
+
+        This replaces the mock loop with actual live data streaming.
+        """
+        self.is_running = True
+        self.logger.info("Starting live trading with real-time data streams...")
+
+        try:
+            # Start data streaming and trading loop concurrently
+            streaming_task = asyncio.create_task(self.data_manager.start_streaming())
+
+            # Wait for both tasks
+            await streaming_task
+
+        except KeyboardInterrupt:
+            self.logger.info("Received shutdown signal")
+        except Exception as e:
+            self.logger.error(f"Error in live trading loop: {e}")
+        finally:
+            await self._shutdown()
+
+    async def _shutdown(self):
+        """Gracefully shutdown all components."""
+        self.logger.info("Shutting down live trading engine...")
+
+        # Stop data manager
+        await self.data_manager.disconnect()
+
+        # Close any open positions (in real implementation)
+        # This would integrate with position management
+
+        self.is_running = False
+        self.logger.info("Live trading engine shutdown complete")
+
+    def get_data_status(self) -> Dict[str, Any]:
+        """
+        Get status of live data streams.
+
+        Returns:
+            Dictionary with data connection and stream status
+        """
+        status = self.data_manager.get_connection_status()
+
+        return {
+            'data_connected': status.connected,
+            'last_data_time': status.last_message_time.isoformat() if status.last_message_time else None,
+            'reconnect_count': status.reconnect_count,
+            'messages_received': status.messages_received,
+            'data_errors': status.errors_count,
+            'uptime_seconds': status.uptime_seconds,
+            'buffered_data_count': len(self.data_manager.data_buffer)
+        }

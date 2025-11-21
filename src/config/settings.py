@@ -243,7 +243,7 @@ class SupremeSystemSettings(BaseSettings):
 
     def to_dict(self) -> Dict[str, Any]:
         """Export configuration to dictionary."""
-        return self.dict()
+        return self.model_dump()
 
     def save_to_file(self, file_path: str) -> None:
         """Save configuration to JSON file."""

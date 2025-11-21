@@ -49,6 +49,25 @@ class OHLCVDataPoint(BaseModel):
 
         return self
 
+    @model_validator(mode='after')
+    def validate_timestamp_freshness(self):
+        """Validate timestamp is not too old for live data."""
+        # For live data, timestamp should not be more than 5 minutes old
+        # This prevents processing of stale data in live trading
+        current_time = int(datetime.now().timestamp() * 1000)  # milliseconds
+        timestamp_ms = self.timestamp
+
+        # Allow some tolerance for network delays (5 minutes = 300 seconds = 300000 ms)
+        max_age_ms = 300000
+
+        if current_time - timestamp_ms > max_age_ms:
+            logger.warning(f"Data timestamp too old: {timestamp_ms}, current: {current_time}")
+            # Don't raise error for old data, just warn - strategies can decide
+
+        return self
+
+        return self
+
     @field_validator('timestamp')
     @classmethod
     def validate_timestamp(cls, v):
@@ -64,11 +83,12 @@ class OHLCVDataPoint(BaseModel):
 
         return v
 
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             Decimal: lambda v: float(v)
         }
+    )
 
 
 class TradingSymbol(BaseModel):
@@ -466,13 +486,13 @@ class DataValidator:
                         try:
                             # Try to create Pydantic model (this will sanitize)
                             model = OHLCVDataPoint(**record)
-                            sanitized_records.append(model.dict())
+                            sanitized_records.append(model.model_dump())
                         except ValidationError:
                             # If validation fails, try to fix common issues
                             sanitized_record = self._fix_common_data_issues(record)
                             try:
                                 model = OHLCVDataPoint(**sanitized_record)
-                                sanitized_records.append(model.dict())
+                                sanitized_records.append(model.model_dump())
                             except ValidationError:
                                 # Skip invalid records
                                 continue
@@ -488,12 +508,12 @@ class DataValidator:
                     for item in data:
                         try:
                             model = OHLCVDataPoint(**item)
-                            sanitized_list.append(model.dict())
+                            sanitized_list.append(model.model_dump())
                         except ValidationError:
                             sanitized_item = self._fix_common_data_issues(item)
                             try:
                                 model = OHLCVDataPoint(**sanitized_item)
-                                sanitized_list.append(model.dict())
+                                sanitized_list.append(model.model_dump())
                             except ValidationError:
                                 continue
                     return sanitized_list
@@ -501,11 +521,11 @@ class DataValidator:
                 elif isinstance(data, dict):
                     try:
                         model = OHLCVDataPoint(**data)
-                        return model.dict()
+                        return model.model_dump()
                     except ValidationError:
                         sanitized = self._fix_common_data_issues(data)
                         model = OHLCVDataPoint(**sanitized)
-                        return model.dict()
+                        return model.model_dump()
 
         except Exception as e:
             self.logger.error(f"Data sanitization failed: {e}")
@@ -983,4 +1003,101 @@ ISSUES FOUND:
         report += f"\n{'='*60}"
 
         return report
+
+
+def validate_live_market_data(data: Dict[str, Any], max_age_seconds: int = 300) -> Optional[OHLCVDataPoint]:
+    """
+    Validate live market data with additional checks for real-time trading.
+
+    Args:
+        data: Raw market data from live feed
+        max_age_seconds: Maximum allowed age of data in seconds (default 5 minutes)
+
+    Returns:
+        Validated OHLCVDataPoint or None if data is invalid/stale
+    """
+    try:
+        # Basic validation first
+        validated_data = OHLCVDataPoint(**data)
+
+        # Check timestamp freshness for live data
+        current_time = int(datetime.now().timestamp() * 1000)  # milliseconds
+        data_timestamp = validated_data.timestamp
+
+        # Allow some tolerance for network delays
+        if current_time - data_timestamp > (max_age_seconds * 1000):
+            logger.warning(f"Live data too old: {data_timestamp} vs current {current_time}")
+            return None
+
+        # Additional live data checks
+        if validated_data.volume < 0:
+            logger.warning("Negative volume in live data")
+            return None
+
+        # Check for unrealistic price movements (more than 50% change from reasonable bounds)
+        # This is a basic sanity check for data quality
+        prices = [validated_data.open, validated_data.high, validated_data.low, validated_data.close]
+        avg_price = sum(prices) / len(prices)
+
+        for price in prices:
+            if abs(price - avg_price) / avg_price > 0.5:  # 50% deviation
+                logger.warning(f"Unrealistic price movement detected: {price} vs avg {avg_price}")
+                # Don't reject, just warn - some volatile assets can have large moves
+
+        logger.debug(f"Live market data validated: {validated_data.symbol} @ {validated_data.close}")
+        return validated_data
+
+    except ValidationError as e:
+        logger.warning(f"Live market data validation failed: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in live data validation: {e}")
+        return None
+
+
+def create_live_data_pipeline_validator(symbol: str, expected_interval_ms: int = 60000):
+    """
+    Create a validator function for a specific symbol's live data pipeline.
+
+    This factory function creates a validator that maintains state for
+    sequence checking and gap detection in live data streams.
+
+    Args:
+        symbol: Trading symbol to validate
+        expected_interval_ms: Expected interval between data points in milliseconds
+
+    Returns:
+        Validation function that maintains state between calls
+    """
+    last_timestamp = 0
+    consecutive_gaps = 0
+    max_consecutive_gaps = 5  # Alert after 5 missed intervals
+
+    def validate_data_point(data: Dict[str, Any]) -> Optional[OHLCVDataPoint]:
+        nonlocal last_timestamp, consecutive_gaps
+
+        validated = validate_live_market_data(data)
+        if not validated:
+            return None
+
+        # Check for data gaps in live stream
+        if last_timestamp > 0:
+            time_diff = validated.timestamp - last_timestamp
+            expected_diff = expected_interval_ms
+
+            # Allow some tolerance (±10% of expected interval)
+            tolerance = expected_diff * 0.1
+
+            if abs(time_diff - expected_diff) > tolerance:
+                if time_diff > expected_diff * 2:  # Gap larger than 2 intervals
+                    consecutive_gaps += 1
+                    if consecutive_gaps >= max_consecutive_gaps:
+                        logger.warning(f"Large data gap detected for {symbol}: {consecutive_gaps} consecutive gaps")
+                else:
+                    consecutive_gaps = 0  # Reset on smaller timing variations
+
+        last_timestamp = validated.timestamp
+        return validated
+
+    return validate_data_point
 

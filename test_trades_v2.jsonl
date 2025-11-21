@@ -1,0 +1,9 @@
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763694115.3307343}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763694141.1095686}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763694608.9859278}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763694809.2870684}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763695245.6495783}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763695317.1851175}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763695334.6201653}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763695463.9101734}
+{"status": "FILLED", "symbol": "BTC/USDT", "side": "buy", "quantity": 2.0, "price": 100.0, "fee": 0.0, "order_id": "test_order_123", "error_message": "", "timestamp": 1763695521.0338717}

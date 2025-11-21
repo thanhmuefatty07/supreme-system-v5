@@ -2,116 +2,132 @@
 """
 Supreme System V5 - Mean Reversion Strategy
 
-Real implementation of mean reversion trading strategy.
+Enterprise-grade mean reversion trading strategy with Bollinger Bands.
 Trades based on the assumption that prices tend to revert to their mean.
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
+from collections import deque
 
 import numpy as np
 import pandas as pd
 
-from .base_strategy import BaseStrategy
+from .base_strategy import BaseStrategy, Signal
 
 
 class MeanReversionStrategy(BaseStrategy):
     """
-    Mean Reversion Strategy.
+    Mean Reversion Strategy - Enterprise Grade
 
-    Identifies overbought/oversold conditions using Bollinger Bands or RSI,
+    Identifies overbought/oversold conditions using Bollinger Bands and RSI,
     and trades on the expectation of price reversion to the mean.
+
+    Production features:
+    - Bollinger Bands for statistical mean reversion
+    - RSI confirmation for enhanced signals
+    - Memory-safe buffer management
+    - Risk-aware signal generation
     """
 
-    def __init__(
-        self,
-        lookback_period: int = 20,
-        entry_threshold: float = 2.0,  # Standard deviations for Bollinger Bands
-        exit_threshold: float = 0.5,   # Exit when price reverts halfway back
-        rsi_period: int = 14,
-        rsi_overbought: float = 70.0,
-        rsi_oversold: float = 30.0,
-        use_rsi: bool = False,
-        name: str = "MeanReversion"
-    ):
+    def __init__(self, config: Dict[str, Any]):
         """
-        Initialize the mean reversion strategy.
+        Initialize the mean reversion strategy with enterprise config.
 
         Args:
-            lookback_period: Period for calculating moving average and std dev
-            entry_threshold: Standard deviation threshold for entry signals
-            exit_threshold: Threshold for exit signals (reversion distance)
-            rsi_period: Period for RSI calculation
-            rsi_overbought: RSI level considered overbought
-            rsi_oversold: RSI level considered oversold
-            use_rsi: Whether to use RSI in addition to Bollinger Bands
-            name: Strategy name
+            config: Strategy configuration with parameters
         """
-        super().__init__(name)
+        # CRITICAL FIX: Initialize deque attributes BEFORE calling super().__init__()
+        buffer_size = max(config.get('lookback_period', 20) * 3, 100)
+        self.price_history = deque(maxlen=buffer_size)
+        self.bollinger_history = deque(maxlen=buffer_size)
+        self.rsi_history = deque(maxlen=buffer_size) if config.get('use_rsi', False) else None
 
-        self.lookback_period = lookback_period
-        self.entry_threshold = entry_threshold
-        self.exit_threshold = exit_threshold
-        self.rsi_period = rsi_period
-        self.rsi_overbought = rsi_overbought
-        self.rsi_oversold = rsi_oversold
-        self.use_rsi = use_rsi
+        super().__init__("MeanReversionStrategy", config)
 
-        # Set parameters for tracking
-        self.set_parameters(
-            lookback_period=lookback_period,
-            entry_threshold=entry_threshold,
-            exit_threshold=exit_threshold,
-            rsi_period=rsi_period,
-            rsi_overbought=rsi_overbought,
-            rsi_oversold=rsi_oversold,
-            use_rsi=use_rsi
-        )
+        # Core parameters
+        self.lookback_period = config.get('lookback_period', 20)
+        self.entry_threshold = config.get('entry_threshold', 2.0)  # Standard deviations
+        self.exit_threshold = config.get('exit_threshold', 0.5)   # Exit threshold
+        self.rsi_period = config.get('rsi_period', 14)
+        self.rsi_overbought = config.get('rsi_overbought', 70.0)
+        self.rsi_oversold = config.get('rsi_oversold', 30.0)
+        self.use_rsi = config.get('use_rsi', False)
+        self.min_signal_strength = config.get('min_signal_strength', 0.1)
 
-    def generate_signal(self, data: pd.DataFrame) -> int:
+        self.logger.info(f"Mean Reversion Strategy initialized: Lookback={self.lookback_period}, Entry={self.entry_threshold}σ, RSI={self.use_rsi}")
+
+    def _initialize_state(self):
+        """Initialize strategy-specific state."""
+        # CRITICAL FIX: Clear deques instead of reassigning
+        self.price_history.clear()
+        self.bollinger_history.clear()
+        if self.rsi_history:
+            self.rsi_history.clear()
+
+    def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
         """
         Generate trading signal based on mean reversion logic.
 
         Args:
-            data: DataFrame with OHLCV data
+            market_data: Current market data with OHLCV
 
         Returns:
-            1 for buy (oversold), -1 for sell (overbought), 0 for hold
+            Signal object or None if no action needed
         """
-        if not self.validate_data(data):
-            return 0
+        current_price = market_data.get('close')
+        symbol = market_data.get('symbol', 'UNKNOWN')
+
+        if not current_price or current_price <= 0:
+            self.logger.warning(f"Invalid price data: {current_price}")
+            return None
+
+        # Update price buffer using base class helper (memory-safe)
+        self.update_price(current_price)
 
         # Need enough data for calculations
         min_periods = max(self.lookback_period, self.rsi_period if self.use_rsi else 0)
-        if len(data) < min_periods:
-            return 0
+        if len(self.prices) < min_periods:
+            return None
 
-        current_price = data['close'].iloc[-1]
-
-        # Calculate Bollinger Bands
-        bb_signal = self._calculate_bollinger_signal(data, current_price)
+        # Calculate signals
+        bb_signal = self._calculate_bollinger_signal(current_price)
         rsi_signal = 0
 
         if self.use_rsi:
-            rsi_signal = self._calculate_rsi_signal(data)
+            rsi_signal = self._calculate_rsi_signal()
 
         # Combine signals (both must agree if using RSI)
+        final_signal = 0
         if self.use_rsi and rsi_signal != 0:
-            # RSI and Bollinger Bands must agree
+            # RSI and Bollinger Bands must agree for confirmation
             if bb_signal == rsi_signal:
-                signal = bb_signal
-            else:
-                signal = 0  # No signal if indicators disagree
+                final_signal = bb_signal
         else:
             # Use only Bollinger Bands
-            signal = bb_signal
+            final_signal = bb_signal
+
+        if final_signal == 0:
+            return None
+
+        # Generate Signal object
+        signal = self._create_signal(final_signal, current_price, symbol)
+        if signal:
+            self.total_signals += 1
+            self.logger.info(f"Mean Reversion signal generated: {signal.side} @ {signal.price} (strength: {signal.strength:.2f})")
 
         return signal
 
-    def _calculate_bollinger_signal(self, data: pd.DataFrame, current_price: float) -> int:
-        """Calculate signal based on Bollinger Bands."""
+    def _calculate_bollinger_signal(self, current_price: float) -> int:
+        """Calculate signal based on Bollinger Bands using price buffer."""
         try:
+            if len(self.prices) < self.lookback_period:
+                return 0
+
+            # Deque-safe: Convert to list for pandas operations
+            prices_list = list(self.prices)
+            prices = pd.Series(prices_list)
+
             # Calculate rolling mean and standard deviation
-            prices = data['close']
             rolling_mean = prices.rolling(window=self.lookback_period).mean()
             rolling_std = prices.rolling(window=self.lookback_period).std()
 
@@ -124,72 +140,94 @@ class MeanReversionStrategy(BaseStrategy):
             latest_upper = upper_band.iloc[-1]
             latest_lower = lower_band.iloc[-1]
 
-            # Calculate z-score (how many standard deviations from mean)
-            if rolling_std.iloc[-1] > 0:
-                z_score = (current_price - latest_mean) / rolling_std.iloc[-1]
-            else:
-                z_score = 0
+            # Store bands for analysis
+            self.bollinger_history.append({
+                'mean': latest_mean,
+                'upper': latest_upper,
+                'lower': latest_lower,
+                'price': current_price
+            })
 
-            # Generate signal based on distance from mean
+            # Generate signal based on Bollinger Band position
             if current_price <= latest_lower:
-                # Price touched or broke lower band - potential buy signal
-                self.logger.debug(f"Bollinger Buy Signal: price {current_price:.2f} <= lower {latest_lower:.2f}")
-                return 1
+                # Price touched or broke lower band - oversold signal (buy)
+                deviation = abs(current_price - latest_mean) / latest_mean
+                if deviation >= self.min_signal_strength:
+                    self.logger.debug(".2f")
+                    return 1
             elif current_price >= latest_upper:
-                # Price touched or broke upper band - potential sell signal
-                self.logger.debug(f"Bollinger Sell Signal: price {current_price:.2f} >= upper {latest_upper:.2f}")
-                return -1
-            else:
-                # Price within bands - check for partial reversion
-                return 0
+                # Price touched or broke upper band - overbought signal (sell)
+                deviation = abs(current_price - latest_mean) / latest_mean
+                if deviation >= self.min_signal_strength:
+                    self.logger.debug(".2f")
+                    return -1
+
+            return 0
 
         except Exception as e:
             self.logger.error(f"Error calculating Bollinger signal: {e}")
             return 0
 
-    def _calculate_rsi_signal(self, data: pd.DataFrame) -> int:
-        """Calculate signal based on RSI."""
+    def _calculate_rsi_signal(self) -> int:
+        """Calculate signal based on RSI using price buffer."""
         try:
-            prices = data['close']
-
-            # Calculate RSI
-            rsi = self._calculate_rsi(prices, self.rsi_period)
-
-            if rsi is None or np.isnan(rsi):
+            if not self.rsi_history or len(self.prices) < self.rsi_period + 1:
                 return 0
 
-            latest_rsi = rsi.iloc[-1]
+            # Calculate RSI using price buffer
+            rsi_value = self._calculate_rsi()
+            if rsi_value is None or np.isnan(rsi_value):
+                return 0
+
+            # Store RSI value
+            self.rsi_history.append(rsi_value)
 
             # Generate RSI-based signal
-            if latest_rsi <= self.rsi_oversold:
-                # Oversold condition
-                self.logger.debug(".2f")
-                return 1
-            elif latest_rsi >= self.rsi_overbought:
-                # Overbought condition
-                self.logger.debug(".2f")
-                return -1
-            else:
-                return 0
+            if rsi_value <= self.rsi_oversold:
+                # Oversold condition - buy signal
+                rsi_deviation = (self.rsi_oversold - rsi_value) / self.rsi_oversold
+                if rsi_deviation >= self.min_signal_strength:
+                    self.logger.debug(".2f")
+                    return 1
+            elif rsi_value >= self.rsi_overbought:
+                # Overbought condition - sell signal
+                rsi_deviation = (rsi_value - self.rsi_overbought) / (100 - self.rsi_overbought)
+                if rsi_deviation >= self.min_signal_strength:
+                    self.logger.debug(".2f")
+                    return -1
+
+            return 0
 
         except Exception as e:
             self.logger.error(f"Error calculating RSI signal: {e}")
             return 0
 
-    def _calculate_rsi(self, prices: pd.Series, period: int) -> Optional[pd.Series]:
-        """Calculate RSI (Relative Strength Index)."""
+    def _calculate_rsi(self) -> Optional[float]:
+        """Calculate RSI using price buffer."""
         try:
+            if len(self.prices) < self.rsi_period + 1:
+                return None
+
+            # Deque-safe: Convert to list for calculations
+            prices_list = list(self.prices)
+            prices = pd.Series(prices_list)
+
             # Calculate price changes
             delta = prices.diff()
 
             # Separate gains and losses
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
 
-            # Calculate RS (Relative Strength)
-            rs = gain / loss
+            # Get latest values
+            latest_gain = gain.iloc[-1]
+            latest_loss = loss.iloc[-1]
 
-            # Calculate RSI
+            if latest_loss == 0:
+                return 100.0  # No losses = extremely strong momentum
+
+            # Calculate RS and RSI
+            rs = latest_gain / latest_loss
             rsi = 100 - (100 / (1 + rs))
 
             return rsi
@@ -198,74 +236,99 @@ class MeanReversionStrategy(BaseStrategy):
             self.logger.error(f"Error calculating RSI: {e}")
             return None
 
-    def calculate_bollinger_bands(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Calculate Bollinger Bands for analysis.
-
-        Args:
-            data: Input DataFrame with 'close' column
-
-        Returns:
-            DataFrame with Bollinger Bands added
-        """
-        df = data.copy()
-
+    def _create_signal(self, signal_type: int, price: float, symbol: str) -> Optional[Signal]:
+        """Create Signal object based on signal type."""
         try:
-            prices = df['close']
-            rolling_mean = prices.rolling(window=self.lookback_period).mean()
-            rolling_std = prices.rolling(window=self.lookback_period).std()
+            if signal_type == 0:
+                return None
 
-            df['bb_middle'] = rolling_mean
-            df['bb_upper'] = rolling_mean + (rolling_std * self.entry_threshold)
-            df['bb_lower'] = rolling_mean - (rolling_std * self.entry_threshold)
+            side = 'buy' if signal_type == 1 else 'sell'
+            signal_strength = self._calculate_signal_strength(signal_type, price)
 
-            # Calculate %B (position within bands)
-            df['bb_percent_b'] = (prices - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
+            if signal_strength < self.min_signal_strength:
+                return None
 
-            # Calculate bandwidth (volatility indicator)
-            df['bb_bandwidth'] = (df['bb_upper'] - df['bb_lower']) / rolling_mean
+            # Get Bollinger Band info for metadata
+            bb_info = {}
+            if self.bollinger_history:
+                latest_bb = self.bollinger_history[-1]
+                bb_info = {
+                    'bb_mean': latest_bb['mean'],
+                    'bb_upper': latest_bb['upper'],
+                    'bb_lower': latest_bb['lower'],
+                    'deviation_from_mean': abs(price - latest_bb['mean']) / latest_bb['mean']
+                }
+
+            metadata = {
+                'type': 'mean_reversion_bollinger' if not self.use_rsi else 'mean_reversion_combined',
+                'lookback_period': self.lookback_period,
+                'entry_threshold': self.entry_threshold,
+                'signal_strength': signal_strength,
+                **bb_info
+            }
+
+            if self.use_rsi and self.rsi_history:
+                metadata['rsi_value'] = self.rsi_history[-1]
+                metadata['rsi_period'] = self.rsi_period
+
+            return Signal(
+                symbol=symbol,
+                side=side,
+                price=price,
+                strength=min(signal_strength, 1.0),
+                metadata=metadata
+            )
 
         except Exception as e:
-            self.logger.error(f"Error calculating Bollinger Bands: {e}")
+            self.logger.error(f"Error creating signal: {e}")
+            return None
 
-        return df
-
-    def get_reversion_probability(self, data: pd.DataFrame, current_price: float) -> float:
-        """
-        Calculate probability of mean reversion based on historical data.
-
-        Args:
-            data: Historical price data
-            current_price: Current price to analyze
-
-        Returns:
-            Probability of reversion (0.0 to 1.0)
-        """
+    def _calculate_signal_strength(self, signal_type: int, price: float) -> float:
+        """Calculate signal strength based on deviation from mean."""
         try:
-            prices = data['close']
+            if not self.bollinger_history:
+                return 0.0
 
-            # Calculate z-score of current price
-            mean_price = prices.tail(self.lookback_period).mean()
-            std_price = prices.tail(self.lookback_period).std()
+            latest_bb = self.bollinger_history[-1]
+            mean_price = latest_bb['mean']
 
-            if std_price > 0:
-                z_score = abs(current_price - mean_price) / std_price
-            else:
-                return 0.5  # Neutral if no volatility
+            # Calculate deviation from mean (normalized)
+            deviation = abs(price - mean_price) / mean_price
 
-            # Calculate reversion probability based on historical data
-            # Simple approach: probability based on how extreme the z-score is
-            if z_score >= self.entry_threshold:
-                # Very extreme - high reversion probability
-                return 0.8
-            elif z_score >= 1.5:
-                return 0.6
-            elif z_score >= 1.0:
-                return 0.4
-            else:
-                # Not extreme enough for strong reversion signal
-                return 0.2
+            # Scale to 0-1 range (higher deviation = stronger signal)
+            strength = min(deviation * 2.0, 1.0)  # Cap at 1.0
+
+            return strength
 
         except Exception as e:
-            self.logger.error(f"Error calculating reversion probability: {e}")
-            return 0.5
+            self.logger.error(f"Error calculating signal strength: {e}")
+            return 0.0
+
+    def get_strategy_info(self) -> Dict[str, Any]:
+        """Get detailed strategy information."""
+        base_info = super().get_status()
+
+        # Add mean reversion-specific info
+        base_info.update({
+            'strategy_type': 'Mean_Reversion',
+            'parameters': {
+                'lookback_period': self.lookback_period,
+                'entry_threshold': self.entry_threshold,
+                'exit_threshold': self.exit_threshold,
+                'rsi_period': self.rsi_period,
+                'rsi_overbought': self.rsi_overbought,
+                'rsi_oversold': self.rsi_oversold,
+                'use_rsi': self.use_rsi,
+                'min_signal_strength': self.min_signal_strength
+            },
+            'current_state': {
+                'data_points': len(self.prices),
+                'bollinger_signals': len(self.bollinger_history),
+                'rsi_signals': len(self.rsi_history) if self.rsi_history else 0,
+                'latest_price': list(self.prices)[-1] if self.prices else None,
+                'latest_bb': self.bollinger_history[-1] if self.bollinger_history else None,
+                'latest_rsi': self.rsi_history[-1] if self.rsi_history else None
+            }
+        })
+
+        return base_info

@@ -33,28 +33,23 @@ class SMACrossover(BaseStrategy):
         Args:
             config: Strategy configuration with parameters
         """
-        # CRITICAL FIX: Initialize deque attributes BEFORE calling super().__init__()
-        buffer_size = max(config.get('slow_window', 20) * 3, 100)  # At least 3x slow window or 100 items
-        self.prices = deque(maxlen=buffer_size)  # Rolling price buffer
-        self.fast_ma_history = deque(maxlen=buffer_size)  # Fast MA history for crossover detection
-        self.slow_ma_history = deque(maxlen=buffer_size)  # Slow MA history for crossover detection
-
-        super().__init__("SMACrossover", config)
-
         # Core parameters
         self.fast_window = config.get('fast_window', 10)
         self.slow_window = config.get('slow_window', 20)
         self.min_crossover_strength = config.get('min_crossover_strength', 0.001)  # Minimum % difference
 
-        # Optimization settings
-        self.max_buffer_size = max(self.slow_window * 2, 100)  # Adaptive buffer size
+        # Strategy-specific buffers (use base class for prices, manage MA buffers separately)
+        buffer_size = config.get('buffer_size', max(self.slow_window * 3, 100))
+        self.fast_ma_history = deque(maxlen=buffer_size)
+        self.slow_ma_history = deque(maxlen=buffer_size)
+
+        super().__init__("SMACrossover", config)
 
         self.logger.info(f"SMA Crossover initialized: Fast={self.fast_window}, Slow={self.slow_window}")
 
     def _initialize_state(self):
         """Initialize strategy-specific state."""
-        # CRITICAL FIX: Clear deques instead of reassigning
-        self.prices.clear()
+        # Clear strategy-specific buffers (base class handles self.prices)
         self.fast_ma_history.clear()
         self.slow_ma_history.clear()
 
@@ -75,8 +70,8 @@ class SMACrossover(BaseStrategy):
             self.logger.warning(f"Invalid price data: {current_price}")
             return None
 
-        # CRITICAL FIX: Update price buffer (deque auto-manages size)
-        self.prices.append(current_price)
+        # Update price buffer using base class helper (memory-safe)
+        self.update_price(current_price)
 
         # Need enough data for analysis
         if len(self.prices) < self.slow_window:

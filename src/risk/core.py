@@ -17,7 +17,7 @@ from .calculations import (
     calculate_sharpe_ratio,
     KellyInput
 )
-from .limits import CircuitBreaker, PositionSizeLimiter
+from .limits import CircuitBreaker, PositionSizeLimiter, PositionLimitsConfig
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +64,10 @@ class RiskManager:
         )
 
         self.position_limiter = PositionSizeLimiter(
-            max_position_pct=self.config["max_position_pct"],
-            max_portfolio_pct=self.config["max_portfolio_pct"]
+            config=PositionLimitsConfig(
+                max_position_pct=self.config["max_position_pct"],
+                max_portfolio_pct=self.config["max_portfolio_pct"]
+            )
         )
 
         # State tracking

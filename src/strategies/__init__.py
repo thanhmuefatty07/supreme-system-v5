@@ -13,6 +13,8 @@ from .base_strategy import BaseStrategy, Signal
 from .sma_crossover import SMACrossover
 from .rsi_strategy import RSIStrategy
 from .breakout_strategy import BreakoutStrategy
+from .mean_reversion import MeanReversionStrategy
+from .momentum import MomentumStrategy
 from .strategy_registry import StrategyRegistry
 
 # Create global registry instance
@@ -84,12 +86,63 @@ registry.register_strategy(
     }
 )
 
+registry.register_strategy(
+    name="mean_reversion_strategy",
+    strategy_class=MeanReversionStrategy,
+    metadata={
+        "description": "Mean Reversion Strategy with Bollinger Bands and RSI",
+        "type": "mean_reversion",
+        "indicators": ["bollinger_bands", "rsi"],
+        "timeframes": ["15m", "1h", "4h"],
+        "risk_level": "medium"
+    },
+    parameters={
+        "lookback_period": 20,
+        "entry_threshold": 2.0,
+        "exit_threshold": 0.5,
+        "rsi_period": 14,
+        "rsi_overbought": 70.0,
+        "rsi_oversold": 30.0,
+        "use_rsi": True,
+        "min_signal_strength": 0.1,
+        "initial_capital": 10000.0,
+        "max_position_size": 0.1,
+        "max_daily_loss": 0.05
+    }
+)
+
+registry.register_strategy(
+    name="momentum_strategy",
+    strategy_class=MomentumStrategy,
+    metadata={
+        "description": "Momentum Strategy with MACD and ROC indicators",
+        "type": "momentum",
+        "indicators": ["macd", "roc", "trend_strength"],
+        "timeframes": ["15m", "1h", "4h"],
+        "risk_level": "medium"
+    },
+    parameters={
+        "short_period": 12,
+        "long_period": 26,
+        "signal_period": 9,
+        "roc_period": 10,
+        "trend_threshold": 0.02,
+        "volume_confirmation": True,
+        "min_signal_strength": 0.1,
+        "initial_capital": 10000.0,
+        "max_position_size": 0.1,
+        "max_daily_loss": 0.05
+    }
+)
+
 __all__ = [
     'BaseStrategy',
     'Signal',
     'SMACrossover',
     'RSIStrategy',
     'BreakoutStrategy',
+    'MeanReversionStrategy',
+    'MomentumStrategy',
     'StrategyRegistry',
     'registry'
 ]

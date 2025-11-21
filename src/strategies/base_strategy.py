@@ -8,6 +8,7 @@ and production-grade signal generation with validation and lifecycle management.
 
 import logging
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
 from datetime import datetime
@@ -83,6 +84,10 @@ class BaseStrategy(ABC):
         self.max_position_size = config.get('max_position_size', 0.1)
         self.max_daily_loss = config.get('max_daily_loss', 0.05)
 
+        # OPTIMIZATION: Centralized price buffer with maxlen (memory-safe)
+        buffer_size = config.get('buffer_size', 100)
+        self.prices = deque(maxlen=buffer_size)
+
         # Performance tracking
         self.total_signals = 0
         self.executed_signals = 0
@@ -97,6 +102,15 @@ class BaseStrategy(ABC):
     def _initialize_state(self):
         """Initialize strategy-specific state. Override in subclasses."""
         pass
+
+    def update_price(self, price: float):
+        """
+        Helper method to safely update the price buffer.
+
+        Args:
+            price: Current price to add to buffer
+        """
+        self.prices.append(price)
 
     @abstractmethod
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
@@ -241,5 +255,9 @@ class BaseStrategy(ABC):
         self.total_pnl = 0.0
         self.last_signal_time = None
         self.current_position = None
+
+        # CRITICAL FIX: Clear centralized price buffer
+        self.prices.clear()
+
         self._initialize_state()
         self.logger.info(f"Strategy {self.name} reset to initial state")
