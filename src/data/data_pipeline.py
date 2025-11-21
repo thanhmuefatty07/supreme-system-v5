@@ -14,7 +14,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union, Generator
 
 import pandas as pd
 
@@ -909,3 +909,72 @@ class DataPipeline:
         except Exception as e:
             self.logger.error(f"Export failed: {e}")
             return None
+
+    def load_csv_optimized(self, filepath: str, chunksize: int = 100000) -> Generator[List[Dict], None, None]:
+        """
+        Load large CSV files efficiently using pandas chunks.
+
+        Memory-safe for files larger than RAM with vectorized validation.
+
+        Args:
+            filepath: Path to CSV file
+            chunksize: Number of rows per chunk
+
+        Yields:
+            List of dictionaries for each chunk
+
+        Example:
+            async for chunk in pipeline.load_csv_optimized('large_file.csv'):
+                # Process chunk
+                process_data(chunk)
+        """
+        try:
+            # Define efficient dtypes for memory optimization
+            dtypes = {
+                'open': 'float32',
+                'high': 'float32',
+                'low': 'float32',
+                'close': 'float32',
+                'volume': 'float32',
+                'symbol': 'category'  # Memory efficient for repeated strings
+            }
+
+            # Stream file in chunks to avoid OOM
+            for chunk in pd.read_csv(
+                filepath,
+                chunksize=chunksize,
+                dtype=dtypes,
+                parse_dates=['timestamp'],
+                usecols=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'symbol']
+            ):
+                # Vectorized validation using pandas operations
+                # Much faster than loop-based validation
+                null_mask = chunk.isnull().any(axis=1)
+
+                if null_mask.any():
+                    self.logger.warning(f"Found {null_mask.sum()} rows with null values, dropping...")
+                    chunk = chunk.dropna()
+
+                # Additional vectorized validations
+                # Check for negative prices (vectorized)
+                negative_prices = (chunk[['open', 'high', 'low', 'close']] < 0).any(axis=1)
+                if negative_prices.any():
+                    self.logger.warning(f"Found {negative_prices.sum()} rows with negative prices, dropping...")
+                    chunk = chunk[~negative_prices]
+
+                # Check for OHLC relationships (vectorized)
+                # High should be >= max(open, close), Low should be <= min(open, close)
+                ohlc_invalid = (
+                    (chunk['high'] < chunk[['open', 'close']].max(axis=1)) |
+                    (chunk['low'] > chunk[['open', 'close']].min(axis=1))
+                )
+                if ohlc_invalid.any():
+                    self.logger.warning(f"Found {ohlc_invalid.sum()} rows with invalid OHLC relationships, dropping...")
+                    chunk = chunk[~ohlc_invalid]
+
+                # Yield processed chunk as list of dicts
+                yield chunk.to_dict('records')
+
+        except Exception as e:
+            self.logger.error(f"Failed to load CSV {filepath}: {e}")
+            raise
