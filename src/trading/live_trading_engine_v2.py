@@ -20,6 +20,7 @@ from datetime import datetime
 
 from ..execution.router import SmartRouter
 from ..risk.adaptive_kelly import AdaptiveKellyRiskManager, RiskConfig
+from ..risk.correlation import PortfolioCorrelationManager, CorrelationConfig
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..utils.validators import validate_market_data, ValidationError
 from ..monitoring.metrics_collector import MetricsCollector
@@ -69,6 +70,16 @@ class LiveTradingEngineV2:
             config=adaptive_risk_config,
             current_capital=config.get('initial_capital', 10000.0)
         )
+
+        # INTEGRATION 1.5: Portfolio Correlation Risk Manager (Ultra Optimized)
+        correlation_config_dict = config.get('correlation_config', {})
+        correlation_config = CorrelationConfig(
+            lookback_period=correlation_config_dict.get('lookback_period', 100),
+            update_interval=correlation_config_dict.get('update_interval', 60.0),
+            high_correlation_threshold=correlation_config_dict.get('high_correlation_threshold', 0.7),
+            max_correlated_positions=correlation_config_dict.get('max_correlated_positions', 2)
+        )
+        self.correlation_manager = PortfolioCorrelationManager(correlation_config)
 
         # INTEGRATION 2: Smart Execution Router with Flush-to-Disk logging
         log_path = config.get('trade_log_path', 'trade_history.jsonl')
@@ -137,6 +148,10 @@ class LiveTradingEngineV2:
 
         symbol = validated_data.symbol
 
+        # CORRELATION UPDATE: O(1) price update for risk tracking
+        close_price = validated_data.close
+        self.correlation_manager.update_price(symbol, close_price)
+
         # CRITICAL FIX: Use lock to protect shared state
         async with self._state_lock:
             try:
@@ -166,9 +181,22 @@ class LiveTradingEngineV2:
                     self.logger.warning(f"Adaptive Kelly returned zero size for {symbol}")
                     return {'status': 'REJECTED', 'reason': 'kelly_zero_size'}
 
+                # CORRELATION RISK CHECK: Apply correlation-based size adjustment
+                current_positions = list(self.current_positions.keys())
+                correlation_penalty = self.correlation_manager.get_correlation_risk(symbol, current_positions)
+
+                if correlation_penalty == 0.0:
+                    self.logger.warning(f"Correlation Risk: Blocking {symbol} trade due to excessive correlated positions")
+                    return {'status': 'REJECTED', 'reason': 'correlation_risk_blocked'}
+
+                # Apply correlation penalty to target size
+                adjusted_size = target_size * correlation_penalty
+                if correlation_penalty < 1.0:
+                    self.logger.info(f"Correlation Risk: Reducing position size by {correlation_penalty:.1f}x due to correlated positions")
+
                 # Convert size from $ amount to quantity
-                quantity = target_size / signal.price
-                self.logger.info(f"Risk Manager approved: ${target_size:.2f} (~{quantity:.4f} {symbol})")
+                quantity = adjusted_size / signal.price
+                self.logger.info(f"Risk Manager approved: ${adjusted_size:.2f} (~{quantity:.4f} {symbol}) [Kelly: ${target_size:.2f}, Correlation: {correlation_penalty:.1f}x]")
 
                 # STEP 3: Execute via Smart Router
                 self.logger.info(f"Executing {signal.side} {quantity:.4f} {symbol} via SmartRouter")
