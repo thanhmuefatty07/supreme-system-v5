@@ -16,6 +16,9 @@ from typing import Dict, Any, List, Optional
 import time
 import aiofiles  # OPTIMIZATION: Async file operations
 
+# TCA INTEGRATION
+from src.analytics.tca import TransactionCostAnalyzer
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,6 +83,9 @@ class SmartRouter:
         self.cache_timestamps: Dict[str, float] = {}
         self.cache_ttl = 0.1  # 100ms cache TTL for high-frequency trading
 
+        # TCA INTEGRATION: Ultra-fast cost analysis
+        self.tca = TransactionCostAnalyzer(max_history_size=10000)
+
         # Default configuration with latency optimizations
         self.config = config or {
             "liquidity_check": True,    # Enable liquidity validation
@@ -125,7 +131,7 @@ class SmartRouter:
             self.order_book_cache[symbol] = order_book
             self.cache_timestamps[symbol] = time.time()
 
-    async def execute_order(self, symbol: str, side: str, quantity: float) -> Dict[str, Any]:
+    async def execute_order(self, symbol: str, side: str, quantity: float, decision_price: Optional[float] = None) -> Dict[str, Any]:
         """
         Execute an order with smart routing and disk logging.
 
@@ -166,6 +172,10 @@ class SmartRouter:
                 symbol, side, quantity, price, 'FILLED', "",
                 order_id=order.get('id', ''), execution_time=execution_time, cache_hit=cache_hit
             )
+
+            # TCA INTEGRATION: Record for cost analysis (O(1) operation, non-blocking)
+            if decision_price is not None:
+                self.tca.record_trade(decision_price=decision_price, execution_result=result)
 
             self.logger.info(f"Executed {symbol} {side} {quantity} in {execution_time:.4f}s (cache_hit={cache_hit})")
             return result
@@ -229,6 +239,36 @@ class SmartRouter:
             # In production, you might want to buffer or send to monitoring
 
         return result_dict
+
+    def get_tca_statistics(self) -> Dict[str, Any]:
+        """
+        Get Transaction Cost Analysis statistics.
+
+        Returns:
+            Dict with cost analysis metrics
+        """
+        return self.tca.get_summary_statistics()
+
+    def get_recent_tca_trades(self, limit: int = 50) -> List[Any]:
+        """
+        Get recent trades for TCA analysis.
+
+        Args:
+            limit: Maximum number of trades to return
+
+        Returns:
+            List of recent TradeCostMetrics
+        """
+        return self.tca.get_recent_trades(limit=limit)
+
+    def export_tca_data(self, filepath: str):
+        """
+        Export TCA data to CSV for external analysis.
+
+        Args:
+            filepath: Output CSV file path
+        """
+        self.tca.export_to_csv(filepath)
 
     def _has_liquidity(self, order_book: Dict, side: str, qty: float) -> bool:
         """
