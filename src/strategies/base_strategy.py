@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
+from ..analytics.regime_detector import HMMRegimeDetector, MarketRegime
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +90,18 @@ class BaseStrategy(ABC):
         buffer_size = config.get('buffer_size', 100)
         self.prices = deque(maxlen=buffer_size)
 
+        # MARKET REGIME DETECTION: HMM-based regime awareness
+        regime_config = config.get('regime_config', {})
+        self.regime_detector = HMMRegimeDetector(
+            n_regimes=regime_config.get('n_regimes', 3),
+            training_interval=regime_config.get('training_interval', 3600.0),
+            min_training_samples=regime_config.get('min_training_samples', 100)
+        )
+
+        # Track previous price/volume for regime detector
+        self.previous_price = None
+        self.previous_volume = None
+
         # Performance tracking
         self.total_signals = 0
         self.executed_signals = 0
@@ -103,14 +117,80 @@ class BaseStrategy(ABC):
         """Initialize strategy-specific state. Override in subclasses."""
         pass
 
-    def update_price(self, price: float):
+    def update_price(self, price: float, volume: Optional[float] = None, timestamp: Optional[float] = None):
         """
-        Helper method to safely update the price buffer.
+        Helper method to safely update the price buffer and regime detector.
 
         Args:
             price: Current price to add to buffer
+            volume: Trading volume (optional, for regime detection)
+            timestamp: Data timestamp (optional)
         """
+        # Update price buffer
         self.prices.append(price)
+
+        # Update regime detector with market data
+        if volume is not None and self.previous_price is not None:
+            current_timestamp = timestamp or time.time()
+            self.regime_detector.update_market_data(
+                close_price=price,
+                volume=volume,
+                timestamp=current_timestamp,
+                prev_close=self.previous_price
+            )
+
+        # Track previous values for next update
+        self.previous_price = price
+        if volume is not None:
+            self.previous_volume = volume
+
+    def get_current_regime(self) -> Optional[Any]:
+        """
+        Get current market regime prediction from HMM detector.
+
+        Returns:
+            RegimePrediction object or None if insufficient data
+        """
+        return self.regime_detector.get_current_regime()
+
+    def should_trade_in_regime(self, regime: Any) -> bool:
+        """
+        Determine if strategy should trade in current market regime.
+
+        Default implementation allows trading in all regimes.
+        Subclasses can override for regime-specific behavior.
+
+        Args:
+            regime: Current market regime
+
+        Returns:
+            True if strategy should trade, False otherwise
+        """
+        if regime is None:
+            return True  # Default to allowing trade if no regime data
+
+        # Default: trade in all regimes but adjust signal strength
+        return True
+
+    def adjust_signal_for_regime(self, signal: Signal, regime: Any) -> Signal:
+        """
+        Adjust signal strength based on market regime.
+
+        Default implementation reduces signal strength in uncertain regimes.
+        Subclasses can override for sophisticated regime adaptation.
+
+        Args:
+            signal: Original trading signal
+            regime: Current market regime
+
+        Returns:
+            Adjusted signal
+        """
+        if regime is None or regime.confidence < 0.7:
+            # Reduce signal strength in uncertain regimes
+            signal.strength *= 0.8
+
+        return signal
 
     @abstractmethod
     def generate_signal(self, market_data: Dict[str, Any]) -> Optional[Signal]:
